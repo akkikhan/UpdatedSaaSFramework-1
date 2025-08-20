@@ -1,0 +1,574 @@
+# SaaS Framework - Multi-Tenant Platform Specification
+
+## Overview
+A minimal multi-tenant SaaS framework with platform admin portal, tenant onboarding with email notifications, and separate Authentication & RBAC NPM modules for external application integration.
+
+## Core Architecture
+
+### Technology Stack
+- **Frontend**: Angular standalone components
+- **Backend**: ASP.NET Core (.NET 8) microservices
+- **Database**: Azure Cosmos DB (serverless)
+- **Gateway**: Reverse proxy on port 8080, public API `/api/v2`
+- **Email**: SMTP/SendGrid integration
+- **Auth**: JWT tokens with tenant isolation
+
+### Services & Ports
+| Service | Port | Purpose |
+|---------|------|---------|
+| API Gateway | 8080 | Public entry point, routing |
+| Authentication API | 7011 | JWT/tenant auth, user management |
+| RBAC API | 7002 | Roles/permissions management |
+| Notification API | 7015 | Email service |
+
+## Data Model
+
+### Cosmos DB Database: "SaaSFactory"
+
+#### Core Tenant Management
+```typescript
+Tenant {
+  id: string,
+  orgId: string,           // URL slug (e.g., "acme-corp")
+  name: string,            // Display name
+  adminEmail: string,      // Primary contact
+  status: "pending" | "active" | "suspended",
+  createdAt: Date,
+  authApiKey: string,      // For @saas-framework/auth
+  rbacApiKey: string       // For @saas-framework/rbac
+}
+```
+
+#### Authentication API Containers
+```typescript
+User {
+  id: string,
+  tenantId: string,        // Partition key
+  email: string,
+  passwordHash: string,
+  isActive: boolean,
+  createdAt: Date,
+  lastLogin?: Date
+}
+
+Session {
+  id: string,
+  tenantId: string,        // Partition key
+  userId: string,
+  token: string,           // JWT token
+  expiresAt: Date,
+  createdAt: Date
+}
+```
+
+#### RBAC API Containers
+```typescript
+Role {
+  id: string,
+  tenantId: string,        // Partition key
+  name: string,            // e.g., "Admin", "Editor", "Viewer"
+  description: string,
+  permissions: string[],   // Array of permission keys
+  isSystem: boolean,       // Cannot be deleted
+  createdAt: Date
+}
+
+UserRole {
+  id: string,
+  tenantId: string,        // Partition key
+  userId: string,
+  roleId: string,
+  assignedAt: Date,
+  assignedBy: string
+}
+
+Permission {
+  id: string,
+  tenantId: string,        // Partition key
+  key: string,             // e.g., "user.create", "order.read"
+  description: string,
+  category: string,        // e.g., "Users", "Orders", "Reports"
+  isSystem: boolean
+}
+```
+
+## API Endpoints
+
+### Gateway Routing (`/api/v2`)
+```
+/api/v2/auth/*          → Authentication API (7011)
+/api/v2/rbac/*          → RBAC API (7002)
+/api/v2/notifications/* → Notification API (7015)
+/api/v2/tenants/*       → Gateway handles tenant CRUD
+```
+
+### Authentication API (Port 7011)
+```http
+POST   /api/v2/auth/login                    # User login
+POST   /api/v2/auth/logout                   # Invalidate session
+POST   /api/v2/auth/refresh                  # Refresh JWT token
+GET    /api/v2/auth/verify                   # Verify token validity
+POST   /api/v2/auth/users                    # Create user (admin only)
+GET    /api/v2/auth/users                    # List tenant users
+GET    /api/v2/auth/users/{id}               # Get user details
+PUT    /api/v2/auth/users/{id}               # Update user
+DELETE /api/v2/auth/users/{id}               # Delete user
+POST   /api/v2/auth/change-password          # Change user password
+POST   /api/v2/auth/reset-password           # Reset password request
+```
+
+### RBAC API (Port 7002)
+```http
+GET    /api/v2/rbac/roles                    # List tenant roles
+POST   /api/v2/rbac/roles                    # Create role
+GET    /api/v2/rbac/roles/{id}               # Get role details
+PUT    /api/v2/rbac/roles/{id}               # Update role
+DELETE /api/v2/rbac/roles/{id}               # Delete role
+GET    /api/v2/rbac/permissions              # List available permissions
+POST   /api/v2/rbac/permissions              # Create custom permission
+GET    /api/v2/rbac/user-roles               # List user-role assignments
+POST   /api/v2/rbac/user-roles               # Assign role to user
+DELETE /api/v2/rbac/user-roles/{userId}/{roleId} # Remove role from user
+GET    /api/v2/rbac/users/{id}/permissions   # Get user's effective permissions
+POST   /api/v2/rbac/check-permission         # Check if user has permission
+GET    /api/v2/rbac/users/{id}/roles         # Get user's roles
+```
+
+## Platform Admin Portal
+
+### Routes & Features
+- **Route**: `/admin`
+- **Authentication**: Platform admin credentials
+- **Features**:
+  - Tenant onboarding form
+  - Tenant list with status management
+  - Send/resend onboarding emails
+  - View tenant usage metrics
+  - System health monitoring
+
+### Tenant Onboarding Flow
+1. **Admin Input**: Name, admin email, orgId (URL slug)
+2. **System Processing**:
+   - Create tenant record
+   - Generate auth API key (`auth_[random]`)
+   - Generate RBAC API key (`rbac_[random]`)
+   - Create default admin user
+   - Create default roles (Admin, User)
+   - Set tenant status to "pending"
+3. **Email Notification**: Send onboarding email with credentials
+4. **Status Update**: Mark as "active" when first login occurs
+
+## Tenant Portal
+
+### Authentication Flow
+- **Login Route**: `/tenant/{orgId}/login`
+- **Dashboard Route**: `/tenant/{orgId}/dashboard`
+- **Auth Methods**: Username/password with JWT tokens
+
+### Tenant Admin Features
+- **User Management**: Create, edit, deactivate users
+- **Role Management**: Create custom roles, assign permissions
+- **Permission Management**: Define custom permissions
+- **User-Role Assignment**: Assign/remove roles from users
+- **API Key Management**: View and regenerate API keys
+
+## NPM SDK Modules
+
+### Authentication Module: `@saas-framework/auth`
+
+#### Installation
+```bash
+npm install @saas-framework/auth
+```
+
+#### Usage
+```typescript
+import { SaaSAuth } from '@saas-framework/auth';
+
+const auth = new SaaSAuth({
+  apiKey: 'auth_your-tenant-key',
+  baseUrl: 'https://your-api.com/api/v2/auth'
+});
+
+// Login user
+const session = await auth.login('user@tenant.com', 'password');
+// Returns: { token: string, user: User, expiresAt: Date }
+
+// Verify token
+const isValid = await auth.verifyToken(token);
+
+// Get current user
+const user = await auth.getCurrentUser(token);
+
+// Refresh token
+const newToken = await auth.refreshToken(refreshToken);
+
+// Logout
+await auth.logout(token);
+
+// Express middleware
+app.use(auth.middleware()); // Validates JWT and adds req.user
+```
+
+#### Express Middleware
+```typescript
+// Protect routes
+app.get('/profile', auth.middleware(), (req, res) => {
+  res.json({ user: req.user }); // req.user populated by middleware
+});
+
+// Optional authentication
+app.get('/public', auth.middleware({ required: false }), (req, res) => {
+  if (req.user) {
+    // Authenticated user
+  } else {
+    // Anonymous user
+  }
+});
+```
+
+### RBAC Module: `@saas-framework/rbac`
+
+#### Installation
+```bash
+npm install @saas-framework/rbac
+```
+
+#### Usage
+```typescript
+import { SaaSRBAC } from '@saas-framework/rbac';
+
+const rbac = new SaaSRBAC({
+  apiKey: 'rbac_your-tenant-key',
+  baseUrl: 'https://your-api.com/api/v2/rbac'
+});
+
+// Check single permission
+const canCreate = await rbac.hasPermission(userId, 'user.create');
+
+// Check multiple permissions
+const permissions = await rbac.hasPermissions(userId, ['user.create', 'user.edit']);
+
+// Get user roles
+const roles = await rbac.getUserRoles(userId);
+
+// Get effective permissions
+const userPermissions = await rbac.getUserPermissions(userId);
+
+// Express middleware
+app.use(rbac.middleware(['user.read'])); // Requires any of these permissions
+app.use(rbac.middleware(['admin'], { requireAll: true })); // Requires all permissions
+```
+
+#### Express Middleware
+```typescript
+// Single permission required
+app.get('/users', rbac.middleware(['user.read']), (req, res) => {
+  // User has 'user.read' permission
+});
+
+// Multiple permissions (any)
+app.post('/users', rbac.middleware(['user.create', 'admin']), (req, res) => {
+  // User has either 'user.create' OR 'admin' permission
+});
+
+// Multiple permissions (all)
+app.delete('/users/:id', rbac.middleware(['user.delete', 'admin'], { requireAll: true }), (req, res) => {
+  // User has both 'user.delete' AND 'admin' permissions
+});
+
+// Role-based access
+app.get('/admin', rbac.roleMiddleware(['Admin', 'SuperAdmin']), (req, res) => {
+  // User has Admin or SuperAdmin role
+});
+```
+
+### Combined Usage Example
+```typescript
+import express from 'express';
+import { SaaSAuth } from '@saas-framework/auth';
+import { SaaSRBAC } from '@saas-framework/rbac';
+
+const app = express();
+
+// Initialize SDKs
+const auth = new SaaSAuth({
+  apiKey: 'auth_your-tenant-key',
+  baseUrl: 'https://your-api.com/api/v2/auth'
+});
+
+const rbac = new SaaSRBAC({
+  apiKey: 'rbac_your-tenant-key',
+  baseUrl: 'https://your-api.com/api/v2/rbac'
+});
+
+// Protected route with permission check
+app.get('/users', 
+  auth.middleware(),                    // Validate JWT
+  rbac.middleware(['user.read']),       // Check permission
+  async (req, res) => {
+    // Route logic - user is authenticated and has permission
+    res.json({ users: await getUsers() });
+  }
+);
+
+// Admin-only route
+app.post('/users',
+  auth.middleware(),
+  rbac.roleMiddleware(['Admin']),
+  async (req, res) => {
+    // Only users with Admin role can access
+    const user = await createUser(req.body);
+    res.json({ user });
+  }
+);
+```
+
+## Email Templates
+
+### Onboarding Email Template
+```html
+Subject: Welcome to [Platform Name] - Your Tenant is Ready
+
+Hi [Admin Name],
+
+Your tenant "[Tenant Name]" has been created successfully!
+
+🔗 **Tenant Portal**: https://app.com/tenant/[orgId]/login
+📧 **Admin Email**: [email]
+🔑 **Temporary Password**: [generated-password]
+
+📦 **SDK Integration**:
+```bash
+npm install @saas-framework/auth @saas-framework/rbac
+```
+
+🔐 **API Keys**:
+- Auth API Key: `[authApiKey]`
+- RBAC API Key: `[rbacApiKey]`
+
+📚 **Documentation**: https://app.com/docs
+
+🚀 **Next Steps**:
+1. Login to your tenant portal
+2. Change your temporary password
+3. Set up users and roles for your team
+4. Integrate our SDKs in your application
+
+Best regards,
+The [Platform Name] Team
+```
+
+## User Journey Flows
+
+### 1. Platform Admin Journey
+```mermaid
+graph TD
+    A[Login to Admin Portal] --> B[View Tenant List]
+    B --> C[Click 'Add Tenant']
+    C --> D[Fill Onboarding Form]
+    D --> E[System Creates Tenant]
+    E --> F[Generate API Keys]
+    F --> G[Send Onboarding Email]
+    G --> H[Monitor Tenant Status]
+    H --> I[Tenant Logs In First Time]
+    I --> J[Status: Pending → Active]
+```
+
+### 2. Tenant Admin Journey
+```mermaid
+graph TD
+    A[Receive Onboarding Email] --> B[Click Portal Link]
+    B --> C[Login with Temp Credentials]
+    C --> D[Change Password]
+    D --> E[Explore Dashboard]
+    E --> F[Create Team Users]
+    F --> G[Set Up Roles & Permissions]
+    G --> H[Assign Roles to Users]
+    H --> I[Get API Keys for Developers]
+    I --> J[Integrate SDKs]
+```
+
+### 3. External App Developer Journey
+```mermaid
+graph TD
+    A[Receive API Keys from Tenant Admin] --> B[Install NPM Packages]
+    B --> C[Initialize Auth SDK]
+    C --> D[Initialize RBAC SDK]
+    D --> E[Implement Login Flow]
+    E --> F[Add Permission Middleware]
+    F --> G[Test Authentication]
+    G --> H[Test Authorization]
+    H --> I[Deploy to Production]
+```
+
+## Configuration
+
+### Environment Variables
+```bash
+# Database
+ConnectionStrings__CosmosDB=<cosmos-connection-string>
+CosmosDb__IsServerless=true
+
+# Email Service
+EmailService__SmtpHost=<smtp-host>
+EmailService__SmtpPort=587
+EmailService__SmtpUsername=<username>
+EmailService__SmtpPassword=<password>
+EmailService__FromEmail=noreply@yourplatform.com
+EmailService__FromName=Your Platform Name
+
+# JWT Configuration
+JWT__Secret=<jwt-secret-key>
+JWT__ExpiryMinutes=60
+JWT__RefreshExpiryDays=7
+
+# API Keys
+Auth__ApiKeyPrefix=auth_
+RBAC__ApiKeyPrefix=rbac_
+ApiKey__Length=32
+
+# Gateway
+Gateway__BaseUrl=https://api.yourplatform.com
+Gateway__AllowedOrigins=https://app.yourplatform.com,http://localhost:4200
+
+# Platform Admin
+Admin__Email=admin@yourplatform.com
+Admin__DefaultPassword=<secure-password>
+```
+
+### Docker Compose (Development)
+```yaml
+version: '3.8'
+services:
+  gateway:
+    build: ./src/Gateway
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - auth-api
+      - rbac-api
+      - notification-api
+
+  auth-api:
+    build: ./src/Authentication
+    ports:
+      - "7011:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__CosmosDB=${COSMOS_CONNECTION}
+
+  rbac-api:
+    build: ./src/RBAC
+    ports:
+      - "7002:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__CosmosDB=${COSMOS_CONNECTION}
+
+  notification-api:
+    build: ./src/Notifications
+    ports:
+      - "7015:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - EmailService__SmtpHost=${SMTP_HOST}
+```
+
+## Security & Data Isolation
+
+### Multi-Tenancy
+- **Data Partitioning**: All containers use `tenantId` as partition key
+- **API Key Scoping**: Each tenant has separate auth and RBAC API keys
+- **JWT Claims**: Tokens include tenant context and user roles
+- **Cross-Tenant Protection**: APIs validate tenant ownership of all resources
+
+### Security Best Practices
+- **Password Hashing**: BCrypt with salt rounds
+- **JWT Security**: Short-lived access tokens, longer refresh tokens
+- **API Rate Limiting**: Per-tenant and per-API-key limits
+- **Input Validation**: Comprehensive validation on all endpoints
+- **HTTPS Only**: All communication over TLS
+- **CORS Configuration**: Strict origin controls
+
+### Permission System
+```typescript
+// Permission naming convention
+"resource.action"
+
+// Examples
+"user.create"      // Can create users
+"user.read"        // Can view users
+"user.update"      // Can modify users
+"user.delete"      // Can delete users
+"role.manage"      // Can manage roles
+"tenant.admin"     // Tenant administrator
+"system.admin"     // Platform administrator
+```
+
+## Testing Strategy
+
+### Unit Tests
+- Authentication service logic
+- RBAC permission calculations
+- Email template rendering
+- JWT token validation
+
+### Integration Tests
+- API endpoint functionality
+- Database operations
+- Email delivery
+- SDK authentication flows
+
+### End-to-End Tests
+- Complete onboarding flow
+- Tenant portal functionality
+- SDK integration scenarios
+- Permission enforcement
+
+## Deployment
+
+### Production Checklist
+- [ ] Environment variables configured
+- [ ] Database containers created
+- [ ] Email service configured
+- [ ] SSL certificates installed
+- [ ] Domain DNS configured
+- [ ] Monitoring and logging setup
+- [ ] Backup strategy implemented
+- [ ] Rate limiting configured
+- [ ] API documentation published
+
+### Scaling Considerations
+- **Horizontal Scaling**: Stateless APIs for easy scaling
+- **Database Performance**: Proper indexing on tenantId
+- **Caching**: Redis for session storage and frequent queries
+- **CDN**: Static assets and documentation
+- **Load Balancing**: Multiple API instances behind load balancer
+
+## Success Criteria
+
+### Functional Requirements
+✅ Platform admin can onboard tenants  
+✅ Automated email delivery with credentials  
+✅ Tenant portal login and user management  
+✅ Separate Auth and RBAC NPM modules  
+✅ External app integration via SDKs  
+✅ Role-based access control enforcement  
+✅ Multi-tenant data isolation  
+
+### Non-Functional Requirements
+✅ API response time < 200ms  
+✅ 99.9% uptime SLA  
+✅ Support 1000+ concurrent users  
+✅ GDPR compliance for user data  
+✅ SOC 2 Type II security standards  
+✅ Comprehensive audit logging  
+
+---
+
+**Last Updated**: August 20, 2025  
+**Version**: 1.0  
+**Status**: Ready for Development
