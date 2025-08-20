@@ -2,7 +2,18 @@
 
 ## Overview
 
-This is a minimal multi-tenant SaaS framework built for tenant management with an admin portal. The platform provides comprehensive tenant onboarding with email notifications and is designed to support separate Authentication & RBAC NPM modules for external application integration. The system features a React frontend with a clean admin interface and an Express.js backend with PostgreSQL database using Drizzle ORM.
+This is a comprehensive multi-tenant SaaS framework built for tenant management with both admin and tenant portals. The platform provides guided tenant onboarding with progress tracking, real-time monitoring, and email notifications. It's designed to support separate Authentication & RBAC NPM modules for external application integration. The system features a React frontend with a clean admin interface, guided onboarding wizard, and an Express.js backend with PostgreSQL database using Drizzle ORM.
+
+## Recent Updates
+
+**Latest Feature: Guided Onboarding Wizard** (August 2025)
+- Added comprehensive 4-step onboarding wizard with progress tracking
+- Visual step indicators with icons and completion status
+- Module selection with recommended badges and detailed descriptions
+- Dynamic configuration forms based on selected modules
+- Review step with full configuration summary
+- Smooth animations and transitions between steps
+- Both guided wizard and quick add options available
 
 ## User Preferences
 
@@ -14,9 +25,11 @@ Preferred communication style: Simple, everyday language.
 - **Framework**: React with TypeScript using Vite as the build tool
 - **UI Library**: Radix UI components with shadcn/ui for consistent design system
 - **Styling**: Tailwind CSS with CSS variables for theming
+- **Animations**: Framer Motion for smooth transitions and wizard animations
 - **State Management**: TanStack Query (React Query) for server state management
 - **Routing**: Wouter for lightweight client-side routing
 - **Form Handling**: React Hook Form with Zod validation
+- **User Experience**: Multi-step guided wizards with progress tracking
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework

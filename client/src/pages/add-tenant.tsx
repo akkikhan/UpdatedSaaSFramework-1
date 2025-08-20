@@ -218,6 +218,173 @@ export default function AddTenantPage() {
               </CardContent>
             </Card>
 
+            {/* Authentication Modules */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Authentication Modules
+                </CardTitle>
+                <CardDescription>
+                  Select which authentication modules to enable for this tenant
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="enabledModules"
+                  render={() => (
+                    <FormItem>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[
+                          { id: "auth", label: "Authentication", description: "Basic authentication with email/password", required: true },
+                          { id: "rbac", label: "Role-Based Access Control", description: "Permission management system", required: false },
+                          { id: "azure-ad", label: "Azure Active Directory", description: "Microsoft Azure AD integration", required: false },
+                          { id: "auth0", label: "Auth0", description: "Auth0 identity platform integration", required: false },
+                          { id: "saml", label: "SAML", description: "Security Assertion Markup Language integration", required: false },
+                        ].map((module) => (
+                          <FormField
+                            key={module.id}
+                            control={form.control}
+                            name="enabledModules"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(module.id as any)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, module.id])
+                                        : field.onChange(field.value?.filter((value: string) => value !== module.id))
+                                    }}
+                                    disabled={module.required}
+                                    data-testid={`checkbox-module-${module.id}`}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="text-sm font-medium">
+                                    {module.label}
+                                    {module.required && <span className="text-red-500 ml-1">*</span>}
+                                  </FormLabel>
+                                  <FormDescription className="text-xs">
+                                    {module.description}
+                                  </FormDescription>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Module Configurations */}
+                {watchedModules.includes("azure-ad") && (
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="text-sm font-medium">Azure AD Configuration</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.azure-ad.tenantId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tenant ID</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your Azure AD Tenant ID" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.azure-ad.clientId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Client ID</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your Azure AD Application ID" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {watchedModules.includes("auth0") && (
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="text-sm font-medium">Auth0 Configuration</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.auth0.domain"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Domain</FormLabel>
+                            <FormControl>
+                              <Input placeholder="your-domain.auth0.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.auth0.clientId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Client ID</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your Auth0 Client ID" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {watchedModules.includes("saml") && (
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="text-sm font-medium">SAML Configuration</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.saml.entryPoint"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Entry Point URL</FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://your-idp.com/sso" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.saml.issuer"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Issuer</FormLabel>
+                            <FormControl>
+                              <Input placeholder="your-saml-issuer" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Submit Button */}
             <div className="flex justify-end gap-4">
               <Button

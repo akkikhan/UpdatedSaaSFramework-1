@@ -7,6 +7,7 @@ import AdminLayout from "@/components/layout/admin-layout";
 import AdminDashboard from "@/pages/admin-dashboard";
 import TenantsPage from "@/pages/tenants";
 import AddTenantPage from "@/pages/add-tenant";
+import OnboardingWizard from "@/pages/onboarding-wizard";
 import ModuleManagementPage from "@/pages/module-management";
 import LogsPage from "@/pages/logs";
 import SDKIntegrationPage from "@/pages/sdk-integration";
@@ -32,6 +33,7 @@ function Router() {
             <Route path="/admin" component={AdminDashboard} />
             <Route path="/tenants" component={TenantsPage} />
             <Route path="/tenants/add" component={AddTenantPage} />
+            <Route path="/tenants/wizard" component={OnboardingWizard} />
             <Route path="/modules" component={ModuleManagementPage} />
             <Route path="/logs" component={LogsPage} />
             <Route path="/sdk" component={SDKIntegrationPage} />

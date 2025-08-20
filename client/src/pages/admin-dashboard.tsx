@@ -1,14 +1,13 @@
-import { useState } from "react";
 import { Building, CheckCircle, Clock, Mail, Plus } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import StatsCard from "@/components/ui/stats-card";
-import AddTenantModal from "@/components/modals/add-tenant-modal";
 import { useStats, useHealthStatus } from "@/hooks/use-stats";
 import { useRecentTenants } from "@/hooks/use-tenants";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminDashboard() {
-  const [showAddTenantModal, setShowAddTenantModal] = useState(false);
+  const [, setLocation] = useLocation();
   
   const { data: stats, isLoading: statsLoading } = useStats();
   const { data: recentTenants, isLoading: tenantsLoading } = useRecentTenants();
@@ -19,7 +18,7 @@ export default function AdminDashboard() {
       {/* Add Tenant Button - positioned absolutely for header */}
       <div className="fixed top-4 right-6 z-10">
         <Button
-          onClick={() => window.location.href = '/tenants/add'}
+          onClick={() => setLocation("/tenants/wizard")}
           className="btn-primary flex items-center space-x-2"
           data-testid="button-add-tenant"
         >
@@ -193,11 +192,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-
-      <AddTenantModal
-        open={showAddTenantModal}
-        onOpenChange={setShowAddTenantModal}
-      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Eye, Mail, Edit, Pause, Trash, Search, CheckCircle } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,7 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import AddTenantModal from "@/components/modals/add-tenant-modal";
 import ViewTenantModal from "@/components/modals/view-tenant-modal";
 import EditTenantModal from "@/components/modals/edit-tenant-modal";
 import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
 export default function TenantsPage() {
-  const [showAddTenantModal, setShowAddTenantModal] = useState(false);
+  const [, setLocation] = useLocation();
   const [showViewTenantModal, setShowViewTenantModal] = useState(false);
   const [showEditTenantModal, setShowEditTenantModal] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -83,12 +83,21 @@ export default function TenantsPage() {
                 <Search className="absolute left-3 top-3 text-slate-400" size={16} />
               </div>
               <Button
-                onClick={() => setShowAddTenantModal(true)}
+                onClick={() => setLocation("/tenants/wizard")}
                 className="btn-primary flex items-center space-x-2"
+                data-testid="button-guided-setup"
+              >
+                <Plus size={16} />
+                <span>Guided Setup</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLocation("/tenants/add")}
+                className="flex items-center space-x-2"
                 data-testid="button-add-tenant"
               >
                 <Plus size={16} />
-                <span>Add Tenant</span>
+                <span>Quick Add</span>
               </Button>
             </div>
           </div>
@@ -251,22 +260,22 @@ export default function TenantsPage() {
         )}
       </div>
 
-      <AddTenantModal
-        open={showAddTenantModal}
-        onOpenChange={setShowAddTenantModal}
-      />
-      
-      <ViewTenantModal
-        open={showViewTenantModal}
-        onOpenChange={setShowViewTenantModal}
-        tenant={selectedTenant}
-      />
-      
-      <EditTenantModal
-        open={showEditTenantModal}
-        onOpenChange={setShowEditTenantModal}
-        tenant={selectedTenant}
-      />
+      {/* Modals */}
+      {selectedTenant && (
+        <>
+          <ViewTenantModal
+            open={showViewTenantModal}
+            onOpenChange={setShowViewTenantModal}
+            tenant={selectedTenant}
+          />
+          
+          <EditTenantModal
+            open={showEditTenantModal}
+            onOpenChange={setShowEditTenantModal}
+            tenant={selectedTenant}
+          />
+        </>
+      )}
     </div>
   );
 }
