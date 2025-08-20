@@ -7,6 +7,9 @@ import {
   permissions,
   emailLogs,
   systemLogs,
+  tenantUsers,
+  tenantRoles,
+  tenantUserRoles,
   type Tenant,
   type InsertTenant,
   type User,
@@ -14,7 +17,13 @@ import {
   type Role,
   type Session,
   type EmailLog,
-  type SystemLog
+  type SystemLog,
+  type TenantUser,
+  type InsertTenantUser,
+  type TenantRole,
+  type InsertTenantRole,
+  type TenantUserRole,
+  type InsertTenantUserRole
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, sql } from "drizzle-orm";
@@ -80,6 +89,26 @@ export interface IStorage {
     emailsSent: number;
   }>;
   getRecentTenants(limit: number): Promise<Tenant[]>;
+  
+  // Tenant Users - actual end users of the tenant's application
+  createTenantUser(user: InsertTenantUser): Promise<TenantUser>;
+  getTenantUsers(tenantId: string, limit?: number, offset?: number): Promise<TenantUser[]>;
+  getTenantUser(id: string): Promise<TenantUser | null>;
+  getTenantUserByEmail(tenantId: string, email: string): Promise<TenantUser | null>;
+  updateTenantUser(id: string, updates: Partial<InsertTenantUser>): Promise<TenantUser | null>;
+  deleteTenantUser(id: string): Promise<void>;
+  
+  // Tenant Roles - custom roles within each tenant for RBAC
+  createTenantRole(role: InsertTenantRole): Promise<TenantRole>;
+  getTenantRoles(tenantId: string): Promise<TenantRole[]>;
+  getTenantRole(id: string): Promise<TenantRole | null>;
+  updateTenantRole(id: string, updates: Partial<InsertTenantRole>): Promise<TenantRole | null>;
+  deleteTenantRole(id: string): Promise<void>;
+  
+  // Tenant User Role Assignments
+  assignTenantUserRole(assignment: InsertTenantUserRole): Promise<TenantUserRole>;
+  getTenantUserRoles(tenantId: string, userId?: string): Promise<TenantUserRole[]>;
+  removeTenantUserRole(userId: string, roleId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -359,6 +388,125 @@ export class DatabaseStorage implements IStorage {
     // Simple hash for demo - in production use bcrypt
     const crypto = await import('crypto');
     return crypto.createHash('sha256').update(password).digest('hex');
+  }
+  
+  // Tenant Users Implementation
+  async createTenantUser(user: InsertTenantUser): Promise<TenantUser> {
+    const [newUser] = await db
+      .insert(tenantUsers)
+      .values(user)
+      .returning();
+    return newUser;
+  }
+  
+  async getTenantUsers(tenantId: string, limit: number = 50, offset: number = 0): Promise<TenantUser[]> {
+    return await db
+      .select()
+      .from(tenantUsers)
+      .where(eq(tenantUsers.tenantId, tenantId))
+      .orderBy(desc(tenantUsers.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+  
+  async getTenantUser(id: string): Promise<TenantUser | null> {
+    const [user] = await db
+      .select()
+      .from(tenantUsers)
+      .where(eq(tenantUsers.id, id));
+    return user || null;
+  }
+  
+  async getTenantUserByEmail(tenantId: string, email: string): Promise<TenantUser | null> {
+    const [user] = await db
+      .select()
+      .from(tenantUsers)
+      .where(sql`${tenantUsers.tenantId} = ${tenantId} AND ${tenantUsers.email} = ${email}`);
+    return user || null;
+  }
+  
+  async updateTenantUser(id: string, updates: Partial<InsertTenantUser>): Promise<TenantUser | null> {
+    const [updatedUser] = await db
+      .update(tenantUsers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tenantUsers.id, id))
+      .returning();
+    return updatedUser || null;
+  }
+  
+  async deleteTenantUser(id: string): Promise<void> {
+    await db.delete(tenantUsers).where(eq(tenantUsers.id, id));
+  }
+  
+  // Tenant Roles Implementation
+  async createTenantRole(role: InsertTenantRole): Promise<TenantRole> {
+    const [newRole] = await db
+      .insert(tenantRoles)
+      .values(role)
+      .returning();
+    return newRole;
+  }
+  
+  async getTenantRoles(tenantId: string): Promise<TenantRole[]> {
+    return await db
+      .select()
+      .from(tenantRoles)
+      .where(eq(tenantRoles.tenantId, tenantId))
+      .orderBy(tenantRoles.name);
+  }
+  
+  async getTenantRole(id: string): Promise<TenantRole | null> {
+    const [role] = await db
+      .select()
+      .from(tenantRoles)
+      .where(eq(tenantRoles.id, id));
+    return role || null;
+  }
+  
+  async updateTenantRole(id: string, updates: Partial<InsertTenantRole>): Promise<TenantRole | null> {
+    const [updatedRole] = await db
+      .update(tenantRoles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tenantRoles.id, id))
+      .returning();
+    return updatedRole || null;
+  }
+  
+  async deleteTenantRole(id: string): Promise<void> {
+    await db.delete(tenantRoles).where(eq(tenantRoles.id, id));
+  }
+  
+  // Tenant User Role Assignments Implementation
+  async assignTenantUserRole(assignment: InsertTenantUserRole): Promise<TenantUserRole> {
+    const [newAssignment] = await db
+      .insert(tenantUserRoles)
+      .values(assignment)
+      .returning();
+    return newAssignment;
+  }
+  
+  async getTenantUserRoles(tenantId: string, userId?: string): Promise<TenantUserRole[]> {
+    if (userId) {
+      return await db
+        .select()
+        .from(tenantUserRoles)
+        .where(
+          sql`${tenantUserRoles.tenantId} = ${tenantId} AND ${tenantUserRoles.userId} = ${userId}`
+        );
+    }
+    
+    return await db
+      .select()
+      .from(tenantUserRoles)
+      .where(eq(tenantUserRoles.tenantId, tenantId));
+  }
+  
+  async removeTenantUserRole(userId: string, roleId: string): Promise<void> {
+    await db
+      .delete(tenantUserRoles)
+      .where(
+        sql`${tenantUserRoles.userId} = ${userId} AND ${tenantUserRoles.roleId} = ${roleId}`
+      );
   }
 }
 

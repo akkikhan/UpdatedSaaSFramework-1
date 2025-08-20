@@ -97,6 +97,44 @@ export const systemLogs = pgTable("system_logs", {
   timestamp: timestamp("timestamp").defaultNow()
 });
 
+// Tenant Users - The actual end users of each tenant's application
+export const tenantUsers = pgTable("tenant_users", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  passwordHash: varchar("password_hash", { length: 255 }),
+  firstName: varchar("first_name", { length: 100 }),
+  lastName: varchar("last_name", { length: 100 }),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  externalId: varchar("external_id", { length: 255 }), // For SSO integrations
+  metadata: jsonb("metadata").default(sql`'{}'`)
+});
+
+// Tenant Roles - Custom roles within each tenant
+export const tenantRoles = pgTable("tenant_roles", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  permissions: text("permissions").array().notNull().default(sql`'{}'::text[]`),
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// User Role Assignments
+export const tenantUserRoles = pgTable("tenant_user_roles", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => tenantUsers.id, { onDelete: "cascade" }).notNull(),
+  roleId: uuid("role_id").references(() => tenantRoles.id, { onDelete: "cascade" }).notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedBy: uuid("assigned_by").references(() => tenantUsers.id)
+});
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -138,6 +176,23 @@ export const insertRoleSchema = createInsertSchema(roles).omit({
   createdAt: true
 });
 
+export const insertTenantUserSchema = createInsertSchema(tenantUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertTenantRoleSchema = createInsertSchema(tenantRoles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertTenantUserRoleSchema = createInsertSchema(tenantUserRoles).omit({
+  id: true,
+  assignedAt: true
+});
+
 // Types
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
@@ -148,3 +203,9 @@ export type InsertRole = z.infer<typeof insertRoleSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type SystemLog = typeof systemLogs.$inferSelect;
+export type TenantUser = typeof tenantUsers.$inferSelect;
+export type InsertTenantUser = z.infer<typeof insertTenantUserSchema>;
+export type TenantRole = typeof tenantRoles.$inferSelect;
+export type InsertTenantRole = z.infer<typeof insertTenantRoleSchema>;
+export type TenantUserRole = typeof tenantUserRoles.$inferSelect;
+export type InsertTenantUserRole = z.infer<typeof insertTenantUserRoleSchema>;

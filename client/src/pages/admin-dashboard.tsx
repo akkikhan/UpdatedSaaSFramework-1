@@ -19,7 +19,7 @@ export default function AdminDashboard() {
       {/* Add Tenant Button - positioned absolutely for header */}
       <div className="fixed top-4 right-6 z-10">
         <Button
-          onClick={() => setShowAddTenantModal(true)}
+          onClick={() => window.location.href = '/tenants/add'}
           className="btn-primary flex items-center space-x-2"
           data-testid="button-add-tenant"
         >
@@ -124,6 +124,7 @@ export default function AdminDashboard() {
             <Button
               variant="ghost"
               className="w-full mt-4 text-blue-600 hover:text-blue-500"
+              onClick={() => window.location.href = '/tenants'}
               data-testid="button-view-all-tenants"
             >
               View All Tenants

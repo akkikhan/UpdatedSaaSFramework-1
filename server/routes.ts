@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { emailService } from "./services/email";
 import { authService } from "./services/auth";
 import { authMiddleware, tenantMiddleware } from "./middleware/auth";
-import { insertTenantSchema, insertUserSchema } from "@shared/schema";
+import { insertTenantSchema, insertUserSchema, insertTenantUserSchema, insertTenantRoleSchema, insertTenantUserRoleSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -566,6 +566,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =============================================================================
+  // TENANT USERS & ROLES CRUD API (For tenant portals)
+  // =============================================================================
+  
+  // Tenant Users CRUD
+  app.post("/api/tenants/:tenantId/users", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const userData = insertTenantUserSchema.parse({ ...req.body, tenantId });
+      
+      // Check if user already exists
+      const existingUser = await storage.getTenantUserByEmail(tenantId, userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+      
+      const newUser = await storage.createTenantUser(userData);
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Error creating tenant user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+  
+  app.get("/api/tenants/:tenantId/users", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      
+      const users = await storage.getTenantUsers(tenantId, parseInt(limit as string), parseInt(offset as string));
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching tenant users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+  
+  app.get("/api/tenants/:tenantId/roles", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const roles = await storage.getTenantRoles(tenantId);
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching tenant roles:", error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }

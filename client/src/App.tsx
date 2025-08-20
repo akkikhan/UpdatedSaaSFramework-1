@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import AdminLayout from "@/components/layout/admin-layout";
 import AdminDashboard from "@/pages/admin-dashboard";
 import TenantsPage from "@/pages/tenants";
+import AddTenantPage from "@/pages/add-tenant";
 import SDKIntegrationPage from "@/pages/sdk-integration";
 import EmailTemplatesPage from "@/pages/email-templates";
 import SystemHealthPage from "@/pages/system-health";
@@ -28,6 +29,7 @@ function Router() {
             <Route path="/" component={AdminDashboard} />
             <Route path="/admin" component={AdminDashboard} />
             <Route path="/tenants" component={TenantsPage} />
+            <Route path="/tenants/add" component={AddTenantPage} />
             <Route path="/sdk" component={SDKIntegrationPage} />
             <Route path="/emails" component={EmailTemplatesPage} />
             <Route path="/system" component={SystemHealthPage} />

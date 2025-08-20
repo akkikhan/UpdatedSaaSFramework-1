@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useParams } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Shield, Key, Settings, Copy, Eye, EyeOff } from "lucide-react";
+import { Users, Shield, Key, Settings, Copy, Eye, EyeOff, Plus } from "lucide-react";
 import { useTenantAuth } from "@/hooks/use-tenant-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -50,32 +51,42 @@ export default function TenantDashboard() {
     );
   }
 
-  // Mock data for demonstration - in production this would come from APIs
+  // Get tenant data from API
+  const { data: tenant } = useQuery({
+    queryKey: [`/api/tenants/by-org-id/${orgId}`],
+    enabled: !!orgId
+  });
+  
+  const { data: tenantUsers = [] } = useQuery({
+    queryKey: [`/api/tenants/${tenant?.id}/users`],
+    enabled: !!tenant?.id
+  });
+  
+  const { data: tenantRoles = [] } = useQuery({
+    queryKey: [`/api/tenants/${tenant?.id}/roles`],
+    enabled: !!tenant?.id
+  });
+  
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-slate-800 mb-2">Loading...</h2>
+          <p className="text-slate-600">Fetching tenant information</p>
+        </div>
+      </div>
+    );
+  }
+  
   const tenantInfo = {
-    name: orgId?.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || 'Tenant',
-    status: 'active',
-    authApiKey: 'auth_abc123def456ghi789jkl012mno345',
-    rbacApiKey: 'rbac_pqr678stu901vwx234yz567abc890',
-    enabledModules: ['auth', 'rbac', 'azure-ad'], // Example - would come from API
-    moduleConfigs: {
-      'azure-ad': {
-        tenantId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-        clientId: 'your-azure-client-id',
-        domain: 'yourdomain.onmicrosoft.com'
-      },
-      'auth0': {
-        domain: 'yourapp.auth0.com',
-        clientId: 'your-auth0-client-id',
-        clientSecret: 'your-auth0-client-secret'
-      }
-    } as any,
-    users: [
-      { id: '1', email: user.email, role: 'Admin', status: 'Active', lastLogin: new Date().toISOString() }
-    ],
-    roles: [
-      { id: '1', name: 'Admin', description: 'Full administrative access', permissions: ['tenant.admin', 'user.create', 'user.read', 'user.update', 'user.delete', 'role.manage'] },
-      { id: '2', name: 'User', description: 'Standard user access', permissions: ['user.read'] }
-    ]
+    name: tenant.name,
+    status: tenant.status,
+    authApiKey: tenant.authApiKey,
+    rbacApiKey: tenant.rbacApiKey,
+    enabledModules: (tenant.enabledModules as string[]) || ['auth', 'rbac'],
+    moduleConfigs: tenant.moduleConfigs || {},
+    users: tenantUsers,
+    roles: tenantRoles
   };
 
   return (
@@ -196,7 +207,10 @@ export default function TenantDashboard() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Users</CardTitle>
-                  <Button data-testid="button-add-user">Add User</Button>
+                  <Button data-testid="button-add-user">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -211,25 +225,31 @@ export default function TenantDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tenantInfo.users.map((user) => (
+                    {tenantInfo.users.length > 0 ? tenantInfo.users.map((user: any) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.email}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{user.role}</Badge>
+                          <Badge variant="outline">User</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
+                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
                             {user.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
+                        <TableCell>{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" data-testid={`button-edit-user-${user.id}`}>
                             Edit
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                          No users found. Add users to get started.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -241,11 +261,14 @@ export default function TenantDashboard() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Roles & Permissions</CardTitle>
-                  <Button data-testid="button-add-role">Add Role</Button>
+                  <Button data-testid="button-add-role">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Role
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {tenantInfo.roles.map((role) => (
+                {tenantInfo.roles.length > 0 ? tenantInfo.roles.map((role: any) => (
                   <Card key={role.id}>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
@@ -260,7 +283,7 @@ export default function TenantDashboard() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="flex flex-wrap gap-2">
-                        {role.permissions.map((permission) => (
+                        {role.permissions.map((permission: string) => (
                           <Badge key={permission} variant="secondary" className="text-xs">
                             {permission}
                           </Badge>
@@ -268,7 +291,11 @@ export default function TenantDashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                )) : (
+                  <div className="text-center py-8 text-slate-500">
+                    No custom roles found. Default system roles are used.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
