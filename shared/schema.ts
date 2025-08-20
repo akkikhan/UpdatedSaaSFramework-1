@@ -13,7 +13,7 @@ export const tenants = pgTable("tenants", {
   authApiKey: varchar("auth_api_key", { length: 100 }).notNull(),
   rbacApiKey: varchar("rbac_api_key", { length: 100 }).notNull(),
   // Module configurations
-  enabledModules: jsonb("enabled_modules").default(sql`'["auth", "rbac"]'`), // ["auth", "rbac", "azure-ad", "auth0"]
+  enabledModules: jsonb("enabled_modules").default(sql`'["auth", "rbac"]'`), // ["auth", "rbac", "azure-ad", "auth0", "saml"]
   moduleConfigs: jsonb("module_configs").default(sql`'{}'`), // Store configs for each module
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
@@ -83,6 +83,20 @@ export const emailLogs = pgTable("email_logs", {
   errorMessage: text("error_message")
 });
 
+// System activity logs for admin monitoring
+export const systemLogs = pgTable("system_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").references(() => tenants.id),
+  adminUserId: uuid("admin_user_id").references(() => users.id),
+  action: varchar("action", { length: 100 }).notNull(), // module_enabled, module_disabled, tenant_created, etc.
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // tenant, module, user
+  entityId: varchar("entity_id", { length: 100 }).notNull(),
+  details: jsonb("details").default(sql`'{}'`), // Additional context
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow()
+});
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -91,7 +105,7 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
   createdAt: true,
   updatedAt: true
 }).extend({
-  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0"])).optional(),
+  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml"])).optional(),
   moduleConfigs: z.object({
     "azure-ad": z.object({
       tenantId: z.string(),
@@ -103,6 +117,12 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
       domain: z.string(),
       clientId: z.string(),
       clientSecret: z.string(),
+    }).optional(),
+    "saml": z.object({
+      entryPoint: z.string(),
+      issuer: z.string(),
+      cert: z.string(),
+      identifierFormat: z.string().optional(),
     }).optional(),
   }).optional(),
 });
@@ -127,3 +147,4 @@ export type Role = typeof roles.$inferSelect;
 export type InsertRole = z.infer<typeof insertRoleSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type EmailLog = typeof emailLogs.$inferSelect;
+export type SystemLog = typeof systemLogs.$inferSelect;

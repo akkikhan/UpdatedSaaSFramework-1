@@ -38,6 +38,52 @@ export class EmailService {
     });
   }
 
+  async sendModuleStatusEmail(tenant: {
+    id: string;
+    name: string;
+    adminEmail: string;
+  }, changes: {
+    enabled: string[];
+    disabled: string[];
+  }): Promise<boolean> {
+    const subject = `Module Access Updated - ${tenant.name}`;
+    
+    const html = this.generateModuleStatusEmailTemplate(tenant, changes);
+    
+    try {
+      await this.transporter.sendMail({
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+        to: tenant.adminEmail,
+        subject,
+        html
+      });
+      
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: tenant.adminEmail,
+        subject,
+        templateType: 'module_status',
+        status: 'sent',
+        errorMessage: null
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to send module status email:', error);
+      
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: tenant.adminEmail,
+        subject,
+        templateType: 'module_status',
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
+      return false;
+    }
+  }
+
   async sendTenantOnboardingEmail(tenant: {
     id: string;
     name: string;
@@ -84,6 +130,94 @@ export class EmailService {
       
       return false;
     }
+  }
+
+  private generateModuleStatusEmailTemplate(tenant: {
+    id: string;
+    name: string;
+    adminEmail: string;
+  }, changes: {
+    enabled: string[];
+    disabled: string[];
+  }): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Module Access Updated</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #f8fafc; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: white; padding: 30px; border: 1px solid #e2e8f0; }
+          .footer { background: #f8fafc; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #64748b; }
+          .module-list { background: #f1f5f9; padding: 15px; border-radius: 6px; margin: 15px 0; }
+          .enabled { color: #059669; font-weight: 600; }
+          .disabled { color: #dc2626; font-weight: 600; }
+          .warning { background: #fef3c7; border: 1px solid #fbbf24; padding: 15px; border-radius: 6px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; color: #1e293b;">Module Access Updated</h1>
+            <p style="margin: 10px 0 0 0; color: #64748b;">Changes to your tenant access</p>
+          </div>
+          
+          <div class="content">
+            <p>Hello,</p>
+            
+            <p>Your tenant <strong>${tenant.name}</strong> module access has been updated by an administrator.</p>
+            
+            ${changes.enabled.length > 0 ? `
+            <div class="module-list">
+              <h3 class="enabled">✓ Modules Enabled:</h3>
+              <ul>
+                ${changes.enabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join('')}
+              </ul>
+            </div>
+            ` : ''}
+            
+            ${changes.disabled.length > 0 ? `
+            <div class="module-list">
+              <h3 class="disabled">✗ Modules Disabled:</h3>
+              <ul>
+                ${changes.disabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join('')}
+              </ul>
+            </div>
+            ` : ''}
+            
+            ${changes.disabled.length > 0 ? `
+            <div class="warning">
+              <strong>⚠️ Important:</strong> Disabled modules will immediately restrict access to related features. 
+              Users may receive "access denied" messages when trying to use these features.
+            </div>
+            ` : ''}
+            
+            <p>If you have questions about these changes, please contact your administrator.</p>
+            
+            <p>Best regards,<br>The SaaS Framework Team</p>
+          </div>
+          
+          <div class="footer">
+            <p>This is an automated notification from the SaaS Framework Platform.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getModuleDisplayName(module: string): string {
+    const displayNames: Record<string, string> = {
+      'auth': 'Authentication',
+      'rbac': 'Role-Based Access Control',
+      'azure-ad': 'Azure Active Directory',
+      'auth0': 'Auth0 SSO',
+      'saml': 'SAML SSO'
+    };
+    return displayNames[module] || module;
   }
 
   private generateOnboardingEmailTemplate(tenant: {

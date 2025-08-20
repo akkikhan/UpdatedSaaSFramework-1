@@ -94,6 +94,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Module Management Routes
+  
+  // Update tenant modules
+  app.patch("/api/tenants/:id/modules", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { enabledModules, moduleConfigs } = req.body;
+      
+      const tenant = await storage.getTenant(id);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      
+      const currentModules = (tenant.enabledModules as string[]) || ['auth', 'rbac'];
+      const newModules = enabledModules || currentModules;
+      
+      // Determine changes
+      const enabled = newModules.filter((m: string) => !currentModules.includes(m));
+      const disabled = currentModules.filter((m: string) => !newModules.includes(m));
+      
+      // Update tenant modules
+      await storage.updateTenantModules(id, newModules, moduleConfigs || {});
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId: id,
+        action: 'modules_updated',
+        entityType: 'tenant',
+        entityId: id,
+        details: { enabled, disabled, previousModules: currentModules, newModules },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      // Send email notification if there are changes
+      if (enabled.length > 0 || disabled.length > 0) {
+        await emailService.sendModuleStatusEmail(
+          {
+            id: tenant.id,
+            name: tenant.name,
+            adminEmail: tenant.adminEmail
+          },
+          { enabled, disabled }
+        );
+      }
+      
+      res.json({ 
+        message: "Modules updated successfully",
+        changes: { enabled, disabled }
+      });
+    } catch (error) {
+      console.error("Error updating tenant modules:", error);
+      res.status(500).json({ message: "Failed to update modules" });
+    }
+  });
+  
+  // Get system logs
+  app.get("/api/logs/system", async (req, res) => {
+    try {
+      const { tenantId, action, limit = 50, offset = 0 } = req.query;
+      
+      const logs = await storage.getSystemLogs({
+        tenantId: tenantId as string,
+        action: action as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching system logs:", error);
+      res.status(500).json({ message: "Failed to fetch logs" });
+    }
+  });
+  
+  // Get email logs
+  app.get("/api/logs/email", async (req, res) => {
+    try {
+      const { tenantId, status, limit = 50, offset = 0 } = req.query;
+      
+      const logs = await storage.getEmailLogs({
+        tenantId: tenantId as string,
+        status: status as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching email logs:", error);
+      res.status(500).json({ message: "Failed to fetch email logs" });
+    }
+  });
+
   // Create new tenant
   app.post("/api/tenants", async (req, res) => {
     try {

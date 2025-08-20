@@ -6,13 +6,15 @@ import {
   userRoles,
   permissions,
   emailLogs,
+  systemLogs,
   type Tenant,
   type InsertTenant,
   type User,
   type InsertUser,
   type Role,
   type Session,
-  type EmailLog
+  type EmailLog,
+  type SystemLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, sql } from "drizzle-orm";
@@ -42,6 +44,33 @@ export interface IStorage {
   
   // Email logging
   logEmail(emailLog: Omit<EmailLog, 'id' | 'sentAt'>): Promise<EmailLog>;
+  
+  // System logging
+  logSystemActivity(data: {
+    tenantId?: string;
+    adminUserId?: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    details?: any;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void>;
+  getSystemLogs(options?: {
+    tenantId?: string;
+    limit?: number;
+    offset?: number;
+    action?: string;
+  }): Promise<any[]>;
+  
+  // Module management
+  updateTenantModules(tenantId: string, enabledModules: string[], moduleConfigs: any): Promise<void>;
+  getEmailLogs(options?: {
+    tenantId?: string;
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }): Promise<any[]>;
   
   // Statistics
   getTenantStats(): Promise<{
@@ -181,6 +210,120 @@ export class DatabaseStorage implements IStorage {
       .values(emailLog)
       .returning();
     return log;
+  }
+
+  // System activity logging
+  async logSystemActivity(data: {
+    tenantId?: string;
+    adminUserId?: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    details?: any;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    await db.insert(systemLogs).values({
+      tenantId: data.tenantId || null,
+      adminUserId: data.adminUserId || null,
+      action: data.action,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      details: data.details || {},
+      ipAddress: data.ipAddress || null,
+      userAgent: data.userAgent || null
+    });
+  }
+
+  // Get system logs with pagination
+  async getSystemLogs(options: {
+    tenantId?: string;
+    limit?: number;
+    offset?: number;
+    action?: string;
+  } = {}): Promise<any[]> {
+    const baseQuery = db.select({
+      id: systemLogs.id,
+      tenantId: systemLogs.tenantId,
+      adminUserId: systemLogs.adminUserId,
+      action: systemLogs.action,
+      entityType: systemLogs.entityType,
+      entityId: systemLogs.entityId,
+      details: systemLogs.details,
+      ipAddress: systemLogs.ipAddress,
+      userAgent: systemLogs.userAgent,
+      timestamp: systemLogs.timestamp,
+      tenantName: tenants.name,
+      adminEmail: users.email
+    })
+    .from(systemLogs)
+    .leftJoin(tenants, eq(systemLogs.tenantId, tenants.id))
+    .leftJoin(users, eq(systemLogs.adminUserId, users.id))
+    .orderBy(desc(systemLogs.timestamp));
+
+    // Apply filters and execute
+    if (options.tenantId && options.action) {
+      return await baseQuery.where(
+        sql`${systemLogs.tenantId} = ${options.tenantId} AND ${systemLogs.action} = ${options.action}`
+      ).limit(options.limit || 50).offset(options.offset || 0);
+    } else if (options.tenantId) {
+      return await baseQuery.where(eq(systemLogs.tenantId, options.tenantId))
+        .limit(options.limit || 50).offset(options.offset || 0);
+    } else if (options.action) {
+      return await baseQuery.where(eq(systemLogs.action, options.action))
+        .limit(options.limit || 50).offset(options.offset || 0);
+    } else {
+      return await baseQuery.limit(options.limit || 50).offset(options.offset || 0);
+    }
+  }
+
+  // Update tenant modules
+  async updateTenantModules(tenantId: string, enabledModules: string[], moduleConfigs: any): Promise<void> {
+    await db.update(tenants)
+      .set({ 
+        enabledModules: enabledModules,
+        moduleConfigs: moduleConfigs,
+        updatedAt: new Date()
+      })
+      .where(eq(tenants.id, tenantId));
+  }
+
+  // Get email logs for admin
+  async getEmailLogs(options: {
+    tenantId?: string;
+    limit?: number;
+    offset?: number;
+    status?: string;
+  } = {}): Promise<any[]> {
+    const baseQuery = db.select({
+      id: emailLogs.id,
+      tenantId: emailLogs.tenantId,
+      recipientEmail: emailLogs.recipientEmail,
+      subject: emailLogs.subject,
+      templateType: emailLogs.templateType,
+      status: emailLogs.status,
+      sentAt: emailLogs.sentAt,
+      errorMessage: emailLogs.errorMessage,
+      tenantName: tenants.name
+    })
+    .from(emailLogs)
+    .leftJoin(tenants, eq(emailLogs.tenantId, tenants.id))
+    .orderBy(desc(emailLogs.sentAt));
+
+    // Apply filters and execute
+    if (options.tenantId && options.status) {
+      return await baseQuery.where(
+        sql`${emailLogs.tenantId} = ${options.tenantId} AND ${emailLogs.status} = ${options.status}`
+      ).limit(options.limit || 50).offset(options.offset || 0);
+    } else if (options.tenantId) {
+      return await baseQuery.where(eq(emailLogs.tenantId, options.tenantId))
+        .limit(options.limit || 50).offset(options.offset || 0);
+    } else if (options.status) {
+      return await baseQuery.where(eq(emailLogs.status, options.status))
+        .limit(options.limit || 50).offset(options.offset || 0);
+    } else {
+      return await baseQuery.limit(options.limit || 50).offset(options.offset || 0);
+    }
   }
   
   async getTenantStats() {
