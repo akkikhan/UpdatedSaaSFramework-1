@@ -1,223 +1,220 @@
-# Publishing Guide for SaaS Factory SDKs
+# Publishing Guide for Auth & RBAC Packages
 
-This guide explains how to publish the `@saas-factory/auth` and `@saas-factory/rbac` packages to npm.
+## Current Status
 
-## Prerequisites
+Your project includes 4 authentication and authorization packages ready for external use:
 
-1. **npm Account**: Create an account at [npmjs.com](https://www.npmjs.com)
-2. **npm CLI**: Install npm CLI and login:
-   ```bash
-   npm login
-   ```
-3. **Organization** (Optional): Create `@saas-factory` organization on npm
+### 1. `@saas-framework/auth` 
+- **Location**: `packages/auth/`
+- **Status**: Built but not published yet
+- **Purpose**: Core authentication SDK for multi-tenant applications
+- **Features**: JWT tokens, password hashing, session management
 
-## Package Structure
+### 2. `@saas-framework/rbac`
+- **Location**: `packages/rbac/`  
+- **Status**: Built but not published yet
+- **Purpose**: Role-based access control SDK
+- **Features**: Permission management, role assignments, middleware protection
 
-```
-packages/
-├── auth-sdk/
-│   ├── src/
-│   │   └── index.ts
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── README.md
-└── rbac-sdk/
-    ├── src/
-    │   └── index.ts
-    ├── package.json
-    ├── tsconfig.json
-    └── README.md
-```
+### 3. `@saas-factory/auth`
+- **Location**: `packages/auth-sdk/`
+- **Status**: Built but not published yet
+- **Purpose**: Alternative auth SDK with different branding
+- **Features**: Multi-tenant authentication, JWT, bcrypt
 
-## Publishing Steps
+### 4. `@saas-factory/rbac`
+- **Location**: `packages/rbac-sdk/`
+- **Status**: Built but not published yet  
+- **Purpose**: Alternative RBAC SDK with different branding
+- **Features**: Authorization, permissions, roles
 
-### 1. Install Dependencies
+## How to Publish These Packages
 
-For each package, install dependencies:
+### Prerequisites
+1. **NPM Account**: Create account at [npmjs.com](https://npmjs.com)
+2. **NPM Authentication**: Run `npm login` in terminal
+3. **Organization Setup** (Optional): Create organizations `@saas-framework` and `@saas-factory` on NPM
 
-```bash
-# Auth SDK
-cd packages/auth-sdk
-npm install
+### Step-by-Step Publishing
 
-# RBAC SDK  
-cd packages/rbac-sdk
-npm install
-```
-
-### 2. Build Packages
-
-Build TypeScript to JavaScript:
+#### For @saas-framework packages:
 
 ```bash
-# Auth SDK
-cd packages/auth-sdk
+# Navigate to auth package
+cd packages/auth
+
+# Build the package
 npm run build
 
-# RBAC SDK
-cd packages/rbac-sdk  
+# Publish to NPM
+npm run publish-package
+
+# Navigate to rbac package  
+cd ../rbac
+
+# Build the package
 npm run build
+
+# Publish to NPM
+npm run publish-package
 ```
 
-This creates `dist/` folders with compiled JavaScript and TypeScript definitions.
-
-### 3. Test Packages Locally
-
-Before publishing, test packages locally:
+#### For @saas-factory packages:
 
 ```bash
-# Create test project
-mkdir test-integration
-cd test-integration
-npm init -y
-
-# Install local packages
-npm install ../packages/auth-sdk
-npm install ../packages/rbac-sdk
-
-# Test imports
-node -e "const auth = require('@saas-factory/auth'); console.log('Auth loaded');"
-node -e "const rbac = require('@saas-factory/rbac'); console.log('RBAC loaded');"
-```
-
-### 4. Version Management
-
-Use semantic versioning (semver):
-
-```bash
-# For bug fixes
-npm version patch  # 1.0.0 -> 1.0.1
-
-# For new features  
-npm version minor  # 1.0.0 -> 1.1.0
-
-# For breaking changes
-npm version major  # 1.0.0 -> 2.0.0
-```
-
-### 5. Publish to npm
-
-```bash
-# Publish Auth SDK
+# Navigate to auth-sdk package
 cd packages/auth-sdk
+
+# Build the package
+npm run build
+
+# Publish (you'll need to add publish script)
 npm publish --access public
 
-# Publish RBAC SDK  
-cd packages/rbac-sdk
+# Navigate to rbac-sdk package
+cd ../rbac-sdk
+
+# Build the package
+npm run build
+
+# Publish (you'll need to add publish script)
 npm publish --access public
 ```
 
-## Automated Publishing with GitHub Actions
+### Package.json Enhancements Needed
 
-Create `.github/workflows/publish.yml`:
+Add these scripts to `packages/auth-sdk/package.json` and `packages/rbac-sdk/package.json`:
 
-```yaml
-name: Publish Packages
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
-          
-      - name: Install dependencies
-        run: |
-          cd packages/auth-sdk && npm ci
-          cd packages/rbac-sdk && npm ci
-          
-      - name: Build packages
-        run: |
-          cd packages/auth-sdk && npm run build
-          cd packages/rbac-sdk && npm run build
-          
-      - name: Publish Auth SDK
-        run: cd packages/auth-sdk && npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          
-      - name: Publish RBAC SDK  
-        run: cd packages/rbac-sdk && npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+```json
+{
+  "scripts": {
+    "publish-package": "npm publish --access public"
+  }
+}
 ```
 
-## Usage Examples
-
-After publishing, users can install and use:
+## How External Applications Can Use These Packages
 
 ### Installation
+
+Once published, users can install your packages:
+
 ```bash
+# For @saas-framework packages
+npm install @saas-framework/auth @saas-framework/rbac
+
+# Or for @saas-factory packages  
 npm install @saas-factory/auth @saas-factory/rbac
 ```
 
-### Basic Usage
-```typescript
-import SaaSFactoryAuth from '@saas-factory/auth';
-import SaaSFactoryRBAC from '@saas-factory/rbac';
+### Usage Examples
 
-// Get API keys from your SaaS Factory tenant
-const auth = new SaaSFactoryAuth({
-  apiKey: 'auth_abc123...',
-  baseUrl: 'https://your-platform.com',
-  tenantId: 'your-tenant-id'
+#### Express.js Application
+
+```javascript
+const express = require('express');
+const { SaaSAuth } = require('@saas-framework/auth');
+const { SaaSRBAC } = require('@saas-framework/rbac');
+
+const app = express();
+
+// Initialize auth with your platform's API
+const auth = new SaaSAuth({
+  apiUrl: 'https://your-saas-platform.com/api',
+  apiKey: process.env.SAAS_AUTH_API_KEY
 });
 
-const rbac = new SaaSFactoryRBAC({
-  apiKey: 'rbac_xyz789...',
-  baseUrl: 'https://your-platform.com', 
-  tenantId: 'your-tenant-id'
+// Initialize RBAC
+const rbac = new SaaSRBAC({
+  apiUrl: 'https://your-saas-platform.com/api', 
+  apiKey: process.env.SAAS_RBAC_API_KEY
 });
 
-// Authenticate user
-const result = await auth.login({ email, password });
+// Protected route with authentication
+app.get('/dashboard', auth.middleware(), (req, res) => {
+  res.json({ user: req.user });
+});
 
-// Check permissions  
-const canEdit = await rbac.hasPermission(result.user.id, 'documents', 'edit');
+// Protected route with specific permission
+app.get('/admin', rbac.middleware(['admin.access']), (req, res) => {
+  res.json({ message: 'Admin access granted' });
+});
 ```
 
-## Package Maintenance
+#### React Application
 
-### Updating Packages
+```jsx
+import { useAuth } from '@saas-framework/auth';
 
-1. Make changes to source code
-2. Update version in `package.json`
-3. Build and test locally
-4. Publish updated version
+function App() {
+  const { user, login, logout, isAuthenticated } = useAuth({
+    apiUrl: 'https://your-saas-platform.com/api',
+    apiKey: process.env.REACT_APP_SAAS_API_KEY
+  });
 
-### Security
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={login} />;
+  }
 
-- Never commit API keys or sensitive data
-- Use environment variables for configuration
-- Regularly audit dependencies: `npm audit`
-- Keep dependencies updated
+  return (
+    <div>
+      <h1>Welcome {user.name}</h1>
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+```
 
-### Documentation
+## Integration with Your Platform
 
-- Update README files for new features
-- Include code examples
-- Document breaking changes in changelog
-- Maintain API documentation
+### API Keys Management
+Your platform generates unique API keys for each tenant:
+- **Auth API Key**: For authentication operations
+- **RBAC API Key**: For authorization operations
 
-## Support
+### Tenant Configuration
+When external applications integrate:
 
-For questions about publishing or using the SDKs:
+1. **Register with your platform**: Get API keys for their organization
+2. **Configure SDK**: Point to your platform's API endpoints
+3. **Set up authentication**: Users authenticate through your platform
+4. **Manage permissions**: Roles and permissions managed in your admin portal
 
-1. Check the README files in each package
-2. Create issues in the repository
-3. Contact the SaaS Factory team
+### API Endpoints Your Platform Provides
 
-## License
+```
+POST /api/auth/login
+POST /api/auth/logout  
+GET  /api/auth/user
+POST /api/auth/register
 
-Both packages are published under MIT license, allowing commercial use.
+GET  /api/rbac/permissions
+POST /api/rbac/check-permission
+GET  /api/rbac/user-roles
+```
+
+## Benefits for External Users
+
+1. **Quick Integration**: Drop-in authentication and authorization
+2. **Multi-tenant Ready**: Built for SaaS applications from day one
+3. **Centralized Management**: All user management through your platform
+4. **Security**: Enterprise-grade JWT and permission systems
+5. **Scalability**: Built to handle growing user bases
+
+## Next Steps
+
+1. **Publish packages** using the commands above
+2. **Create documentation website** with integration guides
+3. **Add example projects** showing real implementations
+4. **Set up CI/CD** for automatic publishing of updates
+5. **Create developer onboarding** flow in your admin portal
+
+## Platform Revenue Model
+
+External applications using your packages could:
+- Pay per user authenticated
+- Pay monthly subscription per organization
+- Pay for premium features (SSO, advanced RBAC, etc.)
+- Use freemium model with usage limits
+
+This creates a sustainable business model around your authentication platform.
