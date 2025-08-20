@@ -1,0 +1,44 @@
+{
+  "name": "@saas-factory/auth",
+  "version": "1.0.0",
+  "description": "Multi-tenant authentication SDK for SaaS Factory platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "authentication",
+    "multi-tenant",
+    "saas",
+    "auth",
+    "jwt",
+    "typescript"
+  ],
+  "author": "SaaS Factory",
+  "license": "MIT",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.3",
+    "@types/bcryptjs": "^2.4.4",
+    "typescript": "^5.2.2"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-factory/auth-sdk"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

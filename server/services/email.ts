@@ -21,7 +21,7 @@ export class EmailService {
       smtpUsername: 'dev-saas@primussoft.com',
       smtpPassword: 'First@098',
       fromEmail: 'dev-saas@primussoft.com',
-      fromName: 'SaaS Framework Platform'
+      fromName: 'SaaS Factory Platform'
     };
 
     this.transporter = nodemailer.createTransport({
@@ -33,7 +33,7 @@ export class EmailService {
         pass: this.config.smtpPassword,
       },
       tls: {
-        ciphers: 'SSLv3'
+        rejectUnauthorized: false
       }
     });
   }
