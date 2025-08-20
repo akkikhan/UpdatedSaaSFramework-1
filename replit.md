@@ -6,13 +6,22 @@ This is a comprehensive multi-tenant SaaS framework built for tenant management 
 
 ## Recent Updates
 
-**Latest Feature: Guided Onboarding Wizard** (August 2025)
+**Latest Features: Notification System & Azure AD Integration** (August 2025)
+- **Complete Tenant Notification System**: Database table, service, and API endpoints for real-time notifications
+- **Email & In-App Notifications**: Platform admins automatically notify tenant admins of changes
+- **Module Change Alerts**: Tenants receive notifications when authentication modules are enabled/disabled
+- **Status Change Notifications**: Automatic alerts for tenant status changes (active/suspended/pending)
+- **Azure AD Integration**: Full MSAL-based authentication service with real credential testing
+- **Test Interface**: Created `/test-azure` page for testing real Azure AD configurations
+- **OAuth Flow**: Complete authorization code flow with success/error callback pages
+- **Notification Management**: Mark notifications as read, fetch by tenant, with metadata tracking
+
+**Previous Feature: Guided Onboarding Wizard** (August 2025)
 - Added comprehensive 4-step onboarding wizard with progress tracking
 - Visual step indicators with icons and completion status
 - Module selection with recommended badges and detailed descriptions
 - Dynamic configuration forms based on selected modules
 - Review step with full configuration summary
-- Smooth animations and transitions between steps
 - Both guided wizard and quick add options available
 
 ## User Preferences
@@ -48,8 +57,10 @@ Preferred communication style: Simple, everyday language.
 ### Database Schema Design
 - **Multi-tenant architecture** with tenant isolation
 - **Core entities**: Tenants, Users, Sessions, Roles, Permissions
+- **Notification system**: TenantNotifications table with type, metadata, and read status
 - **RBAC system** with role-based access control
 - **Email logging** for audit trails
+- **Module configurations** stored as JSON with tenant-specific settings
 - **UUID primary keys** for all entities
 
 ### Authentication and Authorization
