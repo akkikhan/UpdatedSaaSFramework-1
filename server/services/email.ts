@@ -18,9 +18,9 @@ export class EmailService {
     this.config = {
       smtpHost: 'smtp.office365.com',
       smtpPort: 587,
-      smtpUsername: 'dev-saas@primussoft.com',
-      smtpPassword: 'First@098',
-      fromEmail: 'dev-saas@primussoft.com',
+      smtpUsername: process.env.SMTP_USERNAME || 'dev-saas@primussoft.com',
+      smtpPassword: process.env.SMTP_PASSWORD || 'First@098',
+      fromEmail: process.env.SMTP_USERNAME || 'dev-saas@primussoft.com',
       fromName: 'SaaS Factory Platform'
     };
 
