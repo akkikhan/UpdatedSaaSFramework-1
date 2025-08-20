@@ -15,19 +15,25 @@ export class EmailService {
   private config: EmailConfig;
 
   constructor() {
+    const smtpUsername = process.env.SMTP_USERNAME || 'dev-saas@primussoft.com';
+    const smtpPassword = process.env.SMTP_PASSWORD || 'First@098';
+    
+    // Auto-detect SMTP settings based on email domain
+    const smtpSettings = this.getSmtpSettings(smtpUsername);
+    
     this.config = {
-      smtpHost: 'smtp.office365.com',
-      smtpPort: 587,
-      smtpUsername: process.env.SMTP_USERNAME || 'dev-saas@primussoft.com',
-      smtpPassword: process.env.SMTP_PASSWORD || 'First@098',
-      fromEmail: process.env.SMTP_USERNAME || 'dev-saas@primussoft.com',
+      smtpHost: smtpSettings.host,
+      smtpPort: smtpSettings.port,
+      smtpUsername,
+      smtpPassword,
+      fromEmail: smtpUsername,
       fromName: 'SaaS Factory Platform'
     };
 
     this.transporter = nodemailer.createTransport({
       host: this.config.smtpHost,
       port: this.config.smtpPort,
-      secure: false,
+      secure: smtpSettings.secure,
       auth: {
         user: this.config.smtpUsername,
         pass: this.config.smtpPassword,
@@ -36,6 +42,28 @@ export class EmailService {
         rejectUnauthorized: false
       }
     });
+  }
+
+  private getSmtpSettings(email: string): { host: string; port: number; secure: boolean } {
+    const domain = email.split('@')[1]?.toLowerCase();
+    
+    // Common email providers SMTP settings
+    const providers: Record<string, { host: string; port: number; secure: boolean }> = {
+      'gmail.com': { host: 'smtp.gmail.com', port: 587, secure: false },
+      'googlemail.com': { host: 'smtp.gmail.com', port: 587, secure: false },
+      'outlook.com': { host: 'smtp-mail.outlook.com', port: 587, secure: false },
+      'hotmail.com': { host: 'smtp-mail.outlook.com', port: 587, secure: false },
+      'live.com': { host: 'smtp-mail.outlook.com', port: 587, secure: false },
+      'office365.com': { host: 'smtp.office365.com', port: 587, secure: false },
+      'primussoft.com': { host: 'smtp.office365.com', port: 587, secure: false },
+      'yahoo.com': { host: 'smtp.mail.yahoo.com', port: 587, secure: false },
+      'yahoo.co.uk': { host: 'smtp.mail.yahoo.com', port: 587, secure: false },
+      'icloud.com': { host: 'smtp.mail.me.com', port: 587, secure: false },
+      'me.com': { host: 'smtp.mail.me.com', port: 587, secure: false },
+      'mac.com': { host: 'smtp.mail.me.com', port: 587, secure: false }
+    };
+
+    return providers[domain] || { host: 'smtp.gmail.com', port: 587, secure: false };
   }
 
   async sendModuleStatusEmail(tenant: {
@@ -418,10 +446,30 @@ const rbac = new SaaSRBAC({
 
   async testConnection(): Promise<boolean> {
     try {
+      console.log(`Testing SMTP connection with:
+        Host: ${this.config.smtpHost}
+        Port: ${this.config.smtpPort}
+        Username: ${this.config.smtpUsername}
+        From: ${this.config.fromEmail}`);
+      
       await this.transporter.verify();
+      console.log('SMTP connection successful!');
       return true;
     } catch (error) {
       console.error('SMTP connection test failed:', error);
+      
+      // Provide helpful error messages
+      if (error instanceof Error && error.message.includes('535')) {
+        console.error(`
+Authentication failed. Possible solutions:
+1. For Gmail: Use an App Password instead of your regular password
+   - Go to Google Account > Security > 2-Step Verification > App passwords
+2. For Outlook/Office365: Use the correct credentials or app password
+3. For other providers: Verify your email and password are correct
+4. Check if 2-factor authentication requires an app password
+        `);
+      }
+      
       return false;
     }
   }

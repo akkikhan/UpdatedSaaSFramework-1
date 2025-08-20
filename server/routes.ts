@@ -25,6 +25,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Test email route for debugging
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { to, subject = "Test Email" } = req.body;
+      
+      if (!to) {
+        return res.status(400).json({ message: "Recipient email 'to' is required" });
+      }
+
+      const testEmail = {
+        id: 'test',
+        name: 'Test Organization',
+        orgId: 'test-org',
+        adminEmail: to,
+        authApiKey: 'test-auth-key',
+        rbacApiKey: 'test-rbac-key'
+      };
+
+      const emailSent = await emailService.sendTenantOnboardingEmail(testEmail);
+      
+      if (emailSent) {
+        res.json({ 
+          success: true, 
+          message: `Test email sent successfully to ${to}` 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: "Failed to send test email. Check server logs for details." 
+        });
+      }
+    } catch (error) {
+      console.error("Test email error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Email test failed",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Tenant management routes (admin only for now)
   
   // Get all tenants
