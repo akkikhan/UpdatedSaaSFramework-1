@@ -1,0 +1,41 @@
+{
+  "name": "@saas-framework/auth",
+  "version": "1.0.0",
+  "description": "Authentication SDK for SaaS Framework multi-tenant applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "auth",
+    "jwt",
+    "multi-tenant",
+    "saas",
+    "authentication",
+    "express"
+  ],
+  "author": "SaaS Framework",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  },
+  "peerDependencies": {
+    "express": ">=4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-framework/auth"
+  },
+  "homepage": "https://github.com/saas-framework/auth#readme"
+}

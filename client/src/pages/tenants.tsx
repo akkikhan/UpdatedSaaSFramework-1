@@ -11,12 +11,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import AddTenantModal from "@/components/modals/add-tenant-modal";
+import ViewTenantModal from "@/components/modals/view-tenant-modal";
+import EditTenantModal from "@/components/modals/edit-tenant-modal";
 import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
+import type { Tenant } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
 export default function TenantsPage() {
   const [showAddTenantModal, setShowAddTenantModal] = useState(false);
+  const [showViewTenantModal, setShowViewTenantModal] = useState(false);
+  const [showEditTenantModal, setShowEditTenantModal] = useState(false);
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   const { data: tenants, isLoading } = useTenants();
@@ -35,6 +41,23 @@ export default function TenantsPage() {
 
   const handleResendEmail = async (id: string) => {
     await resendEmail.mutateAsync(id);
+  };
+
+  const handleViewTenant = (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    setShowViewTenantModal(true);
+  };
+
+  const handleEditTenant = (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    setShowEditTenantModal(true);
+  };
+
+  const handleDeleteTenant = async (tenant: Tenant) => {
+    if (confirm(`Are you sure you want to delete tenant "${tenant.name}"? This action cannot be undone.`)) {
+      // Implement delete functionality
+      console.log('Delete tenant:', tenant.id);
+    }
   };
 
   return (
@@ -138,6 +161,7 @@ export default function TenantsPage() {
                             size="sm"
                             className="text-slate-400 hover:text-slate-600"
                             title="View Details"
+                            onClick={() => handleViewTenant(tenant)}
                             data-testid={`button-view-${tenant.orgId}`}
                           >
                             <Eye size={16} />
@@ -158,6 +182,7 @@ export default function TenantsPage() {
                             size="sm"
                             className="text-slate-400 hover:text-slate-600"
                             title="Edit"
+                            onClick={() => handleEditTenant(tenant)}
                             data-testid={`button-edit-${tenant.orgId}`}
                           >
                             <Edit size={16} />
@@ -180,6 +205,7 @@ export default function TenantsPage() {
                               size="sm"
                               className="text-red-400 hover:text-red-600"
                               title="Delete"
+                              onClick={() => handleDeleteTenant(tenant)}
                               data-testid={`button-delete-${tenant.orgId}`}
                             >
                               <Trash size={16} />
@@ -228,6 +254,18 @@ export default function TenantsPage() {
       <AddTenantModal
         open={showAddTenantModal}
         onOpenChange={setShowAddTenantModal}
+      />
+      
+      <ViewTenantModal
+        open={showViewTenantModal}
+        onOpenChange={setShowViewTenantModal}
+        tenant={selectedTenant}
+      />
+      
+      <EditTenantModal
+        open={showEditTenantModal}
+        onOpenChange={setShowEditTenantModal}
+        tenant={selectedTenant}
       />
     </div>
   );

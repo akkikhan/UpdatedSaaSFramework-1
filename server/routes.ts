@@ -59,6 +59,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get tenant by orgId
+  app.get("/api/tenants/by-org-id/:orgId", async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const tenant = await storage.getTenantByOrgId(orgId);
+      
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error fetching tenant by orgId:", error);
+      res.status(500).json({ message: "Failed to fetch tenant" });
+    }
+  });
+
+  // Update tenant status
+  app.patch("/api/tenants/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!['pending', 'active', 'suspended'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      await storage.updateTenantStatus(id, status);
+      res.json({ message: "Tenant status updated successfully" });
+    } catch (error) {
+      console.error("Error updating tenant status:", error);
+      res.status(500).json({ message: "Failed to update tenant status" });
+    }
+  });
+
   // Create new tenant
   app.post("/api/tenants", async (req, res) => {
     try {

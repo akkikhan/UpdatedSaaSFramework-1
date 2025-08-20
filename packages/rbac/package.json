@@ -1,0 +1,38 @@
+{
+  "name": "@saas-framework/rbac",
+  "version": "1.0.0",
+  "description": "Role-Based Access Control SDK for SaaS Framework multi-tenant applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "rbac",
+    "roles",
+    "permissions",
+    "multi-tenant",
+    "saas",
+    "authorization",
+    "express"
+  ],
+  "author": "SaaS Framework",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "express": ">=4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-framework/rbac"
+  },
+  "homepage": "https://github.com/saas-framework/rbac#readme"
+}
