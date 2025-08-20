@@ -87,10 +87,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.updateTenantStatus(id, status);
-      res.json({ message: "Tenant status updated successfully" });
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId: id,
+        action: 'tenant_status_updated',
+        entityType: 'tenant',
+        entityId: id,
+        details: { newStatus: status },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      console.log(`Tenant ${id} status updated to: ${status}`);
+      
+      res.json({ 
+        message: "Tenant status updated successfully",
+        status: status,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       console.error("Error updating tenant status:", error);
       res.status(500).json({ message: "Failed to update tenant status" });
+    }
+  });
+  
+  // Test endpoint to suspend the test tenant (for demonstration)
+  app.post("/api/test/suspend-tenant", async (req, res) => {
+    try {
+      const testTenant = await storage.getTenantByOrgId('test');
+      if (!testTenant) {
+        return res.status(404).json({ message: "Test tenant not found" });
+      }
+      
+      await storage.updateTenantStatus(testTenant.id, 'suspended');
+      
+      res.json({ 
+        message: "Test tenant suspended successfully. Active users will be logged out on next verification.",
+        tenantId: testTenant.id,
+        orgId: testTenant.orgId
+      });
+    } catch (error) {
+      console.error("Error suspending test tenant:", error);
+      res.status(500).json({ message: "Failed to suspend test tenant" });
+    }
+  });
+  
+  // Test endpoint to reactivate the test tenant 
+  app.post("/api/test/reactivate-tenant", async (req, res) => {
+    try {
+      const testTenant = await storage.getTenantByOrgId('test');
+      if (!testTenant) {
+        return res.status(404).json({ message: "Test tenant not found" });
+      }
+      
+      await storage.updateTenantStatus(testTenant.id, 'active');
+      
+      res.json({ 
+        message: "Test tenant reactivated successfully",
+        tenantId: testTenant.id,
+        orgId: testTenant.orgId
+      });
+    } catch (error) {
+      console.error("Error reactivating test tenant:", error);
+      res.status(500).json({ message: "Failed to reactivate test tenant" });
     }
   });
 
@@ -294,10 +354,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Verify token
   app.get("/api/v2/auth/verify", authMiddleware, async (req, res) => {
-    res.json({ 
-      valid: true, 
-      user: req.user 
-    });
+    try {
+      // Check if tenant is still active
+      const tenant = await storage.getTenant(req.user!.tenantId);
+      
+      if (!tenant || tenant.status === 'suspended') {
+        return res.status(403).json({ 
+          valid: false,
+          error: 'TENANT_SUSPENDED',
+          message: 'Your organization\'s account has been suspended. Please contact your administrator.',
+          tenant: tenant ? {
+            name: tenant.name,
+            status: tenant.status,
+            adminEmail: tenant.adminEmail
+          } : null
+        });
+      }
+      
+      res.json({ 
+        valid: true, 
+        user: req.user,
+        tenant: {
+          name: tenant.name,
+          status: tenant.status,
+          orgId: tenant.orgId
+        }
+      });
+    } catch (error) {
+      console.error('Token verification error:', error);
+      res.status(500).json({ 
+        valid: false,
+        error: 'VERIFICATION_ERROR',
+        message: 'Unable to verify account status'
+      });
+    }
   });
 
   // Refresh token

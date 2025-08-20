@@ -73,6 +73,7 @@ export function useTenantLogin() {
 
 export function useTenantAuth() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Get current user from localStorage for now
   const user = (() => {
@@ -83,6 +84,50 @@ export function useTenantAuth() {
       return null;
     }
   })();
+  
+  // Verify token and check tenant status
+  const { data: verifyData } = useQuery({
+    queryKey: ['/api/v2/auth/verify'],
+    queryFn: async () => {
+      const token = localStorage.getItem('tenant_token');
+      if (!token) return null;
+      
+      const response = await fetch('/api/v2/auth/verify', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        
+        // Handle suspended tenant
+        if (errorData?.error === 'TENANT_SUSPENDED') {
+          localStorage.removeItem('tenant_token');
+          localStorage.removeItem('tenant_user');
+          toast({
+            title: "Account Suspended",
+            description: errorData.message || "Your organization's account has been suspended.",
+            variant: "destructive",
+          });
+          // Force page reload to show suspension notice
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          return null;
+        }
+        
+        localStorage.removeItem('tenant_token');
+        localStorage.removeItem('tenant_user');
+        return null;
+      }
+      
+      return response.json();
+    },
+    enabled: !!user,
+    retry: false,
+    refetchInterval: 30000, // Check every 30 seconds for suspension
+  });
 
   const logout = useMutation({
     mutationFn: async () => {

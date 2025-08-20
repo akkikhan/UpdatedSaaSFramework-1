@@ -55,17 +55,50 @@ export default function TenantDashboard() {
   const { data: tenant } = useQuery({
     queryKey: [`/api/tenants/by-org-id/${orgId}`],
     enabled: !!orgId
-  });
+  }) as { data: any };
   
   const { data: tenantUsers = [] } = useQuery({
     queryKey: [`/api/tenants/${tenant?.id}/users`],
     enabled: !!tenant?.id
-  });
+  }) as { data: any[] };
   
   const { data: tenantRoles = [] } = useQuery({
     queryKey: [`/api/tenants/${tenant?.id}/roles`],
     enabled: !!tenant?.id
-  });
+  }) as { data: any[] };
+  
+  // Check if tenant is suspended and handle accordingly
+  if (tenant && tenant.status === 'suspended') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-600 text-2xl">⚠️</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-slate-800 mb-4">Account Suspended</h2>
+          <p className="text-slate-600 mb-6">
+            Your organization's account has been suspended. Please contact your administrator for assistance.
+          </p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-red-700">
+              <strong>Organization:</strong> {tenant.name}<br />
+              <strong>Status:</strong> {tenant.status}<br />
+              <strong>Contact:</strong> {tenant.adminEmail}
+            </p>
+          </div>
+          <Button 
+            onClick={() => {
+              logout.mutate();
+              window.location.href = `/tenant/${orgId}/login`;
+            }}
+            className="w-full"
+          >
+            Return to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
   
   if (!tenant) {
     return (
@@ -79,14 +112,14 @@ export default function TenantDashboard() {
   }
   
   const tenantInfo = {
-    name: tenant.name,
-    status: tenant.status,
-    authApiKey: tenant.authApiKey,
-    rbacApiKey: tenant.rbacApiKey,
+    name: tenant.name || 'Unknown',
+    status: tenant.status || 'unknown',
+    authApiKey: tenant.authApiKey || '',
+    rbacApiKey: tenant.rbacApiKey || '',
     enabledModules: (tenant.enabledModules as string[]) || ['auth', 'rbac'],
     moduleConfigs: tenant.moduleConfigs || {},
-    users: tenantUsers,
-    roles: tenantRoles
+    users: tenantUsers || [],
+    roles: tenantRoles || []
   };
 
   return (
@@ -225,7 +258,7 @@ export default function TenantDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tenantInfo.users.length > 0 ? tenantInfo.users.map((user: any) => (
+                    {(tenantInfo.users as any[]).length > 0 ? (tenantInfo.users as any[]).map((user: any) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.email}</TableCell>
                         <TableCell>
@@ -268,7 +301,7 @@ export default function TenantDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {tenantInfo.roles.length > 0 ? tenantInfo.roles.map((role: any) => (
+                {(tenantInfo.roles as any[]).length > 0 ? (tenantInfo.roles as any[]).map((role: any) => (
                   <Card key={role.id}>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
