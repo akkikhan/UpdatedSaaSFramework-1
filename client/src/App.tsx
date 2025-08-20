@@ -15,11 +15,18 @@ import EmailTemplatesPage from "@/pages/email-templates";
 import SystemHealthPage from "@/pages/system-health";
 import TenantLogin from "@/pages/tenant-login";
 import TenantDashboard from "@/pages/tenant-dashboard";
+import AzureTestPage from "@/pages/azure-test";
+import AuthSuccessPage from "@/pages/auth-success";
+import AuthErrorPage from "@/pages/auth-error";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
+      {/* Authentication Result Pages */}
+      <Route path="/auth-success" component={AuthSuccessPage} />
+      <Route path="/auth-error" component={AuthErrorPage} />
+      
       {/* Tenant Portal Routes */}
       <Route path="/tenant/:orgId/login" component={TenantLogin} />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
@@ -39,6 +46,7 @@ function Router() {
             <Route path="/sdk" component={SDKIntegrationPage} />
             <Route path="/emails" component={EmailTemplatesPage} />
             <Route path="/system" component={SystemHealthPage} />
+            <Route path="/test-azure" component={AzureTestPage} />
             <Route component={NotFound} />
           </Switch>
         </AdminLayout>

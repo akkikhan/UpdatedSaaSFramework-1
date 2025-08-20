@@ -71,6 +71,19 @@ export const permissions = pgTable("permissions", {
   isSystem: boolean("is_system").default(false)
 });
 
+// Tenant notifications for admin actions
+export const tenantNotifications = pgTable("tenant_notifications", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id),
+  type: varchar("type", { length: 50 }).notNull(), // module_enabled, module_disabled, status_changed, config_updated
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata").default(sql`'{}'`), // Store additional context
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  readAt: timestamp("read_at")
+});
+
 // Email logs for tracking
 export const emailLogs = pgTable("email_logs", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -193,6 +206,11 @@ export const insertTenantUserRoleSchema = createInsertSchema(tenantUserRoles).om
   assignedAt: true
 });
 
+export const insertTenantNotificationSchema = createInsertSchema(tenantNotifications).omit({
+  id: true,
+  createdAt: true
+});
+
 // Types
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
@@ -209,3 +227,5 @@ export type TenantRole = typeof tenantRoles.$inferSelect;
 export type InsertTenantRole = z.infer<typeof insertTenantRoleSchema>;
 export type TenantUserRole = typeof tenantUserRoles.$inferSelect;
 export type InsertTenantUserRole = z.infer<typeof insertTenantUserRoleSchema>;
+export type TenantNotification = typeof tenantNotifications.$inferSelect;
+export type InsertTenantNotification = z.infer<typeof insertTenantNotificationSchema>;

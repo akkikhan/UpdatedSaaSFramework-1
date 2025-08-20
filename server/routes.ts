@@ -5,6 +5,8 @@ import { emailService } from "./services/email";
 import { authService } from "./services/auth";
 import { authMiddleware, tenantMiddleware } from "./middleware/auth";
 import { insertTenantSchema, insertUserSchema, insertTenantUserSchema, insertTenantRoleSchema, insertTenantUserRoleSchema } from "@shared/schema";
+import { notificationService } from "./services/notification";
+import { AzureADService } from "./services/azure-ad";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -188,8 +190,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.get('User-Agent')
       });
       
-      // Send email notification if there are changes
+      // Send notifications for module changes
       if (enabled.length > 0 || disabled.length > 0) {
+        // Send email notification
         await emailService.sendModuleStatusEmail(
           {
             id: tenant.id,
@@ -198,6 +201,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           { enabled, disabled }
         );
+
+        // Create in-app notifications
+        for (const module of enabled) {
+          await notificationService.notifyModuleStatusChange(id, module, true, true);
+        }
+        for (const module of disabled) {
+          await notificationService.notifyModuleStatusChange(id, module, false, true);
+        }
       }
       
       res.json({ 
@@ -297,17 +308,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tenants/:id/status", async (req, res) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, reason } = req.body;
       
       if (!['pending', 'active', 'suspended'].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
 
       await storage.updateTenantStatus(id, status);
+      
+      // Send notification to tenant
+      await notificationService.notifyTenantStatusChange(id, status, reason);
+      
       res.json({ message: "Tenant status updated successfully" });
     } catch (error) {
       console.error("Error updating tenant status:", error);
       res.status(500).json({ message: "Failed to update tenant status" });
+    }
+  });
+
+  // Get notifications for a tenant
+  app.get("/api/tenants/:id/notifications", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      const notifications = await notificationService.getNotificationsForTenant(id, limit);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  // Mark notification as read
+  app.patch("/api/notifications/:id/read", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const notification = await notificationService.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
     }
   });
 
@@ -491,71 +533,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Azure AD not properly configured" });
       }
 
-      const { AzureADService } = await import('./services/oauth/azure-ad');
-      const azureService = new AzureADService({
+      const azureService = AzureADService.createFromTenantConfig({
         tenantId: azureConfig.tenantId,
         clientId: azureConfig.clientId,
         clientSecret: azureConfig.clientSecret,
         redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/azure-ad/callback`,
       });
 
-      const state = azureService.generateState(orgId);
-      const authUrl = await azureService.getAuthUrl(state);
+      const authUrl = await azureService.getAuthorizationUrl(['User.Read']);
       
-      res.redirect(authUrl);
+      res.json({ authUrl });
     } catch (error) {
-      console.error("Azure AD OAuth error:", error);
-      res.status(500).json({ message: "OAuth initialization failed" });
+      console.error("Error initiating Azure AD OAuth:", error);
+      res.status(500).json({ message: "Failed to initiate OAuth" });
     }
   });
 
   // Azure AD OAuth callback
   app.get("/api/oauth/azure-ad/callback", async (req, res) => {
     try {
-      const { code, state } = req.query as { code: string; state: string };
+      const { code } = req.query;
       
-      if (!code || !state) {
-        return res.status(400).json({ message: "Missing code or state parameter" });
+      if (!code) {
+        return res.status(400).json({ message: "Authorization code not provided" });
       }
 
-      const { AzureADService } = await import('./services/oauth/azure-ad');
-      const azureService = new AzureADService({
-        tenantId: 'temp', // Will be replaced with actual config
-        clientId: 'temp',
-        clientSecret: 'temp',
-        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/azure-ad/callback`,
-      });
-
-      const stateData = azureService.parseState(state);
-      if (!stateData) {
-        return res.status(400).json({ message: "Invalid state parameter" });
-      }
-
-      const tenant = await storage.getTenantByOrgId(stateData.tenantOrgId);
-      if (!tenant) {
-        return res.status(404).json({ message: "Tenant not found" });
-      }
-
-      const moduleConfigs = tenant.moduleConfigs as any || {};
-      const azureConfig = moduleConfigs['azure-ad'];
-      
-      // Recreate service with actual config
-      const configuredAzureService = new AzureADService({
-        tenantId: azureConfig.tenantId,
-        clientId: azureConfig.clientId,
-        clientSecret: azureConfig.clientSecret,
-        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/azure-ad/callback`,
-      });
-
-      const result = await configuredAzureService.handleCallback(code, state, tenant);
-      
-      if (!result) {
-        return res.status(401).json({ message: "OAuth authentication failed" });
-      }
-
-      // Redirect to tenant dashboard with token
-      const redirectUrl = `/tenant/${tenant.orgId}/dashboard?token=${result.token}`;
-      res.redirect(redirectUrl);
+      // For now, redirect to success page with code
+      // In production, you'd validate the code and create a user session
+      res.redirect(`/auth-success?code=${code}&provider=azure-ad`);
     } catch (error) {
       console.error("Azure AD callback error:", error);
       res.status(500).json({ message: "OAuth callback failed" });
