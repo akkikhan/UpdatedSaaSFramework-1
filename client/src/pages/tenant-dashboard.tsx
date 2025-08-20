@@ -62,8 +62,13 @@ export default function TenantDashboard() {
         tenantId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
         clientId: 'your-azure-client-id',
         domain: 'yourdomain.onmicrosoft.com'
+      },
+      'auth0': {
+        domain: 'yourapp.auth0.com',
+        clientId: 'your-auth0-client-id',
+        clientSecret: 'your-auth0-client-secret'
       }
-    },
+    } as any,
     users: [
       { id: '1', email: user.email, role: 'Admin', status: 'Active', lastLogin: new Date().toISOString() }
     ],
@@ -295,7 +300,7 @@ export default function TenantDashboard() {
                         <Badge variant="default">Active</Badge>
                       </div>
                     </CardHeader>
-                    {(module === 'azure-ad' || module === 'auth0') && tenantInfo.moduleConfigs[module] && (
+                    {(module === 'azure-ad' || module === 'auth0') && (tenantInfo.moduleConfigs as any)[module] && (
                       <CardContent className="pt-0">
                         <div className="space-y-2 bg-slate-50 p-3 rounded-lg">
                           <p className="text-sm font-medium text-slate-700">Configuration:</p>
@@ -308,8 +313,8 @@ export default function TenantDashboard() {
                           )}
                           {module === 'auth0' && (
                             <>
-                              <p className="text-xs text-slate-600">Domain: {tenantInfo.moduleConfigs[module]?.domain}</p>
-                              <p className="text-xs text-slate-600">Client ID: {tenantInfo.moduleConfigs[module]?.clientId}</p>
+                              <p className="text-xs text-slate-600">Domain: {(tenantInfo.moduleConfigs as any)[module]?.domain}</p>
+                              <p className="text-xs text-slate-600">Client ID: {(tenantInfo.moduleConfigs as any)[module]?.clientId}</p>
                             </>
                           )}
                         </div>

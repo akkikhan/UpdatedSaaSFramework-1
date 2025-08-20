@@ -282,6 +282,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OAuth routes
+  
+  // Azure AD OAuth initiation
+  app.get("/api/oauth/azure-ad/:orgId", async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const tenant = await storage.getTenantByOrgId(orgId);
+      
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Check if Azure AD is enabled for this tenant
+      const enabledModules = tenant.enabledModules as string[] || [];
+      if (!enabledModules.includes('azure-ad')) {
+        return res.status(400).json({ message: "Azure AD not enabled for this tenant" });
+      }
+
+      const moduleConfigs = tenant.moduleConfigs as any || {};
+      const azureConfig = moduleConfigs['azure-ad'];
+      
+      if (!azureConfig || !azureConfig.tenantId || !azureConfig.clientId || !azureConfig.clientSecret) {
+        return res.status(400).json({ message: "Azure AD not properly configured" });
+      }
+
+      const { AzureADService } = await import('./services/oauth/azure-ad');
+      const azureService = new AzureADService({
+        tenantId: azureConfig.tenantId,
+        clientId: azureConfig.clientId,
+        clientSecret: azureConfig.clientSecret,
+        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/azure-ad/callback`,
+      });
+
+      const state = azureService.generateState(orgId);
+      const authUrl = await azureService.getAuthUrl(state);
+      
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error("Azure AD OAuth error:", error);
+      res.status(500).json({ message: "OAuth initialization failed" });
+    }
+  });
+
+  // Azure AD OAuth callback
+  app.get("/api/oauth/azure-ad/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query as { code: string; state: string };
+      
+      if (!code || !state) {
+        return res.status(400).json({ message: "Missing code or state parameter" });
+      }
+
+      const { AzureADService } = await import('./services/oauth/azure-ad');
+      const azureService = new AzureADService({
+        tenantId: 'temp', // Will be replaced with actual config
+        clientId: 'temp',
+        clientSecret: 'temp',
+        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/azure-ad/callback`,
+      });
+
+      const stateData = azureService.parseState(state);
+      if (!stateData) {
+        return res.status(400).json({ message: "Invalid state parameter" });
+      }
+
+      const tenant = await storage.getTenantByOrgId(stateData.tenantOrgId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      const moduleConfigs = tenant.moduleConfigs as any || {};
+      const azureConfig = moduleConfigs['azure-ad'];
+      
+      // Recreate service with actual config
+      const configuredAzureService = new AzureADService({
+        tenantId: azureConfig.tenantId,
+        clientId: azureConfig.clientId,
+        clientSecret: azureConfig.clientSecret,
+        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/azure-ad/callback`,
+      });
+
+      const result = await configuredAzureService.handleCallback(code, state, tenant);
+      
+      if (!result) {
+        return res.status(401).json({ message: "OAuth authentication failed" });
+      }
+
+      // Redirect to tenant dashboard with token
+      const redirectUrl = `/tenant/${tenant.orgId}/dashboard?token=${result.token}`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error("Azure AD callback error:", error);
+      res.status(500).json({ message: "OAuth callback failed" });
+    }
+  });
+
+  // Auth0 OAuth initiation
+  app.get("/api/oauth/auth0/:orgId", async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const tenant = await storage.getTenantByOrgId(orgId);
+      
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Check if Auth0 is enabled for this tenant
+      const enabledModules = tenant.enabledModules as string[] || [];
+      if (!enabledModules.includes('auth0')) {
+        return res.status(400).json({ message: "Auth0 not enabled for this tenant" });
+      }
+
+      const moduleConfigs = tenant.moduleConfigs as any || {};
+      const auth0Config = moduleConfigs['auth0'];
+      
+      if (!auth0Config || !auth0Config.domain || !auth0Config.clientId || !auth0Config.clientSecret) {
+        return res.status(400).json({ message: "Auth0 not properly configured" });
+      }
+
+      const { Auth0Service } = await import('./services/oauth/auth0');
+      const auth0Service = new Auth0Service({
+        domain: auth0Config.domain,
+        clientId: auth0Config.clientId,
+        clientSecret: auth0Config.clientSecret,
+        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/auth0/callback`,
+      });
+
+      const state = auth0Service.generateState(orgId);
+      const authUrl = auth0Service.getAuthUrl(state);
+      
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error("Auth0 OAuth error:", error);
+      res.status(500).json({ message: "OAuth initialization failed" });
+    }
+  });
+
+  // Auth0 OAuth callback
+  app.get("/api/oauth/auth0/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query as { code: string; state: string };
+      
+      if (!code || !state) {
+        return res.status(400).json({ message: "Missing code or state parameter" });
+      }
+
+      const { Auth0Service } = await import('./services/oauth/auth0');
+      const auth0Service = new Auth0Service({
+        domain: 'temp', // Will be replaced with actual config
+        clientId: 'temp',
+        clientSecret: 'temp',
+        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/auth0/callback`,
+      });
+
+      const stateData = auth0Service.parseState(state);
+      if (!stateData) {
+        return res.status(400).json({ message: "Invalid state parameter" });
+      }
+
+      const tenant = await storage.getTenantByOrgId(stateData.tenantOrgId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      const moduleConfigs = tenant.moduleConfigs as any || {};
+      const auth0Config = moduleConfigs['auth0'];
+      
+      // Recreate service with actual config
+      const configuredAuth0Service = new Auth0Service({
+        domain: auth0Config.domain,
+        clientId: auth0Config.clientId,
+        clientSecret: auth0Config.clientSecret,
+        redirectUri: `${req.protocol}://${req.get('host')}/api/oauth/auth0/callback`,
+      });
+
+      const result = await configuredAuth0Service.handleCallback(code, state, tenant);
+      
+      if (!result) {
+        return res.status(401).json({ message: "OAuth authentication failed" });
+      }
+
+      // Redirect to tenant dashboard with token
+      const redirectUrl = `/tenant/${tenant.orgId}/dashboard?token=${result.token}`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error("Auth0 callback error:", error);
+      res.status(500).json({ message: "OAuth callback failed" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

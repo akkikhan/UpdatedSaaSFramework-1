@@ -118,10 +118,8 @@ export class AuthService {
   }
 
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
-    // Simple hash verification - in production use bcrypt
-    const crypto = await import('crypto');
-    const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
-    return passwordHash === hash;
+    const bcrypt = await import('bcryptjs');
+    return bcrypt.compare(password, hash);
   }
 }
 

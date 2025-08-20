@@ -110,7 +110,7 @@ export class SaaSRBAC {
       throw new Error('Failed to fetch user permissions');
     }
 
-    const result = await response.json();
+    const result = await response.json() as { permissions?: string[] };
     return result.permissions || [];
   }
 
@@ -129,7 +129,7 @@ export class SaaSRBAC {
       throw new Error('Failed to fetch roles');
     }
 
-    return response.json();
+    return response.json() as Promise<Role[]>;
   }
 
   /**
@@ -147,7 +147,7 @@ export class SaaSRBAC {
       throw new Error('Failed to fetch permissions');
     }
 
-    return response.json();
+    return response.json() as Promise<Permission[]>;
   }
 
   /**
@@ -164,7 +164,7 @@ export class SaaSRBAC {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as { message?: string };
       throw new Error(error.message || 'Failed to assign role');
     }
   }
@@ -181,7 +181,7 @@ export class SaaSRBAC {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as { message?: string };
       throw new Error(error.message || 'Failed to remove role');
     }
   }
@@ -192,12 +192,12 @@ export class SaaSRBAC {
   middleware(requiredPermissions: string[], options: { requireAll?: boolean } = { requireAll: false }) {
     return async (req: Request, res: Response, next: NextFunction) => {
       // Ensure user is authenticated (should be done by auth middleware first)
-      if (!req.user || !req.user.id) {
+      if (!req.user || !(req.user as any).id) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
       try {
-        const userId = req.user.id;
+        const userId = (req.user as any).id;
         
         if (options.requireAll) {
           // User must have ALL specified permissions
@@ -240,12 +240,12 @@ export class SaaSRBAC {
   roleMiddleware(requiredRoles: string[]) {
     return async (req: Request, res: Response, next: NextFunction) => {
       // Ensure user is authenticated
-      if (!req.user || !req.user.id) {
+      if (!req.user || !(req.user as any).id) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
       try {
-        const userId = req.user.id;
+        const userId = (req.user as any).id;
         const userRoles = await this.getUserRoles(userId);
         const userRoleNames = userRoles.map(role => role.name);
         
