@@ -178,7 +178,7 @@ export default function LogsPage() {
                     <SelectValue placeholder="Filter by action..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All actions</SelectItem>
+                    <SelectItem value="all">All actions</SelectItem>
                     <SelectItem value="modules_updated">Module Updates</SelectItem>
                     <SelectItem value="tenant_created">Tenant Created</SelectItem>
                     <SelectItem value="tenant_status_updated">Status Updates</SelectItem>
@@ -275,7 +275,7 @@ export default function LogsPage() {
                     <SelectValue placeholder="Filter by status..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="sent">Sent</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
