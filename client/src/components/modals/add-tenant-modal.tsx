@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCreateTenant } from "@/hooks/use-tenants";
 
 const formSchema = z.object({
@@ -28,6 +30,20 @@ const formSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Organization ID can only contain lowercase letters, numbers, and hyphens"),
   adminEmail: z.string().email("Please enter a valid email address"),
   sendEmail: z.boolean().default(true),
+  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0"])).default(["auth", "rbac"]),
+  moduleConfigs: z.object({
+    "azure-ad": z.object({
+      tenantId: z.string().optional(),
+      clientId: z.string().optional(),
+      clientSecret: z.string().optional(),
+      domain: z.string().optional(),
+    }).optional(),
+    "auth0": z.object({
+      domain: z.string().optional(),
+      clientId: z.string().optional(),
+      clientSecret: z.string().optional(),
+    }).optional(),
+  }).default({}),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -47,6 +63,8 @@ export default function AddTenantModal({ open, onOpenChange }: AddTenantModalPro
       orgId: "",
       adminEmail: "",
       sendEmail: true,
+      enabledModules: ["auth", "rbac"],
+      moduleConfigs: {},
     },
   });
 
@@ -159,6 +177,238 @@ export default function AddTenantModal({ open, onOpenChange }: AddTenantModalPro
                 </FormItem>
               )}
             />
+
+            <Separator className="my-6" />
+
+            {/* Module Selection */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Authentication & Authorization Modules</h3>
+              
+              <FormField
+                control={form.control}
+                name="enabledModules"
+                render={() => (
+                  <FormItem>
+                    <div className="grid grid-cols-1 gap-4">
+                      {/* Core Auth Module */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center space-x-2">
+                            <Checkbox checked={true} disabled />
+                            <span>Core Authentication (Required)</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <p className="text-sm text-slate-600">Basic JWT authentication and user management</p>
+                        </CardContent>
+                      </Card>
+
+                      {/* RBAC Module */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center space-x-2">
+                            <FormField
+                              control={form.control}
+                              name="enabledModules"
+                              render={({ field }) => (
+                                <Checkbox
+                                  checked={field.value?.includes("rbac")}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...current.filter(m => m !== "rbac"), "rbac"]);
+                                    } else {
+                                      field.onChange(current.filter(m => m !== "rbac"));
+                                    }
+                                  }}
+                                  data-testid="checkbox-rbac-module"
+                                />
+                              )}
+                            />
+                            <span>Role-Based Access Control (RBAC)</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <p className="text-sm text-slate-600">Advanced role and permission management system</p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Azure AD Module */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center space-x-2">
+                            <FormField
+                              control={form.control}
+                              name="enabledModules"
+                              render={({ field }) => (
+                                <Checkbox
+                                  checked={field.value?.includes("azure-ad")}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...current.filter(m => m !== "azure-ad"), "azure-ad"]);
+                                    } else {
+                                      field.onChange(current.filter(m => m !== "azure-ad"));
+                                    }
+                                  }}
+                                  data-testid="checkbox-azure-ad-module"
+                                />
+                              )}
+                            />
+                            <span>Azure Active Directory Integration</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <p className="text-sm text-slate-600 mb-3">Single sign-on with Microsoft Azure AD</p>
+                          
+                          {form.watch("enabledModules")?.includes("azure-ad") && (
+                            <div className="space-y-3 border-t pt-3">
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.azure-ad.tenantId"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Azure Tenant ID *</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                        {...field}
+                                        data-testid="input-azure-tenant-id"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.azure-ad.clientId"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Client ID *</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="Application (client) ID"
+                                        {...field}
+                                        data-testid="input-azure-client-id"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.azure-ad.clientSecret"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Client Secret *</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="password"
+                                        placeholder="Client secret value"
+                                        {...field}
+                                        data-testid="input-azure-client-secret"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Auth0 Module */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center space-x-2">
+                            <FormField
+                              control={form.control}
+                              name="enabledModules"
+                              render={({ field }) => (
+                                <Checkbox
+                                  checked={field.value?.includes("auth0")}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...current.filter(m => m !== "auth0"), "auth0"]);
+                                    } else {
+                                      field.onChange(current.filter(m => m !== "auth0"));
+                                    }
+                                  }}
+                                  data-testid="checkbox-auth0-module"
+                                />
+                              )}
+                            />
+                            <span>Auth0 Integration</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <p className="text-sm text-slate-600 mb-3">Universal authentication with Auth0</p>
+                          
+                          {form.watch("enabledModules")?.includes("auth0") && (
+                            <div className="space-y-3 border-t pt-3">
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.auth0.domain"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Domain *</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="your-tenant.auth0.com"
+                                        {...field}
+                                        data-testid="input-auth0-domain"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.auth0.clientId"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Client ID *</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="Auth0 Application Client ID"
+                                        {...field}
+                                        data-testid="input-auth0-client-id"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.auth0.clientSecret"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Client Secret *</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="password"
+                                        placeholder="Auth0 Application Client Secret"
+                                        {...field}
+                                        data-testid="input-auth0-client-secret"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex items-center justify-end space-x-3 pt-4">
               <Button

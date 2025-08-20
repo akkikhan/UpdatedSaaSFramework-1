@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, integer, uuid, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -12,6 +12,9 @@ export const tenants = pgTable("tenants", {
   status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, active, suspended
   authApiKey: varchar("auth_api_key", { length: 100 }).notNull(),
   rbacApiKey: varchar("rbac_api_key", { length: 100 }).notNull(),
+  // Module configurations
+  enabledModules: jsonb("enabled_modules").default(sql`'["auth", "rbac"]'`), // ["auth", "rbac", "azure-ad", "auth0"]
+  moduleConfigs: jsonb("module_configs").default(sql`'{}'`), // Store configs for each module
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -87,6 +90,21 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
   rbacApiKey: true,
   createdAt: true,
   updatedAt: true
+}).extend({
+  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0"])).optional(),
+  moduleConfigs: z.object({
+    "azure-ad": z.object({
+      tenantId: z.string(),
+      clientId: z.string(),
+      clientSecret: z.string(),
+      domain: z.string().optional(),
+    }).optional(),
+    "auth0": z.object({
+      domain: z.string(),
+      clientId: z.string(),
+      clientSecret: z.string(),
+    }).optional(),
+  }).optional(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({

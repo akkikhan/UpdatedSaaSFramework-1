@@ -56,6 +56,14 @@ export default function TenantDashboard() {
     status: 'active',
     authApiKey: 'auth_abc123def456ghi789jkl012mno345',
     rbacApiKey: 'rbac_pqr678stu901vwx234yz567abc890',
+    enabledModules: ['auth', 'rbac', 'azure-ad'], // Example - would come from API
+    moduleConfigs: {
+      'azure-ad': {
+        tenantId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        clientId: 'your-azure-client-id',
+        domain: 'yourdomain.onmicrosoft.com'
+      }
+    },
     users: [
       { id: '1', email: user.email, role: 'Admin', status: 'Active', lastLogin: new Date().toISOString() }
     ],
@@ -105,7 +113,10 @@ export default function TenantDashboard() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="roles">Roles</TabsTrigger>
+            {tenantInfo.enabledModules.includes('rbac') && (
+              <TabsTrigger value="roles">Roles</TabsTrigger>
+            )}
+            <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           </TabsList>
 
@@ -135,12 +146,12 @@ export default function TenantDashboard() {
               
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">API Keys</CardTitle>
+                  <CardTitle className="text-sm font-medium">Active Modules</CardTitle>
                   <Key className="h-4 w-4 text-slate-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">2</div>
-                  <p className="text-xs text-slate-600">Auth + RBAC</p>
+                  <div className="text-2xl font-bold">{tenantInfo.enabledModules.length}</div>
+                  <p className="text-xs text-slate-600">{tenantInfo.enabledModules.join(', ')}</p>
                 </CardContent>
               </Card>
             </div>
@@ -251,6 +262,59 @@ export default function TenantDashboard() {
                         ))}
                       </div>
                     </CardContent>
+                  </Card>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="modules" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Enabled Authentication Modules</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {tenantInfo.enabledModules.map((module) => (
+                  <Card key={module}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-base capitalize">
+                            {module === 'azure-ad' ? 'Azure Active Directory' : 
+                             module === 'auth0' ? 'Auth0' : 
+                             module === 'rbac' ? 'Role-Based Access Control' : 
+                             'Core Authentication'}
+                          </CardTitle>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {module === 'azure-ad' ? 'Single sign-on with Microsoft Azure AD' :
+                             module === 'auth0' ? 'Universal authentication with Auth0' :
+                             module === 'rbac' ? 'Advanced role and permission management' :
+                             'Basic JWT authentication and user management'}
+                          </p>
+                        </div>
+                        <Badge variant="default">Active</Badge>
+                      </div>
+                    </CardHeader>
+                    {(module === 'azure-ad' || module === 'auth0') && tenantInfo.moduleConfigs[module] && (
+                      <CardContent className="pt-0">
+                        <div className="space-y-2 bg-slate-50 p-3 rounded-lg">
+                          <p className="text-sm font-medium text-slate-700">Configuration:</p>
+                          {module === 'azure-ad' && (
+                            <>
+                              <p className="text-xs text-slate-600">Tenant ID: {tenantInfo.moduleConfigs[module].tenantId}</p>
+                              <p className="text-xs text-slate-600">Client ID: {tenantInfo.moduleConfigs[module].clientId}</p>
+                              <p className="text-xs text-slate-600">Domain: {tenantInfo.moduleConfigs[module].domain}</p>
+                            </>
+                          )}
+                          {module === 'auth0' && (
+                            <>
+                              <p className="text-xs text-slate-600">Domain: {tenantInfo.moduleConfigs[module]?.domain}</p>
+                              <p className="text-xs text-slate-600">Client ID: {tenantInfo.moduleConfigs[module]?.clientId}</p>
+                            </>
+                          )}
+                        </div>
+                      </CardContent>
+                    )}
                   </Card>
                 ))}
               </CardContent>
