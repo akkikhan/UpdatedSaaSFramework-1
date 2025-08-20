@@ -385,9 +385,8 @@ export class DatabaseStorage implements IStorage {
   }
   
   private async hashPassword(password: string): Promise<string> {
-    // Simple hash for demo - in production use bcrypt
-    const crypto = await import('crypto');
-    return crypto.createHash('sha256').update(password).digest('hex');
+    const bcrypt = await import('bcryptjs');
+    return bcrypt.hash(password, 10);
   }
   
   // Tenant Users Implementation

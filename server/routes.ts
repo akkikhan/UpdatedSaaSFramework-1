@@ -403,13 +403,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Login
   app.post("/api/v2/auth/login", async (req, res) => {
     try {
-      const { email, password, tenantId } = req.body;
+      const { email, password, tenantId, orgId } = req.body;
       
-      if (!email || !password || !tenantId) {
-        return res.status(400).json({ message: "Email, password, and tenantId are required" });
+      if (!email || !password || (!tenantId && !orgId)) {
+        return res.status(400).json({ message: "Email, password, and tenantId (or orgId) are required" });
       }
 
-      const result = await authService.login(email, password, tenantId);
+      // If orgId is provided, convert it to tenantId
+      let actualTenantId = tenantId;
+      if (orgId && !tenantId) {
+        const tenant = await storage.getTenantByOrgId(orgId);
+        if (!tenant) {
+          return res.status(404).json({ message: "Tenant not found" });
+        }
+        actualTenantId = tenant.id;
+      }
+
+      const result = await authService.login(email, password, actualTenantId);
       
       if (!result) {
         return res.status(401).json({ message: "Invalid credentials" });
