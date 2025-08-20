@@ -34,16 +34,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Recipient email 'to' is required" });
       }
 
-      const testEmail = {
-        id: 'test',
-        name: 'Test Organization',
-        orgId: 'test-org',
-        adminEmail: to,
-        authApiKey: 'test-auth-key',
-        rbacApiKey: 'test-rbac-key'
-      };
+      // Test SMTP connection first
+      const connectionTest = await emailService.testConnection();
+      if (!connectionTest) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "SMTP connection failed. Check email configuration and credentials." 
+        });
+      }
 
-      const emailSent = await emailService.sendTenantOnboardingEmail(testEmail);
+      // Send a simple test email without database logging  
+      const emailSent = await emailService.sendSimpleTestEmail(to, subject);
       
       if (emailSent) {
         res.json({ 

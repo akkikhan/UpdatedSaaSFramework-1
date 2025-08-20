@@ -15,15 +15,20 @@ export class EmailService {
   private config: EmailConfig;
 
   constructor() {
+    // Use exact configuration provided by user
     const smtpUsername = process.env.SMTP_USERNAME || 'dev-saas@primussoft.com';
     const smtpPassword = process.env.SMTP_PASSWORD || 'First@098';
     
-    // Auto-detect SMTP settings based on email domain
-    const smtpSettings = this.getSmtpSettings(smtpUsername);
+    console.log('Email service initializing with:', {
+      username: smtpUsername,
+      passwordLength: smtpPassword.length,
+      host: 'smtp.office365.com',
+      port: 587
+    });
     
     this.config = {
-      smtpHost: smtpSettings.host,
-      smtpPort: smtpSettings.port,
+      smtpHost: 'smtp.office365.com',
+      smtpPort: 587,
       smtpUsername,
       smtpPassword,
       fromEmail: smtpUsername,
@@ -33,13 +38,15 @@ export class EmailService {
     this.transporter = nodemailer.createTransport({
       host: this.config.smtpHost,
       port: this.config.smtpPort,
-      secure: smtpSettings.secure,
+      secure: false, // Use STARTTLS on port 587
       auth: {
         user: this.config.smtpUsername,
         pass: this.config.smtpPassword,
       },
+      requireTLS: true,
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
       }
     });
   }
@@ -470,6 +477,46 @@ Authentication failed. Possible solutions:
         `);
       }
       
+      return false;
+    }
+  }
+
+  async sendSimpleTestEmail(to: string, subject: string = "Test Email"): Promise<boolean> {
+    try {
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Test Email</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #333;">Email Service Test</h2>
+  <p>This is a test email to verify that the SMTP configuration is working correctly.</p>
+  <p><strong>Configuration:</strong></p>
+  <ul>
+    <li>SMTP Host: ${this.config.smtpHost}</li>
+    <li>SMTP Port: ${this.config.smtpPort}</li>
+    <li>From Email: ${this.config.fromEmail}</li>
+  </ul>
+  <p style="color: #666; margin-top: 30px;">
+    Sent at: ${new Date().toISOString()}
+  </p>
+</body>
+</html>
+      `;
+
+      await this.transporter.sendMail({
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+        to,
+        subject,
+        html
+      });
+
+      console.log(`Test email sent successfully to ${to}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send test email:', error);
       return false;
     }
   }
