@@ -22,8 +22,11 @@ export class EmailService {
     console.log('Email service initializing with:', {
       username: smtpUsername,
       passwordLength: smtpPassword.length,
+      passwordFirst3: smtpPassword.substring(0, 3) + '***',
       host: 'smtp.office365.com',
-      port: 587
+      port: 587,
+      hasEnvPassword: !!process.env.SMTP_PASSWORD,
+      hasEnvUsername: !!process.env.SMTP_USERNAME
     });
     
     this.config = {
@@ -35,10 +38,11 @@ export class EmailService {
       fromName: 'SaaS Factory Platform'
     };
 
+    // Try multiple Office 365 configurations
     this.transporter = nodemailer.createTransport({
       host: this.config.smtpHost,
       port: this.config.smtpPort,
-      secure: false, // Use STARTTLS on port 587
+      secure: false, // STARTTLS
       auth: {
         user: this.config.smtpUsername,
         pass: this.config.smtpPassword,
@@ -46,8 +50,9 @@ export class EmailService {
       requireTLS: true,
       tls: {
         rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
-      }
+        servername: 'smtp.office365.com'
+      },
+      authMethod: 'LOGIN'
     });
   }
 
