@@ -22,14 +22,11 @@ export function useCreateTenant() {
 
   return useMutation({
     mutationFn: api.createTenant,
-    onSuccess: () => {
+    onSuccess: (tenantData) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tenants/recent"] });
-      toast({
-        title: "Success",
-        description: "Tenant created successfully and onboarding email sent",
-      });
+      // Don't show toast here - the onboarding wizard will handle the redirect to success page
     },
     onError: (error) => {
       toast({

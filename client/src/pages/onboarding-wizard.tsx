@@ -170,12 +170,16 @@ export default function OnboardingWizard() {
 
   const onSubmit = async (data: FormData) => {
     try {
+      console.log("Submitting tenant data:", data);
       const newTenant = await createTenant.mutateAsync(data);
+      console.log("Tenant created successfully:", newTenant);
       
       // Store tenant data in sessionStorage for the success page
       sessionStorage.setItem('newTenantData', JSON.stringify(newTenant));
+      console.log("Tenant data stored in sessionStorage");
       
       // Redirect to success page instead of tenants list
+      console.log("Redirecting to success page");
       setLocation("/tenants/success");
     } catch (error) {
       console.error("Error creating tenant:", error);

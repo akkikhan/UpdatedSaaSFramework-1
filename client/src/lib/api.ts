@@ -15,6 +15,8 @@ export interface Tenant {
   status: 'pending' | 'active' | 'suspended';
   authApiKey: string;
   rbacApiKey: string;
+  enabledModules: string[];
+  moduleConfigs: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +26,8 @@ export interface CreateTenantData {
   name: string;
   adminEmail: string;
   sendEmail?: boolean;
+  enabledModules: string[];
+  moduleConfigs: Record<string, any>;
 }
 
 export const api = {

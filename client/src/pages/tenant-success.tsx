@@ -20,11 +20,18 @@ export default function TenantSuccessPage() {
 
   useEffect(() => {
     // Get tenant data from sessionStorage (passed from onboarding wizard)
+    console.log("TenantSuccessPage: Looking for tenant data in sessionStorage");
     const savedTenantData = sessionStorage.getItem('newTenantData');
+    console.log("TenantSuccessPage: Found data:", savedTenantData);
+    
     if (savedTenantData) {
-      setTenantData(JSON.parse(savedTenantData));
+      const parsedData = JSON.parse(savedTenantData);
+      console.log("TenantSuccessPage: Parsed data:", parsedData);
+      setTenantData(parsedData);
       // Clear the data after reading
       sessionStorage.removeItem('newTenantData');
+    } else {
+      console.log("TenantSuccessPage: No tenant data found in sessionStorage");
     }
   }, []);
 
