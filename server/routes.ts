@@ -14,12 +14,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Health check
   app.get("/api/health", async (req, res) => {
-    const isEmailWorking = await emailService.testConnection();
+    // Email service is currently disabled in favor of on-screen tenant information display
     res.json({
       status: "operational",
       services: {
         database: true,
-        email: isEmailWorking
+        email: "disabled"
       },
       timestamp: new Date().toISOString()
     });
@@ -315,22 +315,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create tenant
       const tenant = await storage.createTenant(tenantData);
       
-      // Send onboarding email if requested
-      const shouldSendEmail = req.body.sendEmail !== false;
-      if (shouldSendEmail) {
-        const emailSent = await emailService.sendTenantOnboardingEmail({
-          id: tenant.id,
-          name: tenant.name,
-          orgId: tenant.orgId,
-          adminEmail: tenant.adminEmail,
-          authApiKey: tenant.authApiKey,
-          rbacApiKey: tenant.rbacApiKey
-        });
-        
-        if (!emailSent) {
-          console.warn(`Failed to send onboarding email to ${tenant.adminEmail}`);
-        }
-      }
+      // Email sending is currently disabled - tenant info will be displayed on success page
+      // const shouldSendEmail = req.body.sendEmail !== false;
+      // if (shouldSendEmail) {
+      //   const emailSent = await emailService.sendTenantOnboardingEmail({
+      //     id: tenant.id,
+      //     name: tenant.name,
+      //     orgId: tenant.orgId,
+      //     adminEmail: tenant.adminEmail,
+      //     authApiKey: tenant.authApiKey,
+      //     rbacApiKey: tenant.rbacApiKey
+      //   });
+      //   
+      //   if (!emailSent) {
+      //     console.warn(`Failed to send onboarding email to ${tenant.adminEmail}`);
+      //   }
+      // }
+      
+      console.log(`Tenant created successfully: ${tenant.name} (${tenant.orgId})`);
+      console.log(`Admin email: ${tenant.adminEmail}`);
 
       res.status(201).json(tenant);
     } catch (error) {

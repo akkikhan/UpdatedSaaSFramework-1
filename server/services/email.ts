@@ -15,29 +15,16 @@ export class EmailService {
   private config: EmailConfig;
 
   constructor() {
-    // Try Gmail configuration which supports app passwords
-    const useGmail = process.env.GMAIL_USERNAME && process.env.GMAIL_APP_PASSWORD;
-    
-    if (useGmail) {
-      this.config = {
-        smtpHost: 'smtp.gmail.com',
-        smtpPort: 587,
-        smtpUsername: process.env.GMAIL_USERNAME || '',
-        smtpPassword: process.env.GMAIL_APP_PASSWORD || '',
-        fromEmail: process.env.GMAIL_USERNAME || '',
-        fromName: 'SaaS Framework Platform'
-      };
-    } else {
-      // Fallback to Outlook configuration (may not work due to MS security changes)
-      this.config = {
-        smtpHost: 'smtp.office365.com',
-        smtpPort: 587,
-        smtpUsername: 'khan.aakib@outlook.com',
-        smtpPassword: 'NGPTol@95',
-        fromEmail: 'khan.aakib@outlook.com',
-        fromName: 'SaaS Framework Platform'
-      };
-    }
+    this.config = {
+      smtpHost: 'smtp.gmail.com',
+      smtpPort: 587,
+      smtpUsername: 'khanakkijpr@gmail.com',
+      smtpPassword: 'NGPTgm@95',
+      fromEmail: 'khanakkijpr@gmail.com',
+      fromName: 'SaaS Framework Platform'
+    };
+
+    console.log('Email service initialized (currently disabled for tenant onboarding)');
 
     this.transporter = nodemailer.createTransport({
       host: this.config.smtpHost,
@@ -48,7 +35,7 @@ export class EmailService {
         pass: this.config.smtpPassword,
       },
       tls: {
-        ciphers: 'SSLv3'
+        rejectUnauthorized: false
       }
     });
   }

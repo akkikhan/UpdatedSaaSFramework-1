@@ -18,6 +18,7 @@ import TenantDashboard from "@/pages/tenant-dashboard";
 import AzureTestPage from "@/pages/azure-test";
 import AuthSuccessPage from "@/pages/auth-success";
 import AuthErrorPage from "@/pages/auth-error";
+import TenantSuccessPage from "@/pages/tenant-success";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -41,6 +42,7 @@ function Router() {
             <Route path="/tenants" component={TenantsPage} />
             <Route path="/tenants/add" component={AddTenantPage} />
             <Route path="/tenants/wizard" component={OnboardingWizard} />
+            <Route path="/tenants/success" component={TenantSuccessPage} />
             <Route path="/modules" component={ModuleManagementPage} />
             <Route path="/logs" component={LogsPage} />
             <Route path="/sdk" component={SDKIntegrationPage} />
