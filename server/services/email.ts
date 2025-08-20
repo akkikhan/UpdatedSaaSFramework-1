@@ -19,7 +19,7 @@ export class EmailService {
       smtpHost: 'smtp.office365.com',
       smtpPort: 587,
       smtpUsername: 'dev-saas@primussoft.com',
-      smtpPassword: 'First@098',
+      smtpPassword: 'First@099',
       fromEmail: 'dev-saas@primussoft.com',
       fromName: 'SaaS Framework Platform'
     };
