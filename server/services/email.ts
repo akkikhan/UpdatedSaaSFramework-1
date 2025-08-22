@@ -15,27 +15,38 @@ export class EmailService {
   private config: EmailConfig;
 
   constructor() {
+    // Use environment variables with fallbacks
+    const smtpEmail = process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || 'your-email@example.com';
+    const smtpSettings = this.getSmtpSettings(smtpEmail);
+    
     this.config = {
-      smtpHost: 'smtp.gmail.com',
-      smtpPort: 587,
-      smtpUsername: 'khanakkijpr@gmail.com',
-      smtpPassword: 'NGPTgm@95',
-      fromEmail: 'khanakkijpr@gmail.com',
-      fromName: 'SaaS Framework Platform'
+      smtpHost: process.env.SMTP_HOST || smtpSettings.host,
+      smtpPort: parseInt(process.env.SMTP_PORT || '') || smtpSettings.port,
+      smtpUsername: smtpEmail,
+      smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || '',
+      fromEmail: process.env.FROM_EMAIL || smtpEmail,
+      fromName: process.env.FROM_NAME || 'SaaS Framework Platform'
     };
 
-    console.log('Email service initialized (currently disabled for tenant onboarding)');
+    if (!this.config.smtpPassword) {
+      console.warn('⚠️  SMTP_PASSWORD or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled.');
+      console.warn('   For Gmail: Generate an App Password at https://myaccount.google.com/apppasswords');
+      console.warn('   For Outlook/Office365: Generate an App Password at https://account.microsoft.com/security');
+    }
+
+    console.log(`📧 Email service initialized - Host: ${this.config.smtpHost}:${this.config.smtpPort}, From: ${this.config.fromEmail}`);
 
     this.transporter = nodemailer.createTransport({
       host: this.config.smtpHost,
       port: this.config.smtpPort,
-      secure: false,
-      auth: {
+      secure: this.config.smtpPort === 465, // Use secure for port 465
+      auth: this.config.smtpPassword ? {
         user: this.config.smtpUsername,
         pass: this.config.smtpPassword,
-      },
+      } : undefined,
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3'
       }
     });
   }
