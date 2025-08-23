@@ -14,12 +14,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Health check
   app.get("/api/health", async (req, res) => {
-    // Email service is currently disabled in favor of on-screen tenant information display
+    const emailConnected = await emailService.testConnection();
     res.json({
       status: "operational",
       services: {
         database: true,
-        email: "disabled"
+        email: emailConnected ? "operational" : "configuration_needed"
       },
       timestamp: new Date().toISOString()
     });
