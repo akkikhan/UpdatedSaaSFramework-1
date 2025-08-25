@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Eye, Mail, Edit, Pause, Trash, Search, CheckCircle } from "lucide-react";
+import { Plus, Eye, Mail, Edit, Pause, Trash, Search, CheckCircle, ArrowLeft, Copy } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,23 +11,59 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import ViewTenantModal from "@/components/modals/view-tenant-modal";
-import EditTenantModal from "@/components/modals/edit-tenant-modal";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import type { Tenant } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+
+const editFormSchema = z.object({
+  name: z.string().min(2, "Organization name must be at least 2 characters"),
+  adminEmail: z.string().email("Please enter a valid email address"),
+  status: z.enum(["pending", "active", "suspended"]),
+});
+
+type EditFormData = z.infer<typeof editFormSchema>;
 
 export default function TenantsPage() {
   const [, setLocation] = useLocation();
-  const [showViewTenantModal, setShowViewTenantModal] = useState(false);
-  const [showEditTenantModal, setShowEditTenantModal] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'view' | 'edit'>('list');
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
   
   const { data: tenants, isLoading } = useTenants();
   const updateTenantStatus = useUpdateTenantStatus();
   const resendEmail = useResendOnboardingEmail();
+
+  const form = useForm<EditFormData>({
+    resolver: zodResolver(editFormSchema),
+    defaultValues: {
+      name: "",
+      adminEmail: "",
+      status: "pending",
+    },
+  });
+
+  const onSubmit = async (data: EditFormData) => {
+    if (!selectedTenant) return;
+    
+    try {
+      if (data.status !== selectedTenant.status) {
+        await updateTenantStatus.mutateAsync({ id: selectedTenant.id, status: data.status });
+      }
+      handleBackToList();
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
 
   const filteredTenants = tenants?.filter(tenant =>
     tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -45,12 +81,38 @@ export default function TenantsPage() {
 
   const handleViewTenant = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setShowViewTenantModal(true);
+    setViewMode('view');
   };
 
   const handleEditTenant = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setShowEditTenantModal(true);
+    setViewMode('edit');
+    form.reset({
+      name: tenant.name,
+      adminEmail: tenant.adminEmail,
+      status: tenant.status as 'pending' | 'active' | 'suspended'
+    });
+  };
+
+  const handleBackToList = () => {
+    setSelectedTenant(null);
+    setViewMode('list');
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied!",
+        description: `${label} copied to clipboard`,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy manually",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteTenant = async (tenant: Tenant) => {
@@ -59,6 +121,263 @@ export default function TenantsPage() {
       console.log('Delete tenant:', tenant.id);
     }
   };
+
+  // Show inline view/edit forms instead of list
+  if (viewMode === 'view' && selectedTenant) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={handleBackToList}
+            className="flex items-center gap-2"
+            data-testid="button-back-to-list"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tenants
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-800">Tenant Details</h1>
+            <p className="text-slate-600">View detailed information for {selectedTenant.name}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Basic Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700">Organization Name</label>
+                <p className="text-slate-900 font-medium">{selectedTenant.name}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Organization ID</label>
+                <p className="text-slate-900 font-mono">{selectedTenant.orgId}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Admin Email</label>
+                <p className="text-slate-900">{selectedTenant.adminEmail}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Status</label>
+                <Badge variant={selectedTenant.status === 'active' ? 'default' : selectedTenant.status === 'pending' ? 'secondary' : 'destructive'}>
+                  {selectedTenant.status.charAt(0).toUpperCase() + selectedTenant.status.slice(1)}
+                </Badge>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Created</label>
+                <p className="text-slate-900">{format(new Date(selectedTenant.createdAt), 'PPpp')}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* API Keys */}
+          <Card>
+            <CardHeader>
+              <CardTitle>API Keys</CardTitle>
+              <CardDescription>Integration keys for this tenant</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-700">Auth API Key</label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(selectedTenant.authApiKey, 'Auth API Key')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">{selectedTenant.authApiKey}</p>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-700">RBAC API Key</label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(selectedTenant.rbacApiKey, 'RBAC API Key')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">{selectedTenant.rbacApiKey}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Enabled Modules */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Enabled Modules</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {(selectedTenant.enabledModules as string[] || ['auth', 'rbac']).map((module) => (
+                  <Badge key={module} variant="outline">{module}</Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => handleEditTenant(selectedTenant)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Tenant
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => handleResendEmail(selectedTenant.id)}
+                disabled={resendEmail.isPending}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Resend Welcome Email
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'edit' && selectedTenant) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={handleBackToList}
+            className="flex items-center gap-2"
+            data-testid="button-back-to-list"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tenants
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-800">Edit Tenant</h1>
+            <p className="text-slate-600">Update tenant information for {selectedTenant.name}</p>
+          </div>
+        </div>
+
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>Tenant Information</CardTitle>
+            <CardDescription>Update the tenant's status and configuration</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Organization Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          disabled
+                          className="bg-slate-100"
+                          data-testid="input-edit-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div>
+                  <FormLabel>Organization ID</FormLabel>
+                  <Input
+                    value={selectedTenant.orgId}
+                    disabled
+                    className="bg-slate-100"
+                    data-testid="input-edit-org-id"
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="adminEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Admin Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          disabled
+                          className="bg-slate-100"
+                          data-testid="input-edit-email"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-status">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex items-center justify-end space-x-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBackToList}
+                    data-testid="button-edit-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updateTenantStatus.isPending}
+                    data-testid="button-edit-save"
+                  >
+                    {updateTenantStatus.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -260,22 +579,6 @@ export default function TenantsPage() {
         )}
       </div>
 
-      {/* Modals */}
-      {selectedTenant && (
-        <>
-          <ViewTenantModal
-            open={showViewTenantModal}
-            onOpenChange={setShowViewTenantModal}
-            tenant={selectedTenant}
-          />
-          
-          <EditTenantModal
-            open={showEditTenantModal}
-            onOpenChange={setShowEditTenantModal}
-            tenant={selectedTenant}
-          />
-        </>
-      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,11 +159,52 @@ export default function TenantDashboard() {
     );
   }
 
-  // Get tenant data from API
+  // Get tenant data from API with real-time polling
   const { data: tenant } = useQuery({
     queryKey: [`/api/tenants/by-org-id/${orgId}`],
-    enabled: !!orgId
+    enabled: !!orgId,
+    refetchInterval: 5000, // Poll every 5 seconds for module changes
+    refetchIntervalInBackground: true
   }) as { data: any };
+  
+  // Track previous enabled modules for real-time change detection
+  const [previousModules, setPreviousModules] = useState<string[]>([]);
+  
+  // Detect module changes and show notifications
+  useEffect(() => {
+    if (tenant?.enabledModules && previousModules.length > 0) {
+      const currentModules = tenant.enabledModules as string[];
+      const newlyEnabled = currentModules.filter(m => !previousModules.includes(m));
+      const newlyDisabled = previousModules.filter(m => !currentModules.includes(m));
+      
+      // Show notifications for module changes
+      if (newlyEnabled.length > 0) {
+        newlyEnabled.forEach(module => {
+          toast({
+            title: "Module Enabled",
+            description: `${module.toUpperCase()} module has been enabled by your administrator.`,
+            duration: 5000,
+          });
+        });
+      }
+      
+      if (newlyDisabled.length > 0) {
+        newlyDisabled.forEach(module => {
+          toast({
+            title: "Module Disabled",
+            description: `${module.toUpperCase()} module has been disabled by your administrator.`,
+            variant: "destructive",
+            duration: 5000,
+          });
+        });
+      }
+    }
+    
+    // Update previous modules tracking
+    if (tenant?.enabledModules) {
+      setPreviousModules(tenant.enabledModules as string[]);
+    }
+  }, [tenant?.enabledModules, toast]);
   
   const { data: tenantUsers = [] } = useQuery({
     queryKey: [`/api/tenants/${tenant?.id}/users`],
@@ -263,6 +304,12 @@ export default function TenantDashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Real-time connection indicator */}
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Live connection - monitoring for module changes"></div>
+                <span className="text-xs text-slate-500">Live</span>
+              </div>
+              
               <div className="text-right">
                 <p className="text-sm font-medium text-slate-800">{user.email}</p>
                 <p className="text-xs text-slate-500">Administrator</p>
@@ -576,52 +623,71 @@ export default function TenantDashboard() {
           <TabsContent value="modules" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Enabled Authentication Modules</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Authentication Modules</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-slate-500">Live status monitoring</span>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {tenantInfo.enabledModules.map((module) => (
-                  <Card key={module}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-base capitalize">
-                            {module === 'azure-ad' ? 'Azure Active Directory' : 
-                             module === 'auth0' ? 'Auth0' : 
-                             module === 'rbac' ? 'Role-Based Access Control' : 
-                             'Core Authentication'}
-                          </CardTitle>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {module === 'azure-ad' ? 'Single sign-on with Microsoft Azure AD' :
-                             module === 'auth0' ? 'Universal authentication with Auth0' :
-                             module === 'rbac' ? 'Advanced role and permission management' :
-                             'Basic JWT authentication and user management'}
-                          </p>
+                {/* Display all available modules with their current status */}
+                {[
+                  { id: 'auth', name: 'Core Authentication', description: 'Basic JWT authentication and user management', required: true },
+                  { id: 'rbac', name: 'Role-Based Access Control', description: 'Advanced role and permission management', required: true },
+                  { id: 'azure-ad', name: 'Azure Active Directory', description: 'Single sign-on with Microsoft Azure AD', required: false },
+                  { id: 'auth0', name: 'Auth0', description: 'Universal authentication with Auth0', required: false },
+                  { id: 'saml', name: 'SAML SSO', description: 'SAML-based single sign-on integration', required: false }
+                ].map((module) => {
+                  const isEnabled = tenantInfo.enabledModules.includes(module.id);
+                  return (
+                    <Card key={module.id} className={`transition-all duration-500 ${isEnabled ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${isEnabled ? 'bg-green-500' : 'bg-slate-400'} transition-colors duration-500`}></div>
+                            <div>
+                              <CardTitle className="text-base">{module.name}</CardTitle>
+                              <p className="text-sm text-slate-600 mt-1">{module.description}</p>
+                              {module.required && (
+                                <Badge variant="outline" className="text-xs mt-1">Required</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={isEnabled ? "default" : "secondary"} className="transition-colors duration-500">
+                              {isEnabled ? "Active" : "Disabled"}
+                            </Badge>
+                            {!isEnabled && !module.required && (
+                              <span className="text-xs text-slate-500">Contact admin to enable</span>
+                            )}
+                          </div>
                         </div>
-                        <Badge variant="default">Active</Badge>
-                      </div>
-                    </CardHeader>
-                    {(module === 'azure-ad' || module === 'auth0') && (tenantInfo.moduleConfigs as any)[module] && (
-                      <CardContent className="pt-0">
-                        <div className="space-y-2 bg-slate-50 p-3 rounded-lg">
-                          <p className="text-sm font-medium text-slate-700">Configuration:</p>
-                          {module === 'azure-ad' && (
-                            <>
-                              <p className="text-xs text-slate-600">Tenant ID: {tenantInfo.moduleConfigs[module].tenantId}</p>
-                              <p className="text-xs text-slate-600">Client ID: {tenantInfo.moduleConfigs[module].clientId}</p>
-                              <p className="text-xs text-slate-600">Domain: {tenantInfo.moduleConfigs[module].domain}</p>
-                            </>
-                          )}
-                          {module === 'auth0' && (
-                            <>
-                              <p className="text-xs text-slate-600">Domain: {(tenantInfo.moduleConfigs as any)[module]?.domain}</p>
-                              <p className="text-xs text-slate-600">Client ID: {(tenantInfo.moduleConfigs as any)[module]?.clientId}</p>
-                            </>
-                          )}
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
-                ))}
+                      </CardHeader>
+                      {isEnabled && (module.id === 'azure-ad' || module.id === 'auth0') && (tenantInfo.moduleConfigs as any)[module.id] && (
+                        <CardContent className="pt-0">
+                          <div className="space-y-2 bg-white p-3 rounded-lg border border-green-200">
+                            <p className="text-sm font-medium text-slate-700">Configuration:</p>
+                            {module.id === 'azure-ad' && (
+                              <>
+                                <p className="text-xs text-slate-600">Tenant ID: {tenantInfo.moduleConfigs[module.id].tenantId}</p>
+                                <p className="text-xs text-slate-600">Client ID: {tenantInfo.moduleConfigs[module.id].clientId}</p>
+                                <p className="text-xs text-slate-600">Domain: {tenantInfo.moduleConfigs[module.id].domain}</p>
+                              </>
+                            )}
+                            {module.id === 'auth0' && (
+                              <>
+                                <p className="text-xs text-slate-600">Domain: {(tenantInfo.moduleConfigs as any)[module.id]?.domain}</p>
+                                <p className="text-xs text-slate-600">Client ID: {(tenantInfo.moduleConfigs as any)[module.id]?.clientId}</p>
+                              </>
+                            )}
+                          </div>
+                        </CardContent>
+                      )}
+                    </Card>
+                  );
+                })}
               </CardContent>
             </Card>
           </TabsContent>

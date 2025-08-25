@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +44,10 @@ const formSchema = z.object({
   sendEmail: z.boolean().default(true),
   enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml"])).default(["auth"]),
   moduleConfigs: z.object({
+    "rbac": z.object({
+      permissionTemplate: z.string().optional(),
+      defaultRoles: z.array(z.string()).optional(),
+    }).optional(),
     "azure-ad": z.object({
       tenantId: z.string().optional(),
       clientId: z.string().optional(),
@@ -476,18 +482,53 @@ export default function OnboardingWizard() {
                         Module Configuration
                       </CardTitle>
                       <CardDescription>
-                        Configure your selected authentication modules (optional - can be configured later)
+                        Configure your selected authentication and authorization modules
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {watchedModules.length === 1 && watchedModules.includes("auth") ? (
-                        <div className="text-center py-8 text-slate-500">
-                          <Settings className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-                          <p className="text-lg">No additional configuration needed</p>
-                          <p className="text-sm">Basic authentication doesn't require additional setup</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-8">
+                      <div className="space-y-8">
+                        {/* RBAC Configuration - Always show if RBAC is enabled */}
+                        {watchedModules.includes("rbac") && (
+                          <div className="space-y-4 border rounded-lg p-4 bg-green-50">
+                            <h4 className="text-lg font-semibold flex items-center gap-2">
+                              <Shield className="h-5 w-5 text-green-500" />
+                              RBAC Configuration
+                            </h4>
+                            <div className="space-y-4">
+                              <div>
+                                <Label className="text-sm font-medium">Default Permission Template</Label>
+                                <Select defaultValue="standard" onValueChange={(value) => {
+                                  const currentConfigs = form.getValues("moduleConfigs") || {};
+                                  form.setValue("moduleConfigs", {
+                                    ...currentConfigs,
+                                    rbac: { permissionTemplate: value }
+                                  });
+                                }}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select permission template" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="minimal">Minimal (Basic CRUD)</SelectItem>
+                                    <SelectItem value="standard">Standard (User Management + CRUD)</SelectItem>
+                                    <SelectItem value="enterprise">Enterprise (Full Admin Access)</SelectItem>
+                                    <SelectItem value="custom">Custom (Configure Later)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-slate-600 mt-1">Choose a permission template that matches your organization's needs</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium">Default Roles</Label>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {["Admin", "Manager", "User", "Viewer"].map((role) => (
+                                    <Badge key={role} variant="outline" className="text-xs">{role}</Badge>
+                                  ))}
+                                </div>
+                                <p className="text-xs text-slate-600 mt-1">These default roles will be created for your tenant</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                           {watchedModules.includes("azure-ad") && (
                             <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
                               <h4 className="text-lg font-semibold flex items-center gap-2">
@@ -605,7 +646,6 @@ export default function OnboardingWizard() {
                             </div>
                           )}
                         </div>
-                      )}
                     </CardContent>
                   </Card>
                 )}
