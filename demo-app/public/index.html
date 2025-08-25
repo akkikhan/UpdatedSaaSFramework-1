@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechCorp Demo App - SaaS Auth Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+        
+        .section h3 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        
+        .info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+        
+        .credentials {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .credentials h4 {
+            color: #374151;
+            margin-bottom: 10px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 TechCorp Demo App</h1>
+            <p>Showcasing SaaS Authentication & RBAC Integration</p>
+        </div>
+        
+        <div class="content">
+            <div class="credentials">
+                <h4>🔐 Integration Credentials</h4>
+                <div><strong>Tenant:</strong> techcorp</div>
+                <div><strong>Auth API Key:</strong> auth_ea79f3d186064ee99a7f930e</div>
+                <div><strong>RBAC API Key:</strong> rbac_2d062f6dc55e477aafae4098</div>
+                <div><strong>Base URL:</strong> http://localhost:5000</div>
+            </div>
+            
+            <div class="grid">
+                <div class="section">
+                    <h3>🔑 Authentication SDK Demo</h3>
+                    <p>Test user login using the Auth module</p>
+                    
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" value="john.developer@techcorp.com" placeholder="Enter email">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" value="dev123!" placeholder="Enter password">
+                    </div>
+                    
+                    <button onclick="testLogin()">🚀 Test Login</button>
+                    
+                    <div id="loginResult"></div>
+                </div>
+                
+                <div class="section">
+                    <h3>🛡️ RBAC SDK Demo</h3>
+                    <p>Test permission checking using the RBAC module</p>
+                    
+                    <div class="form-group">
+                        <label for="userId">User ID:</label>
+                        <select id="userId">
+                            <option value="user_123">user_123 (John - Developer)</option>
+                            <option value="user_456">user_456 (Lisa - Manager)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="permission">Permission:</label>
+                        <select id="permission">
+                            <option value="users.read">users.read</option>
+                            <option value="users.create">users.create</option>
+                            <option value="roles.read">roles.read</option>
+                            <option value="reports.create">reports.create</option>
+                            <option value="admin.full_access">admin.full_access</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="testPermission()">🔍 Check Permission</button>
+                    
+                    <div id="rbacResult"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📊 App Status</h3>
+                <button onclick="checkStatus()">🔄 Refresh Status</button>
+                <div id="statusResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load status on page load
+        window.addEventListener('load', checkStatus);
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('loginResult');
+            
+            if (!email || !password) {
+                showResult(resultDiv, 'Please enter both email and password', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/demo/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult(resultDiv, `${result.message}
+
+User Details:
+- ID: ${result.user.id}
+- Name: ${result.user.name}
+- Email: ${result.user.email}
+- Token: ${result.user.token}`, 'success');
+                } else {
+                    showResult(resultDiv, result.message, 'error');
+                }
+            } catch (error) {
+                showResult(resultDiv, 'Network error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testPermission() {
+            const userId = document.getElementById('userId').value;
+            const permission = document.getElementById('permission').value;
+            const resultDiv = document.getElementById('rbacResult');
+            
+            try {
+                const response = await fetch('/demo/check-permission', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId, permission })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult(resultDiv, `${result.message}
+
+User Permissions:
+${result.userPermissions.map(p => '- ' + p).join('\n')}`, 
+                        result.hasPermission ? 'success' : 'error');
+                } else {
+                    showResult(resultDiv, result.message, 'error');
+                }
+            } catch (error) {
+                showResult(resultDiv, 'Network error: ' + error.message, 'error');
+            }
+        }
+        
+        async function checkStatus() {
+            const resultDiv = document.getElementById('statusResult');
+            
+            try {
+                const response = await fetch('/demo/status');
+                const result = await response.json();
+                
+                showResult(resultDiv, `App: ${result.app}
+Status: ${result.status}
+Tenant: ${result.tenant}
+
+Modules:
+- Auth: ${result.modules.auth}
+- RBAC: ${result.modules.rbac}
+
+SDK Versions:
+- Auth SDK: v${result.sdkVersions.auth}
+- RBAC SDK: v${result.sdkVersions.rbac}`, 'info');
+            } catch (error) {
+                showResult(resultDiv, 'Failed to get status: ' + error.message, 'error');
+            }
+        }
+        
+        function showResult(element, message, type) {
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
