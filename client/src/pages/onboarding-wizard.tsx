@@ -34,6 +34,7 @@ import {
   Globe,
   Zap
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreateTenant } from "@/hooks/use-tenants";
 
 const formSchema = z.object({
@@ -46,6 +47,8 @@ const formSchema = z.object({
   moduleConfigs: z.object({
     "rbac": z.object({
       permissionTemplate: z.string().optional(),
+      businessType: z.string().optional(),
+      customPermissions: z.array(z.string()).optional(),
       defaultRoles: z.array(z.string()).optional(),
     }).optional(),
     "azure-ad": z.object({
@@ -53,17 +56,24 @@ const formSchema = z.object({
       clientId: z.string().optional(),
       clientSecret: z.string().optional(),
       domain: z.string().optional(),
+      redirectUri: z.string().optional(),
+      groupClaims: z.boolean().optional(),
+      multiTenant: z.boolean().optional(),
     }).optional(),
     "auth0": z.object({
       domain: z.string().optional(),
       clientId: z.string().optional(),
       clientSecret: z.string().optional(),
+      audience: z.string().optional(),
+      callbackUrl: z.string().optional(),
+      logoutUrl: z.string().optional(),
     }).optional(),
     "saml": z.object({
       entryPoint: z.string().optional(),
       issuer: z.string().optional(),
       cert: z.string().optional(),
       identifierFormat: z.string().optional(),
+      callbackUrl: z.string().optional(),
     }).optional(),
   }).default({}),
 });
@@ -495,35 +505,100 @@ export default function OnboardingWizard() {
                               RBAC Configuration
                             </h4>
                             <div className="space-y-4">
-                              <div>
-                                <Label className="text-sm font-medium">Default Permission Template</Label>
-                                <Select defaultValue="standard" onValueChange={(value) => {
-                                  const currentConfigs = form.getValues("moduleConfigs") || {};
-                                  form.setValue("moduleConfigs", {
-                                    ...currentConfigs,
-                                    rbac: { permissionTemplate: value }
-                                  });
-                                }}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select permission template" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="minimal">Minimal (Basic CRUD)</SelectItem>
-                                    <SelectItem value="standard">Standard (User Management + CRUD)</SelectItem>
-                                    <SelectItem value="enterprise">Enterprise (Full Admin Access)</SelectItem>
-                                    <SelectItem value="custom">Custom (Configure Later)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <p className="text-xs text-slate-600 mt-1">Choose a permission template that matches your organization's needs</p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium">Default Roles</Label>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {["Admin", "Manager", "User", "Viewer"].map((role) => (
-                                    <Badge key={role} variant="outline" className="text-xs">{role}</Badge>
-                                  ))}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <Label className="text-sm font-medium">Permission Template</Label>
+                                  <Select defaultValue="standard" onValueChange={(value) => {
+                                    const currentConfigs = form.getValues("moduleConfigs") || {};
+                                    form.setValue("moduleConfigs", {
+                                      ...currentConfigs,
+                                      rbac: { 
+                                        permissionTemplate: value,
+                                        businessType: form.getValues("moduleConfigs.rbac.businessType") || "general",
+                                        customPermissions: form.getValues("moduleConfigs.rbac.customPermissions") || []
+                                      }
+                                    });
+                                  }}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select permission template" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="minimal">Minimal (Basic CRUD)</SelectItem>
+                                      <SelectItem value="standard">Standard (User Management + CRUD)</SelectItem>
+                                      <SelectItem value="enterprise">Enterprise (Full Admin Access)</SelectItem>
+                                      <SelectItem value="custom">Custom (Configure Later)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-slate-600 mt-1">Choose a permission template that matches your organization's needs</p>
                                 </div>
-                                <p className="text-xs text-slate-600 mt-1">These default roles will be created for your tenant</p>
+                                <div>
+                                  <Label className="text-sm font-medium">Business Type</Label>
+                                  <Select defaultValue="general" onValueChange={(value) => {
+                                    const currentConfigs = form.getValues("moduleConfigs") || {};
+                                    const currentRbac = currentConfigs.rbac || {};
+                                    form.setValue("moduleConfigs", {
+                                      ...currentConfigs,
+                                      rbac: { 
+                                        ...currentRbac,
+                                        businessType: value
+                                      }
+                                    });
+                                  }}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select business type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="general">General Business</SelectItem>
+                                      <SelectItem value="saas">SaaS Platform</SelectItem>
+                                      <SelectItem value="ecommerce">E-commerce</SelectItem>
+                                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                                      <SelectItem value="finance">Financial Services</SelectItem>
+                                      <SelectItem value="education">Education</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-slate-600 mt-1">Pre-configured permissions for your industry</p>
+                                </div>
+                              </div>
+                              <div className="space-y-3">
+                                <Label className="text-sm font-medium">Default Role Hierarchy</Label>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="default" className="text-xs">Super Admin</Badge>
+                                      <span className="text-sm text-slate-600">Full system access, tenant management</span>
+                                    </div>
+                                    <span className="text-xs text-slate-400">Required</span>
+                                  </div>
+                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="secondary" className="text-xs">Admin</Badge>
+                                      <span className="text-sm text-slate-600">User management, all permissions</span>
+                                    </div>
+                                    <span className="text-xs text-slate-400">Recommended</span>
+                                  </div>
+                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">Manager</Badge>
+                                      <span className="text-sm text-slate-600">Team management, limited admin</span>
+                                    </div>
+                                    <span className="text-xs text-slate-400">Optional</span>
+                                  </div>
+                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">User</Badge>
+                                      <span className="text-sm text-slate-600">Standard user permissions</span>
+                                    </div>
+                                    <span className="text-xs text-slate-400">Default</span>
+                                  </div>
+                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">Viewer</Badge>
+                                      <span className="text-sm text-slate-600">Read-only access</span>
+                                    </div>
+                                    <span className="text-xs text-slate-400">Limited</span>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-slate-600 mt-1">Role hierarchy will be created based on your permission template</p>
                               </div>
                             </div>
                           </div>
@@ -535,35 +610,94 @@ export default function OnboardingWizard() {
                                 <Globe className="h-5 w-5 text-blue-500" />
                                 Azure Active Directory Configuration
                               </h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.azure-ad.tenantId"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Azure Tenant ID *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Your Azure AD Directory (tenant) ID</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.azure-ad.clientId"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Application (Client) ID *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Your Azure AD Application ID</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.azure-ad.clientSecret"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Client Secret *</FormLabel>
+                                        <FormControl>
+                                          <Input type="password" placeholder="Your Azure AD Client Secret" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Azure AD application secret value</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.azure-ad.domain"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Domain (Optional)</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="your-domain.com" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Your organization domain</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
                                 <FormField
                                   control={form.control}
-                                  name="moduleConfigs.azure-ad.tenantId"
+                                  name="moduleConfigs.azure-ad.redirectUri"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Azure Tenant ID</FormLabel>
+                                      <FormLabel>Redirect URI</FormLabel>
                                       <FormControl>
-                                        <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                                        <Input placeholder="https://your-app.com/auth/azure/callback" {...field} />
                                       </FormControl>
-                                      <FormDescription>Your Azure AD Directory (tenant) ID</FormDescription>
+                                      <FormDescription>OAuth redirect URI configured in Azure AD</FormDescription>
                                       <FormMessage />
                                     </FormItem>
                                   )}
                                 />
-                                <FormField
-                                  control={form.control}
-                                  name="moduleConfigs.azure-ad.clientId"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Application (Client) ID</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
-                                      </FormControl>
-                                      <FormDescription>Your Azure AD Application ID</FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                  <p className="text-sm font-medium text-blue-800">Additional Settings (Optional)</p>
+                                  <div className="mt-2 space-y-2">
+                                    <label className="flex items-center space-x-2">
+                                      <input type="checkbox" className="rounded" defaultChecked />
+                                      <span className="text-sm text-blue-700">Enable group claims</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2">
+                                      <input type="checkbox" className="rounded" defaultChecked />
+                                      <span className="text-sm text-blue-700">Multi-tenant support</span>
+                                    </label>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           )}
@@ -574,35 +708,97 @@ export default function OnboardingWizard() {
                                 <Zap className="h-5 w-5 text-orange-500" />
                                 Auth0 Configuration
                               </h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                  control={form.control}
-                                  name="moduleConfigs.auth0.domain"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Auth0 Domain</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="your-domain.auth0.com" {...field} />
-                                      </FormControl>
-                                      <FormDescription>Your Auth0 domain</FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <FormField
-                                  control={form.control}
-                                  name="moduleConfigs.auth0.clientId"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Client ID</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="Your Auth0 Client ID" {...field} />
-                                      </FormControl>
-                                      <FormDescription>Your Auth0 application client ID</FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth0.domain"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Auth0 Domain *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="your-domain.auth0.com" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Your Auth0 tenant domain</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth0.clientId"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Client ID *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="Your Auth0 Client ID" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Your Auth0 application client ID</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth0.clientSecret"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Client Secret *</FormLabel>
+                                        <FormControl>
+                                          <Input type="password" placeholder="Your Auth0 Client Secret" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Auth0 application secret</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth0.audience"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Audience (API Identifier)</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="https://your-api.auth0.com" {...field} />
+                                        </FormControl>
+                                        <FormDescription>API identifier for JWT tokens</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth0.callbackUrl"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Callback URL</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="https://your-app.com/callback" {...field} />
+                                        </FormControl>
+                                        <FormDescription>OAuth callback URL</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth0.logoutUrl"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Logout URL</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="https://your-app.com/logout" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Post-logout redirect URL</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}
@@ -613,35 +809,95 @@ export default function OnboardingWizard() {
                                 <Shield className="h-5 w-5 text-purple-500" />
                                 SAML Configuration
                               </h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.saml.entryPoint"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>SSO Entry Point URL *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="https://your-idp.com/sso" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Your identity provider's SSO URL</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.saml.issuer"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Issuer *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="your-saml-issuer" {...field} />
+                                        </FormControl>
+                                        <FormDescription>SAML issuer identifier</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
                                 <FormField
                                   control={form.control}
-                                  name="moduleConfigs.saml.entryPoint"
+                                  name="moduleConfigs.saml.cert"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>SSO Entry Point URL</FormLabel>
+                                      <FormLabel>X.509 Certificate *</FormLabel>
                                       <FormControl>
-                                        <Input placeholder="https://your-idp.com/sso" {...field} />
+                                        <Textarea 
+                                          placeholder="-----BEGIN CERTIFICATE-----&#10;MIICertificate...&#10;-----END CERTIFICATE-----" 
+                                          rows={4}
+                                          {...field} 
+                                        />
                                       </FormControl>
-                                      <FormDescription>Your identity provider's SSO URL</FormDescription>
+                                      <FormDescription>Identity provider's public certificate (PEM format)</FormDescription>
                                       <FormMessage />
                                     </FormItem>
                                   )}
                                 />
-                                <FormField
-                                  control={form.control}
-                                  name="moduleConfigs.saml.issuer"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Issuer</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="your-saml-issuer" {...field} />
-                                      </FormControl>
-                                      <FormDescription>SAML issuer identifier</FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.saml.identifierFormat"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Identifier Format</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value || "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"}>
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select identifier format" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            <SelectItem value="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">Email Address</SelectItem>
+                                            <SelectItem value="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified">Unspecified</SelectItem>
+                                            <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">Persistent</SelectItem>
+                                            <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:transient">Transient</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        <FormDescription>NameID format for SAML assertions</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.saml.callbackUrl"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Callback URL</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="https://your-app.com/saml/acs" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Assertion Consumer Service URL</FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}

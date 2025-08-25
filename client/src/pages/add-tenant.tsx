@@ -28,21 +28,33 @@ const formSchema = z.object({
   sendEmail: z.boolean().default(true),
   enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml"])).default(["auth", "rbac"]),
   moduleConfigs: z.object({
+    "rbac": z.object({
+      permissionTemplate: z.string().optional(),
+      businessType: z.string().optional(),
+      customPermissions: z.array(z.string()).optional(),
+      defaultRoles: z.array(z.string()).optional(),
+    }).optional(),
     "azure-ad": z.object({
       tenantId: z.string().optional(),
       clientId: z.string().optional(),
       clientSecret: z.string().optional(),
       domain: z.string().optional(),
+      redirectUri: z.string().optional(),
     }).optional(),
     "auth0": z.object({
       domain: z.string().optional(),
       clientId: z.string().optional(),
       clientSecret: z.string().optional(),
+      audience: z.string().optional(),
+      callbackUrl: z.string().optional(),
+      logoutUrl: z.string().optional(),
     }).optional(),
     "saml": z.object({
       entryPoint: z.string().optional(),
       issuer: z.string().optional(),
       cert: z.string().optional(),
+      identifierFormat: z.string().optional(),
+      callbackUrl: z.string().optional(),
     }).optional(),
   }).default({}),
 });
@@ -281,6 +293,46 @@ export default function AddTenantPage() {
                 />
 
                 {/* Module Configurations */}
+                {watchedModules.includes("rbac") && (
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="text-sm font-medium">RBAC Configuration</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium">Permission Template</Label>
+                        <Select defaultValue="standard" onValueChange={(value) => {
+                          const currentConfigs = form.getValues("moduleConfigs") || {};
+                          form.setValue("moduleConfigs", {
+                            ...currentConfigs,
+                            rbac: { permissionTemplate: value, businessType: 'general' }
+                          });
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="minimal">Minimal</SelectItem>
+                            <SelectItem value="standard">Standard</SelectItem>
+                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Business Type</Label>
+                        <Select defaultValue="general">
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select business type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general">General</SelectItem>
+                            <SelectItem value="saas">SaaS</SelectItem>
+                            <SelectItem value="ecommerce">E-commerce</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {watchedModules.includes("azure-ad") && (
                   <div className="space-y-4 border-t pt-4">
                     <h4 className="text-sm font-medium">Azure AD Configuration</h4>
@@ -290,9 +342,9 @@ export default function AddTenantPage() {
                         name="moduleConfigs.azure-ad.tenantId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tenant ID</FormLabel>
+                            <FormLabel>Tenant ID *</FormLabel>
                             <FormControl>
-                              <Input placeholder="Your Azure AD Tenant ID" {...field} />
+                              <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -303,9 +355,35 @@ export default function AddTenantPage() {
                         name="moduleConfigs.azure-ad.clientId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Client ID</FormLabel>
+                            <FormLabel>Client ID *</FormLabel>
                             <FormControl>
-                              <Input placeholder="Your Azure AD Application ID" {...field} />
+                              <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.azure-ad.clientSecret"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Client Secret *</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Your client secret" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="moduleConfigs.azure-ad.redirectUri"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Redirect URI</FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://your-app.com/auth/callback" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -318,33 +396,63 @@ export default function AddTenantPage() {
                 {watchedModules.includes("auth0") && (
                   <div className="space-y-4 border-t pt-4">
                     <h4 className="text-sm font-medium">Auth0 Configuration</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="moduleConfigs.auth0.domain"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Domain</FormLabel>
-                            <FormControl>
-                              <Input placeholder="your-domain.auth0.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="moduleConfigs.auth0.clientId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Client ID</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your Auth0 Client ID" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="moduleConfigs.auth0.domain"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Domain *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="your-domain.auth0.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="moduleConfigs.auth0.clientId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Client ID *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Your Auth0 Client ID" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="moduleConfigs.auth0.clientSecret"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Client Secret *</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="Your client secret" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="moduleConfigs.auth0.audience"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Audience</FormLabel>
+                              <FormControl>
+                                <Input placeholder="https://your-api.auth0.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -352,33 +460,63 @@ export default function AddTenantPage() {
                 {watchedModules.includes("saml") && (
                   <div className="space-y-4 border-t pt-4">
                     <h4 className="text-sm font-medium">SAML Configuration</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="moduleConfigs.saml.entryPoint"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Entry Point URL</FormLabel>
-                            <FormControl>
-                              <Input placeholder="https://your-idp.com/sso" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="moduleConfigs.saml.issuer"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Issuer</FormLabel>
-                            <FormControl>
-                              <Input placeholder="your-saml-issuer" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="moduleConfigs.saml.entryPoint"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Entry Point URL *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="https://your-idp.com/sso" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="moduleConfigs.saml.issuer"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Issuer *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="your-saml-issuer" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Identifier Format</Label>
+                          <Select defaultValue="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select format" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">Email Address</SelectItem>
+                              <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">Persistent</SelectItem>
+                              <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:transient">Transient</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="moduleConfigs.saml.callbackUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Callback URL</FormLabel>
+                              <FormControl>
+                                <Input placeholder="https://your-app.com/saml/acs" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
