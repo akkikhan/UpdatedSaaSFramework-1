@@ -524,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // RBAC routes (placeholder)
+  // RBAC routes
   app.get("/api/v2/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const roles = await storage.getRolesByTenant(req.user!.tenantId);
@@ -532,6 +532,322 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching roles:", error);
       res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  // Tenant User Management Routes
+  
+  // Get all users for a tenant
+  app.get("/api/tenants/:tenantId/users", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      const users = await storage.getTenantUsers(tenantId, limit, offset);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching tenant users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+  
+  // Create a new tenant user
+  app.post("/api/tenants/:tenantId/users", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const userData = { ...req.body, tenantId };
+      
+      // Validate required fields
+      if (!userData.email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getTenantUserByEmail(tenantId, userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+      
+      // Hash password if provided
+      if (userData.password) {
+        const bcrypt = await import('bcryptjs');
+        userData.passwordHash = await bcrypt.hash(userData.password, 10);
+        delete userData.password;
+      }
+      
+      const user = await storage.createTenantUser(userData);
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_user_created',
+        entityType: 'tenant_user',
+        entityId: user.id,
+        details: { email: user.email },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("Error creating tenant user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+  
+  // Get a specific tenant user
+  app.get("/api/tenants/:tenantId/users/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getTenantUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching tenant user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  
+  // Update a tenant user
+  app.patch("/api/tenants/:tenantId/users/:userId", async (req, res) => {
+    try {
+      const { tenantId, userId } = req.params;
+      const updates = req.body;
+      
+      // Hash password if provided
+      if (updates.password) {
+        const bcrypt = await import('bcryptjs');
+        updates.passwordHash = await bcrypt.hash(updates.password, 10);
+        delete updates.password;
+      }
+      
+      const user = await storage.updateTenantUser(userId, updates);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_user_updated',
+        entityType: 'tenant_user',
+        entityId: userId,
+        details: { updatedFields: Object.keys(updates) },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating tenant user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+  
+  // Delete a tenant user
+  app.delete("/api/tenants/:tenantId/users/:userId", async (req, res) => {
+    try {
+      const { tenantId, userId } = req.params;
+      
+      // Get user details for logging
+      const user = await storage.getTenantUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      await storage.deleteTenantUser(userId);
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_user_deleted',
+        entityType: 'tenant_user',
+        entityId: userId,
+        details: { email: user.email },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting tenant user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+  
+  // Tenant Role Management Routes
+  
+  // Get all roles for a tenant
+  app.get("/api/tenants/:tenantId/roles", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const roles = await storage.getTenantRoles(tenantId);
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching tenant roles:", error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+  
+  // Create a new tenant role
+  app.post("/api/tenants/:tenantId/roles", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const roleData = { ...req.body, tenantId };
+      
+      const role = await storage.createTenantRole(roleData);
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_role_created',
+        entityType: 'tenant_role',
+        entityId: role.id,
+        details: { name: role.name, permissions: role.permissions },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("Error creating tenant role:", error);
+      res.status(500).json({ message: "Failed to create role" });
+    }
+  });
+  
+  // Update a tenant role
+  app.patch("/api/tenants/:tenantId/roles/:roleId", async (req, res) => {
+    try {
+      const { tenantId, roleId } = req.params;
+      const updates = req.body;
+      
+      const role = await storage.updateTenantRole(roleId, updates);
+      
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_role_updated',
+        entityType: 'tenant_role',
+        entityId: roleId,
+        details: { updatedFields: Object.keys(updates) },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json(role);
+    } catch (error) {
+      console.error("Error updating tenant role:", error);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+  
+  // Delete a tenant role
+  app.delete("/api/tenants/:tenantId/roles/:roleId", async (req, res) => {
+    try {
+      const { tenantId, roleId } = req.params;
+      
+      // Get role details for logging
+      const role = await storage.getTenantRole(roleId);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      await storage.deleteTenantRole(roleId);
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_role_deleted',
+        entityType: 'tenant_role',
+        entityId: roleId,
+        details: { name: role.name },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json({ message: "Role deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting tenant role:", error);
+      res.status(500).json({ message: "Failed to delete role" });
+    }
+  });
+  
+  // User Role Assignment Routes
+  
+  // Assign role to user
+  app.post("/api/tenants/:tenantId/users/:userId/roles", async (req, res) => {
+    try {
+      const { tenantId, userId } = req.params;
+      const { roleId } = req.body;
+      
+      const assignment = await storage.assignTenantUserRole({
+        tenantId,
+        userId,
+        roleId
+      });
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_user_role_assigned',
+        entityType: 'tenant_user_role',
+        entityId: assignment.id,
+        details: { userId, roleId },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error assigning role to user:", error);
+      res.status(500).json({ message: "Failed to assign role" });
+    }
+  });
+  
+  // Get user roles
+  app.get("/api/tenants/:tenantId/users/:userId/roles", async (req, res) => {
+    try {
+      const { tenantId, userId } = req.params;
+      const roles = await storage.getTenantUserRoles(tenantId, userId);
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching user roles:", error);
+      res.status(500).json({ message: "Failed to fetch user roles" });
+    }
+  });
+  
+  // Remove role from user
+  app.delete("/api/tenants/:tenantId/users/:userId/roles/:roleId", async (req, res) => {
+    try {
+      const { tenantId, userId, roleId } = req.params;
+      
+      await storage.removeTenantUserRole(userId, roleId);
+      
+      // Log the activity
+      await storage.logSystemActivity({
+        tenantId,
+        action: 'tenant_user_role_removed',
+        entityType: 'tenant_user_role',
+        entityId: `${userId}-${roleId}`,
+        details: { userId, roleId },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json({ message: "Role removed from user successfully" });
+    } catch (error) {
+      console.error("Error removing role from user:", error);
+      res.status(500).json({ message: "Failed to remove role" });
     }
   });
 

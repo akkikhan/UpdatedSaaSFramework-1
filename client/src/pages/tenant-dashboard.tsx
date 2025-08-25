@@ -1,24 +1,132 @@
 import { useState } from "react";
 import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Shield, Key, Settings, Copy, Eye, EyeOff, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Users, Shield, Key, Settings, Copy, Eye, EyeOff, Plus, Edit, Trash2, UserCheck } from "lucide-react";
 import { useTenantAuth } from "@/hooks/use-tenant-auth";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
+
+// Form schemas
+const userFormSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  status: z.enum(["active", "inactive"]).default("active")
+});
+
+const roleFormSchema = z.object({
+  name: z.string().min(1, "Role name is required"),
+  description: z.string().optional(),
+  permissions: z.array(z.string()).min(1, "At least one permission is required")
+});
+
+type UserFormData = z.infer<typeof userFormSchema>;
+type RoleFormData = z.infer<typeof roleFormSchema>;
+
+const AVAILABLE_PERMISSIONS = [
+  "users.read", "users.create", "users.update", "users.delete",
+  "roles.read", "roles.create", "roles.update", "roles.delete",
+  "reports.read", "reports.create", "reports.export",
+  "settings.read", "settings.update",
+  "admin.full_access"
+];
 
 export default function TenantDashboard() {
   const { orgId } = useParams();
   const { user, logout } = useTenantAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showApiKeys, setShowApiKeys] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedRole, setSelectedRole] = useState<any>(null);
 
   const handleLogout = async () => {
     await logout.mutateAsync();
     window.location.href = `/tenant/${orgId}/login`;
+  };
+
+  // User CRUD operations
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/tenants/${tenant?.id}/users/${userId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete user');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (roleId: string) => {
+      const response = await fetch(`/api/tenants/${tenant?.id}/roles/${roleId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete role');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/roles`] });
+      toast({
+        title: "Success",
+        description: "Role deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      deleteUserMutation.mutate(userId);
+    }
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    if (confirm('Are you sure you want to delete this role? This action cannot be undone.')) {
+      deleteRoleMutation.mutate(roleId);
+    }
   };
 
   const copyToClipboard = async (text: string, label: string) => {
@@ -121,6 +229,17 @@ export default function TenantDashboard() {
     users: tenantUsers || [],
     roles: tenantRoles || []
   };
+  
+  // Check if modules are enabled
+  const isModuleEnabled = (moduleName: string) => {
+    return tenantInfo.enabledModules.includes(moduleName);
+  };
+  
+  const isAuthEnabled = isModuleEnabled('auth');
+  const isRbacEnabled = isModuleEnabled('rbac');
+  const isAzureAdEnabled = isModuleEnabled('azure-ad');
+  const isAuth0Enabled = isModuleEnabled('auth0');
+  const isSamlEnabled = isModuleEnabled('saml');
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -161,8 +280,10 @@ export default function TenantDashboard() {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            {tenantInfo.enabledModules.includes('rbac') && (
+            <TabsTrigger value="users" disabled={!isAuthEnabled}>
+              Users {!isAuthEnabled && <span className="ml-1 text-xs opacity-60">(Disabled)</span>}
+            </TabsTrigger>
+            {isRbacEnabled && (
               <TabsTrigger value="roles">Roles</TabsTrigger>
             )}
             <TabsTrigger value="modules">Modules</TabsTrigger>
@@ -236,44 +357,97 @@ export default function TenantDashboard() {
           </TabsContent>
 
           <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Users</CardTitle>
-                  <Button data-testid="button-add-user">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add User
-                  </Button>
-                </div>
-              </CardHeader>
+            {!isAuthEnabled ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5" />
+                    <span>Authentication Module Disabled</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 mx-auto text-slate-400 mb-4" />
+                    <h3 className="text-lg font-semibold text-slate-700 mb-2">User Management Unavailable</h3>
+                    <p className="text-slate-500 mb-4">
+                      The Authentication module has been disabled by your platform administrator.
+                      Contact your administrator to enable this feature.
+                    </p>
+                    <Badge variant="outline" className="text-red-600 border-red-200">
+                      Module Disabled
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Users</CardTitle>
+                    <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-user">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add User
+                        </Button>
+                      </DialogTrigger>
+                      <UserModal 
+                        title="Add New User" 
+                        tenantId={tenant?.id}
+                        onSuccess={() => {
+                          setShowAddUserModal(false);
+                          queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
+                        }}
+                      />
+                    </Dialog>
+                  </div>
+                </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
+                      <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(tenantInfo.users as any[]).length > 0 ? (tenantInfo.users as any[]).map((user: any) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.email}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">User</Badge>
+                        <TableCell className="font-medium">
+                          {user.firstName} {user.lastName}
                         </TableCell>
+                        <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
                             {user.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}</TableCell>
+                        <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" data-testid={`button-edit-user-${user.id}`}>
-                            Edit
-                          </Button>
+                          <div className="flex items-center justify-end space-x-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowEditUserModal(true);
+                              }}
+                              data-testid={`button-edit-user-${user.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteUser(user.id)}
+                              data-testid={`button-delete-user-${user.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )) : (
@@ -286,7 +460,24 @@ export default function TenantDashboard() {
                   </TableBody>
                 </Table>
               </CardContent>
-            </Card>
+              </Card>
+            )}
+            
+            {/* Edit User Modal - Always available when auth is enabled */}
+            {isAuthEnabled && (
+              <Dialog open={showEditUserModal} onOpenChange={setShowEditUserModal}>
+                <UserModal 
+                  title="Edit User" 
+                  tenantId={tenant?.id}
+                  user={selectedUser}
+                  onSuccess={() => {
+                    setShowEditUserModal(false);
+                    setSelectedUser(null);
+                    queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
+                  }}
+                />
+              </Dialog>
+            )}
           </TabsContent>
 
           <TabsContent value="roles">
@@ -294,10 +485,22 @@ export default function TenantDashboard() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Roles & Permissions</CardTitle>
-                  <Button data-testid="button-add-role">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Role
-                  </Button>
+                  <Dialog open={showAddRoleModal} onOpenChange={setShowAddRoleModal}>
+                    <DialogTrigger asChild>
+                      <Button data-testid="button-add-role">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Role
+                      </Button>
+                    </DialogTrigger>
+                    <RoleModal 
+                      title="Add New Role" 
+                      tenantId={tenant?.id}
+                      onSuccess={() => {
+                        setShowAddRoleModal(false);
+                        queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/roles`] });
+                      }}
+                    />
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -308,10 +511,33 @@ export default function TenantDashboard() {
                         <div>
                           <CardTitle className="text-base">{role.name}</CardTitle>
                           <p className="text-sm text-slate-600 mt-1">{role.description}</p>
+                          {role.isSystem && (
+                            <Badge variant="outline" className="text-xs mt-1">System Role</Badge>
+                          )}
                         </div>
-                        <Button variant="ghost" size="sm" data-testid={`button-edit-role-${role.id}`}>
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRole(role);
+                              setShowEditRoleModal(true);
+                            }}
+                            data-testid={`button-edit-role-${role.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {!role.isSystem && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteRole(role.id)}
+                              data-testid={`button-delete-role-${role.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
@@ -331,6 +557,20 @@ export default function TenantDashboard() {
                 )}
               </CardContent>
             </Card>
+            
+            {/* Edit Role Modal */}
+            <Dialog open={showEditRoleModal} onOpenChange={setShowEditRoleModal}>
+              <RoleModal 
+                title="Edit Role" 
+                tenantId={tenant?.id}
+                role={selectedRole}
+                onSuccess={() => {
+                  setShowEditRoleModal(false);
+                  setSelectedRole(null);
+                  queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/roles`] });
+                }}
+              />
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="modules" className="space-y-6">
@@ -461,5 +701,326 @@ export default function TenantDashboard() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+// UserModal Component
+function UserModal({ 
+  title, 
+  tenantId, 
+  user, 
+  onSuccess 
+}: { 
+  title: string; 
+  tenantId?: string; 
+  user?: any; 
+  onSuccess: () => void; 
+}) {
+  const { toast } = useToast();
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      email: user?.email || "",
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      password: "",
+      status: user?.status || "active"
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: UserFormData) => {
+      const url = user 
+        ? `/api/tenants/${tenantId}/users/${user.id}`
+        : `/api/tenants/${tenantId}/users`;
+      
+      const response = await fetch(url, {
+        method: user ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save user');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `User ${user ? 'updated' : 'created'} successfully`,
+      });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: UserFormData) => {
+    mutation.mutate(data);
+  };
+
+  return (
+    <DialogContent className="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>
+          {user ? 'Update user information' : 'Add a new user to your organization.'}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>First Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="john.doe@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{user ? 'New Password (optional)' : 'Password'}</FormLabel>
+                <FormControl>
+                  <Input type="password" placeholder="Enter password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <DialogFooter>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Saving...' : (user ? 'Update User' : 'Create User')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
+  );
+}
+
+// RoleModal Component
+function RoleModal({ 
+  title, 
+  tenantId, 
+  role, 
+  onSuccess 
+}: { 
+  title: string; 
+  tenantId?: string; 
+  role?: any; 
+  onSuccess: () => void; 
+}) {
+  const { toast } = useToast();
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
+    role?.permissions || []
+  );
+  
+  const form = useForm<RoleFormData>({
+    resolver: zodResolver(roleFormSchema),
+    defaultValues: {
+      name: role?.name || "",
+      description: role?.description || "",
+      permissions: role?.permissions || []
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: RoleFormData) => {
+      const url = role 
+        ? `/api/tenants/${tenantId}/roles/${role.id}`
+        : `/api/tenants/${tenantId}/roles`;
+      
+      const response = await fetch(url, {
+        method: role ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...data, permissions: selectedPermissions }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save role');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `Role ${role ? 'updated' : 'created'} successfully`,
+      });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: RoleFormData) => {
+    if (selectedPermissions.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one permission",
+        variant: "destructive",
+      });
+      return;
+    }
+    mutation.mutate({ ...data, permissions: selectedPermissions });
+  };
+
+  const togglePermission = (permission: string) => {
+    setSelectedPermissions(prev => 
+      prev.includes(permission)
+        ? prev.filter(p => p !== permission)
+        : [...prev, permission]
+    );
+  };
+
+  return (
+    <DialogContent className="sm:max-w-[600px]">
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>
+          {role ? 'Update role information and permissions' : 'Create a new role with specific permissions.'}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Role Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Manager" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Role description..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <div>
+            <Label className="text-base font-semibold">Permissions</Label>
+            <p className="text-sm text-slate-600 mb-3">Select the permissions for this role:</p>
+            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+              {AVAILABLE_PERMISSIONS.map((permission) => (
+                <div key={permission} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id={permission}
+                    checked={selectedPermissions.includes(permission)}
+                    onChange={() => togglePermission(permission)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor={permission}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {permission}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Saving...' : (role ? 'Update Role' : 'Create Role')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
 }

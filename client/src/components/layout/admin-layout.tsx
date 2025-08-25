@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   });
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="admin-layout flex h-screen bg-slate-50">
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg border-r border-slate-200">
         {/* Header */}
@@ -92,8 +92,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {children}
+        <div className="admin-content flex-1 p-6">
+          <div className="page-container">
+            {children}
+          </div>
         </div>
       </div>
     </div>
