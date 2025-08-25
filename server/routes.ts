@@ -315,22 +315,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create tenant
       const tenant = await storage.createTenant(tenantData);
       
-      // Email sending is currently disabled - tenant info will be displayed on success page
-      // const shouldSendEmail = req.body.sendEmail !== false;
-      // if (shouldSendEmail) {
-      //   const emailSent = await emailService.sendTenantOnboardingEmail({
-      //     id: tenant.id,
-      //     name: tenant.name,
-      //     orgId: tenant.orgId,
-      //     adminEmail: tenant.adminEmail,
-      //     authApiKey: tenant.authApiKey,
-      //     rbacApiKey: tenant.rbacApiKey
-      //   });
-      //   
-      //   if (!emailSent) {
-      //     console.warn(`Failed to send onboarding email to ${tenant.adminEmail}`);
-      //   }
-      // }
+      // Send onboarding email automatically
+      const shouldSendEmail = req.body.sendEmail !== false;
+      if (shouldSendEmail) {
+        const emailSent = await emailService.sendTenantOnboardingEmail({
+          id: tenant.id,
+          name: tenant.name,
+          orgId: tenant.orgId,
+          adminEmail: tenant.adminEmail,
+          authApiKey: tenant.authApiKey,
+          rbacApiKey: tenant.rbacApiKey
+        });
+        
+        if (!emailSent) {
+          console.warn(`Failed to send onboarding email to ${tenant.adminEmail}`);
+        } else {
+          console.log(`Onboarding email sent successfully to ${tenant.adminEmail}`);
+        }
+      }
       
       console.log(`Tenant created successfully: ${tenant.name} (${tenant.orgId})`);
       console.log(`Admin email: ${tenant.adminEmail}`);
