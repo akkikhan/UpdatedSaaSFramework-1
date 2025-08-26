@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Users, Shield, Key, Settings, Copy, Eye, EyeOff, Plus, Edit, Trash2, UserCheck } from "lucide-react";
+import { Users, Shield, Key, Settings, Copy, Eye, EyeOff, Plus, Edit, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { useTenantAuth } from "@/hooks/use-tenant-auth";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
@@ -56,8 +56,10 @@ export default function TenantDashboard() {
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+  const [showUserRoleModal, setShowUserRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState<any>(null);
+  const [selectedUserForRoles, setSelectedUserForRoles] = useState<any>(null);
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -127,6 +129,11 @@ export default function TenantDashboard() {
     if (confirm('Are you sure you want to delete this role? This action cannot be undone.')) {
       deleteRoleMutation.mutate(roleId);
     }
+  };
+
+  const handleManageUserRoles = (user: any) => {
+    setSelectedUserForRoles(user);
+    setShowUserRoleModal(true);
   };
 
   const copyToClipboard = async (text: string, label: string) => {
@@ -456,6 +463,7 @@ export default function TenantDashboard() {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Roles</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -472,9 +480,31 @@ export default function TenantDashboard() {
                             {user.status}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles && user.roles.length > 0 ? (
+                              user.roles.map((role: any) => (
+                                <Badge key={role.id} variant="outline" className="text-xs">
+                                  {role.name}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-sm text-slate-500">No roles assigned</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end space-x-2">
+                          <div className="flex items-center justify-end space-x-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleManageUserRoles(user)}
+                              data-testid={`button-manage-roles-${user.id}`}
+                              title="Manage Roles"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -483,6 +513,7 @@ export default function TenantDashboard() {
                                 setShowEditUserModal(true);
                               }}
                               data-testid={`button-edit-user-${user.id}`}
+                              title="Edit User"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -491,6 +522,7 @@ export default function TenantDashboard() {
                               size="sm"
                               onClick={() => handleDeleteUser(user.id)}
                               data-testid={`button-delete-user-${user.id}`}
+                              title="Delete User"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -499,7 +531,7 @@ export default function TenantDashboard() {
                       </TableRow>
                     )) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                        <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                           No users found. Add users to get started.
                         </TableCell>
                       </TableRow>
@@ -520,6 +552,22 @@ export default function TenantDashboard() {
                   onSuccess={() => {
                     setShowEditUserModal(false);
                     setSelectedUser(null);
+                    queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
+                  }}
+                />
+              </Dialog>
+            )}
+
+            {/* User Role Management Modal */}
+            {isAuthEnabled && (
+              <Dialog open={showUserRoleModal} onOpenChange={setShowUserRoleModal}>
+                <UserRoleModal 
+                  tenantId={tenant?.id}
+                  user={selectedUserForRoles}
+                  availableRoles={tenantRoles}
+                  onSuccess={() => {
+                    setShowUserRoleModal(false);
+                    setSelectedUserForRoles(null);
                     queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
                   }}
                 />
@@ -556,7 +604,14 @@ export default function TenantDashboard() {
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-base">{role.name}</CardTitle>
+                          <div className="flex items-center space-x-2">
+                            <CardTitle className="text-base">{role.name}</CardTitle>
+                            {typeof role.userCount !== 'undefined' && (
+                              <Badge variant="secondary" className="text-xs">
+                                {role.userCount} user{role.userCount !== 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-slate-600 mt-1">{role.description}</p>
                           {role.isSystem && (
                             <Badge variant="outline" className="text-xs mt-1">System Role</Badge>
@@ -631,7 +686,7 @@ export default function TenantDashboard() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 max-h-[500px] overflow-y-auto">
                 {/* Display all available modules with their current status */}
                 {[
                   { id: 'auth', name: 'Core Authentication', description: 'Basic JWT authentication and user management', required: true },
@@ -1087,6 +1142,182 @@ function RoleModal({
           </DialogFooter>
         </form>
       </Form>
+    </DialogContent>
+  );
+}
+
+// UserRoleModal Component
+function UserRoleModal({ 
+  tenantId, 
+  user, 
+  availableRoles,
+  onSuccess 
+}: { 
+  tenantId?: string; 
+  user?: any; 
+  availableRoles: any[];
+  onSuccess: () => void; 
+}) {
+  const { toast } = useToast();
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch current user roles
+  const { data: currentUserRoles = [] } = useQuery({
+    queryKey: [`/api/tenants/${tenantId}/users/${user?.id}/roles`],
+    enabled: !!tenantId && !!user?.id,
+    onSuccess: (data) => {
+      setUserRoles(data.map((role: any) => role.id));
+      setLoading(false);
+    }
+  }) as { data: any[] };
+
+  useEffect(() => {
+    if (currentUserRoles.length >= 0) {
+      setUserRoles(currentUserRoles.map((role: any) => role.id));
+      setLoading(false);
+    }
+  }, [currentUserRoles]);
+
+  const assignRoleMutation = useMutation({
+    mutationFn: async (roleId: string) => {
+      const response = await fetch(`/api/tenants/${tenantId}/users/${user.id}/roles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roleId }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to assign role');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Role assigned successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeRoleMutation = useMutation({
+    mutationFn: async (roleId: string) => {
+      const response = await fetch(`/api/tenants/${tenantId}/users/${user.id}/roles/${roleId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to remove role');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Role removed successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleRole = async (roleId: string, isAssigned: boolean) => {
+    if (isAssigned) {
+      await removeRoleMutation.mutateAsync(roleId);
+      setUserRoles(prev => prev.filter(id => id !== roleId));
+    } else {
+      await assignRoleMutation.mutateAsync(roleId);
+      setUserRoles(prev => [...prev, roleId]);
+    }
+  };
+
+  const handleSave = () => {
+    onSuccess();
+  };
+
+  if (!user) return null;
+
+  return (
+    <DialogContent className="sm:max-w-[500px]">
+      <DialogHeader>
+        <DialogTitle>Manage User Roles</DialogTitle>
+        <DialogDescription>
+          Assign or remove roles for {user.firstName} {user.lastName} ({user.email})
+        </DialogDescription>
+      </DialogHeader>
+      
+      <div className="space-y-4">
+        {loading ? (
+          <div className="text-center py-4">
+            <span className="text-sm text-slate-500">Loading user roles...</span>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {availableRoles.map((role) => {
+              const isAssigned = userRoles.includes(role.id);
+              return (
+                <div key={role.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{role.name}</span>
+                      {role.isSystem && (
+                        <Badge variant="outline" className="text-xs">System</Badge>
+                      )}
+                    </div>
+                    {role.description && (
+                      <p className="text-sm text-slate-600 mt-1">{role.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {role.permissions?.slice(0, 3).map((permission: string) => (
+                        <Badge key={permission} variant="secondary" className="text-xs">
+                          {permission}
+                        </Badge>
+                      ))}
+                      {role.permissions?.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{role.permissions.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant={isAssigned ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleRole(role.id, isAssigned)}
+                    disabled={assignRoleMutation.isPending || removeRoleMutation.isPending}
+                  >
+                    {isAssigned ? "Assigned" : "Assign"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      
+      <DialogFooter>
+        <Button onClick={handleSave}>
+          Done
+        </Button>
+      </DialogFooter>
     </DialogContent>
   );
 }

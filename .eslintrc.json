@@ -1,0 +1,101 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "react",
+    "react-hooks"
+  ],
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "rules": {
+    // TypeScript specific
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-non-null-assertion": "warn",
+    
+    // React specific
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "react/display-name": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    
+    // General code quality
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-debugger": "warn",
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-unused-expressions": "warn",
+    "no-duplicate-imports": "error",
+    
+    // Code style
+    "indent": ["error", 2, { "SwitchCase": 1 }],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "semi": ["error", "always"],
+    "comma-dangle": ["error", "never"],
+    "object-curly-spacing": ["error", "always"],
+    "array-bracket-spacing": ["error", "never"],
+    
+    // Security
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error"
+  },
+  "overrides": [
+    {
+      "files": ["*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx"],
+      "env": {
+        "vitest/globals": true
+      },
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["server/**/*.ts"],
+      "rules": {
+        "no-console": ["warn", { "allow": ["log", "warn", "error", "info"] }]
+      }
+    },
+    {
+      "files": ["scripts/**/*.ts"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist",
+    "build",
+    "node_modules",
+    "*.d.ts",
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.js"
+  ]
+}

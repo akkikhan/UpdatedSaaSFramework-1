@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RealtimeSyncProvider } from "@/components/providers/realtime-provider";
 import AdminLayout from "@/components/layout/admin-layout";
 import AdminDashboard from "@/pages/admin-dashboard";
 import TenantsPage from "@/pages/tenants";
@@ -24,6 +25,13 @@ import RBACManagementPage from "@/pages/rbac-management";
 import RBACConfigPage from "@/pages/rbac-config";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
 import NotFound from "@/pages/not-found";
+import ConfigSyncDashboard from "@/pages/config-sync-dashboard";
+import EnhancedLogin from "@/pages/enhanced-login";
+import MfaManagement from "@/pages/mfa-management";
+import SecurityAdmin from "@/pages/security-admin";
+import NotificationCenter from "@/pages/notification-center";
+import InfrastructureDashboard from "@/pages/infrastructure-dashboard";
+import MonitoringDashboard from "@/pages/monitoring-dashboard";
 
 function Router() {
   return (
@@ -34,6 +42,8 @@ function Router() {
       
       {/* Tenant Portal Routes */}
       <Route path="/tenant/:orgId/login" component={TenantLogin} />
+      <Route path="/tenant/:orgId/enhanced-login" component={EnhancedLogin} />
+      <Route path="/tenant/:orgId/mfa" component={MfaManagement} />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
       <Route path="/tenant/:orgId/*" component={TenantDashboard} />
       
@@ -56,6 +66,11 @@ function Router() {
             <Route path="/sdk" component={SDKIntegrationPage} />
             <Route path="/emails" component={EmailTemplatesPage} />
             <Route path="/system" component={SystemHealthPage} />
+            <Route path="/sync" component={ConfigSyncDashboard} />
+            <Route path="/security" component={SecurityAdmin} />
+            <Route path="/notifications" component={NotificationCenter} />
+            <Route path="/infrastructure" component={InfrastructureDashboard} />
+            <Route path="/monitoring" component={MonitoringDashboard} />
             <Route path="/test-azure" component={AzureTestPage} />
             <Route component={NotFound} />
           </Switch>
@@ -68,10 +83,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <RealtimeSyncProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </RealtimeSyncProvider>
     </QueryClientProvider>
   );
 }

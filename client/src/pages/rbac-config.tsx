@@ -8,7 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2, Save, Shield, Users, Building2, Settings } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Plus, Edit, Trash2, Save, Shield, Users, Building2, Settings, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -73,14 +82,41 @@ const useDefaultRoles = () => {
 };
 
 const availablePermissions = [
+  // Core permissions
   'read_users', 'create_users', 'update_users', 'delete_users',
   'read_reports', 'create_reports', 'update_reports', 'delete_reports',
   'manage_settings', 'manage_roles', 'manage_permissions',
-  'hipaa_audit_access', 'patient_data_access', 'financial_data_access',
-  'compliance_reports', 'security_logs', 'admin_panel_access'
+  'admin_panel_access', 'security_logs',
+  
+  // Healthcare permissions
+  'hipaa_audit_access', 'patient_data_access', 'medical_records_access',
+  'phi_access', 'healthcare_compliance_reports',
+  
+  // Financial/Banking permissions
+  'financial_data_access', 'transaction_processing', 'account_management',
+  'wire_transfers', 'loan_processing', 'credit_analysis',
+  'aml_monitoring', 'kyc_verification', 'regulatory_reporting',
+  'sox_compliance_access', 'pci_compliance_access', 'basel_reporting',
+  'risk_assessment', 'fraud_detection', 'audit_trail_access',
+  
+  // Insurance permissions
+  'policy_management', 'claims_processing', 'underwriting_access',
+  'actuarial_data_access', 'premium_calculation', 'risk_modeling',
+  'insurance_compliance_reports', 'solvency_reporting', 'reinsurance_management',
+  'catastrophe_modeling', 'loss_reserves_management', 'regulatory_filings',
+  
+  // Compliance frameworks
+  'gdpr_compliance', 'ccpa_compliance', 'nist_framework_access',
+  'iso27001_compliance', 'ffiec_compliance', 'naic_compliance'
 ];
 
-const complianceFrameworks = ['sox', 'hipaa', 'gdpr', 'pci', 'iso27001'];
+const complianceFrameworks = [
+  'sox', 'hipaa', 'gdpr', 'pci', 'iso27001', 'ccpa', 'nist',
+  // Banking specific
+  'basel-iii', 'dodd-frank', 'mifid-ii', 'psd2', 'ffiec', 'glba', 'bsa-aml',
+  // Insurance specific  
+  'naic', 'solvency-ii', 'ifrs17', 'orsa', 'rbc', 'nydfs-cybersecurity'
+];
 
 export default function RBACConfigPage() {
   const [activeTab, setActiveTab] = useState('templates');
@@ -109,16 +145,20 @@ export default function RBACConfigPage() {
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: PermissionTemplate) => {
       if (template.id) {
-        return await apiRequest(`/api/rbac-config/permission-templates/${template.id}`, 'PUT', template);
+        const response = await apiRequest('PUT', `/api/rbac-config/permission-templates/${template.id}`, template);
+        return await response.json();
       } else {
-        return await apiRequest('/api/rbac-config/permission-templates', 'POST', template);
+        const response = await apiRequest('POST', '/api/rbac-config/permission-templates', template);
+        return await response.json();
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/permission-templates'] });
+      // Invalidate all tenant data as RBAC config affects tenant portals and onboarding
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
       toast({
         title: "Template Saved",
-        description: "Permission template has been saved successfully.",
+        description: "Permission template has been saved successfully. All tenant configurations will be updated.",
       });
       setEditingTemplate(null);
     }
@@ -127,16 +167,20 @@ export default function RBACConfigPage() {
   const saveBusinessTypeMutation = useMutation({
     mutationFn: async (businessType: BusinessType) => {
       if (businessType.id) {
-        return await apiRequest(`/api/rbac-config/business-types/${businessType.id}`, 'PUT', businessType);
+        const response = await apiRequest('PUT', `/api/rbac-config/business-types/${businessType.id}`, businessType);
+        return await response.json();
       } else {
-        return await apiRequest('/api/rbac-config/business-types', 'POST', businessType);
+        const response = await apiRequest('POST', '/api/rbac-config/business-types', businessType);
+        return await response.json();
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/business-types'] });
+      // Invalidate all tenant data as business type changes affect tenant configurations
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
       toast({
         title: "Business Type Saved",
-        description: "Business type has been saved successfully.",
+        description: "Business type has been saved successfully. All tenant configurations will be updated.",
       });
       setEditingBusinessType(null);
     }
@@ -145,16 +189,20 @@ export default function RBACConfigPage() {
   const saveRoleMutation = useMutation({
     mutationFn: async (role: DefaultRole) => {
       if (role.id) {
-        return await apiRequest(`/api/rbac-config/default-roles/${role.id}`, 'PUT', role);
+        const response = await apiRequest('PUT', `/api/rbac-config/default-roles/${role.id}`, role);
+        return await response.json();
       } else {
-        return await apiRequest('/api/rbac-config/default-roles', 'POST', role);
+        const response = await apiRequest('POST', '/api/rbac-config/default-roles', role);
+        return await response.json();
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/default-roles'] });
+      // Invalidate tenant data as default roles affect new tenant creation
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
       toast({
         title: "Default Role Saved",
-        description: "Default role has been saved successfully.",
+        description: "Default role has been saved successfully. New tenants will inherit this configuration.",
       });
       setEditingRole(null);
     }
@@ -162,39 +210,45 @@ export default function RBACConfigPage() {
 
   const deleteTemplateMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/rbac-config/permission-templates/${id}`, 'DELETE');
+      const response = await apiRequest('DELETE', `/api/rbac-config/permission-templates/${id}`);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/permission-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
       toast({
         title: "Template Deleted",
-        description: "Permission template has been deleted successfully.",
+        description: "Permission template has been deleted successfully. Tenant configurations updated.",
       });
     }
   });
 
   const deleteBusinessTypeMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/rbac-config/business-types/${id}`, 'DELETE');
+      const response = await apiRequest('DELETE', `/api/rbac-config/business-types/${id}`);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/business-types'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
       toast({
         title: "Business Type Deleted",
-        description: "Business type has been deleted successfully.",
+        description: "Business type has been deleted successfully. Tenant configurations updated.",
       });
     }
   });
 
   const deleteRoleMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/rbac-config/default-roles/${id}`, 'DELETE');
+      const response = await apiRequest('DELETE', `/api/rbac-config/default-roles/${id}`);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/default-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
       toast({
         title: "Default Role Deleted",
-        description: "Default role has been deleted successfully.",
+        description: "Default role has been deleted successfully. New tenant creation updated.",
       });
     }
   });
@@ -218,6 +272,28 @@ export default function RBACConfigPage() {
           <h1 className="text-3xl font-bold mb-2" data-testid="title-rbac-config">RBAC Configuration</h1>
           <p className="text-gray-600">Manage permission templates, business types, and default roles for tenant onboarding</p>
         </div>
+        <Button 
+          variant="outline"
+          onClick={async () => {
+            try {
+              const response = await fetch('/api/rbac-config/seed-sample-data', { method: 'POST' });
+              if (response.ok) {
+                queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/permission-templates'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/business-types'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/default-roles'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
+                toast({ title: "Sample Data Seeded", description: "Sample RBAC configuration has been created successfully. All systems updated." });
+              } else {
+                throw new Error('Failed to seed data');
+              }
+            } catch (error) {
+              toast({ title: "Error", description: "Failed to seed sample data", variant: "destructive" });
+            }
+          }}
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Seed Sample Data
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -334,6 +410,265 @@ export default function RBACConfigPage() {
           </Card>
         </TabsContent>
 
+        {/* Permission Template Modal */}
+        {editingTemplate && (
+          <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTemplate.id ? 'Edit Permission Template' : 'Create Permission Template'}
+                </DialogTitle>
+                <DialogDescription>
+                  Define a reusable set of permissions for different business scenarios
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="template-name">Template Name</Label>
+                    <Input
+                      id="template-name"
+                      value={editingTemplate.name}
+                      onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                      placeholder="Standard Business Template"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="template-default"
+                      checked={editingTemplate.isDefault}
+                      onCheckedChange={(checked) => setEditingTemplate({ ...editingTemplate, isDefault: checked })}
+                    />
+                    <Label htmlFor="template-default">Set as Default Template</Label>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="template-description">Description</Label>
+                  <Textarea
+                    id="template-description"
+                    value={editingTemplate.description}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, description: e.target.value })}
+                    placeholder="Describe when this template should be used..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label>Business Types</Label>
+                  <div className="grid grid-cols-3 gap-3 mt-2">
+                    {['general', 'healthcare', 'finance', 'education', 'government'].map((type) => (
+                      <div key={type} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`business-type-${type}`}
+                          checked={editingTemplate.businessTypes.includes(type)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditingTemplate({
+                                ...editingTemplate,
+                                businessTypes: [...editingTemplate.businessTypes, type]
+                              });
+                            } else {
+                              setEditingTemplate({
+                                ...editingTemplate,
+                                businessTypes: editingTemplate.businessTypes.filter(t => t !== type)
+                              });
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`business-type-${type}`} className="capitalize">{type}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Permissions</Label>
+                  <div className="mt-2 max-h-80 overflow-y-auto border rounded p-3">
+                    <div className="space-y-4">
+                      {/* Core Permissions */}
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-700 mb-2">Core Permissions</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availablePermissions.filter(p => 
+                            ['read_users', 'create_users', 'update_users', 'delete_users', 'read_reports', 'create_reports', 'update_reports', 'delete_reports', 'manage_settings', 'manage_roles', 'manage_permissions', 'admin_panel_access', 'security_logs'].includes(p)
+                          ).map((permission) => (
+                            <div key={permission} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`permission-${permission}`}
+                                checked={editingTemplate.permissions.includes(permission)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: [...editingTemplate.permissions, permission]
+                                    });
+                                  } else {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: editingTemplate.permissions.filter(p => p !== permission)
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`permission-${permission}`} className="text-xs">{permission.replace(/_/g, ' ')}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Banking/Financial Permissions */}
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-700 mb-2">Banking & Financial</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availablePermissions.filter(p => 
+                            ['financial_data_access', 'transaction_processing', 'account_management', 'wire_transfers', 'loan_processing', 'credit_analysis', 'aml_monitoring', 'kyc_verification', 'regulatory_reporting', 'sox_compliance_access', 'pci_compliance_access', 'basel_reporting', 'risk_assessment', 'fraud_detection', 'audit_trail_access'].includes(p)
+                          ).map((permission) => (
+                            <div key={permission} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`permission-${permission}`}
+                                checked={editingTemplate.permissions.includes(permission)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: [...editingTemplate.permissions, permission]
+                                    });
+                                  } else {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: editingTemplate.permissions.filter(p => p !== permission)
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`permission-${permission}`} className="text-xs text-blue-700">{permission.replace(/_/g, ' ')}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Insurance Permissions */}
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-700 mb-2">Insurance</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availablePermissions.filter(p => 
+                            ['policy_management', 'claims_processing', 'underwriting_access', 'actuarial_data_access', 'premium_calculation', 'risk_modeling', 'insurance_compliance_reports', 'solvency_reporting', 'reinsurance_management', 'catastrophe_modeling', 'loss_reserves_management', 'regulatory_filings'].includes(p)
+                          ).map((permission) => (
+                            <div key={permission} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`permission-${permission}`}
+                                checked={editingTemplate.permissions.includes(permission)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: [...editingTemplate.permissions, permission]
+                                    });
+                                  } else {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: editingTemplate.permissions.filter(p => p !== permission)
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`permission-${permission}`} className="text-xs text-purple-700">{permission.replace(/_/g, ' ')}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Healthcare Permissions */}
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-700 mb-2">Healthcare</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availablePermissions.filter(p => 
+                            ['hipaa_audit_access', 'patient_data_access', 'medical_records_access', 'phi_access', 'healthcare_compliance_reports'].includes(p)
+                          ).map((permission) => (
+                            <div key={permission} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`permission-${permission}`}
+                                checked={editingTemplate.permissions.includes(permission)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: [...editingTemplate.permissions, permission]
+                                    });
+                                  } else {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: editingTemplate.permissions.filter(p => p !== permission)
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`permission-${permission}`} className="text-xs text-green-700">{permission.replace(/_/g, ' ')}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Compliance Permissions */}
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-700 mb-2">Compliance Frameworks</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availablePermissions.filter(p => 
+                            ['gdpr_compliance', 'ccpa_compliance', 'nist_framework_access', 'iso27001_compliance', 'ffiec_compliance', 'naic_compliance'].includes(p)
+                          ).map((permission) => (
+                            <div key={permission} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`permission-${permission}`}
+                                checked={editingTemplate.permissions.includes(permission)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: [...editingTemplate.permissions, permission]
+                                    });
+                                  } else {
+                                    setEditingTemplate({
+                                      ...editingTemplate,
+                                      permissions: editingTemplate.permissions.filter(p => p !== permission)
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`permission-${permission}`} className="text-xs text-orange-700">{permission.replace(/_/g, ' ')}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="template-active"
+                    checked={editingTemplate.isActive}
+                    onCheckedChange={(checked) => setEditingTemplate({ ...editingTemplate, isActive: checked })}
+                  />
+                  <Label htmlFor="template-active">Active Template</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingTemplate(null)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => handleSaveTemplate(editingTemplate)}
+                  disabled={!editingTemplate.name || editingTemplate.permissions.length === 0}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Template
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
         {/* Business Types Tab */}
         <TabsContent value="business-types" className="space-y-4">
           <Card data-testid="card-business-types">
@@ -445,6 +780,157 @@ export default function RBACConfigPage() {
           </Card>
         </TabsContent>
 
+        {/* Business Type Modal */}
+        {editingBusinessType && (
+          <Dialog open={!!editingBusinessType} onOpenChange={() => setEditingBusinessType(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingBusinessType.id ? 'Edit Business Type' : 'Create Business Type'}
+                </DialogTitle>
+                <DialogDescription>
+                  Configure business type with specific compliance requirements and risk level
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="business-type-name">Business Type Name</Label>
+                    <Input
+                      id="business-type-name"
+                      value={editingBusinessType.name}
+                      onChange={(e) => setEditingBusinessType({ ...editingBusinessType, name: e.target.value })}
+                      placeholder="Healthcare"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="risk-level">Risk Level</Label>
+                    <Select 
+                      value={editingBusinessType.riskLevel} 
+                      onValueChange={(value: 'low' | 'medium' | 'high' | 'critical') => 
+                        setEditingBusinessType({ ...editingBusinessType, riskLevel: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select risk level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="business-type-description">Description</Label>
+                  <Textarea
+                    id="business-type-description"
+                    value={editingBusinessType.description}
+                    onChange={(e) => setEditingBusinessType({ ...editingBusinessType, description: e.target.value })}
+                    placeholder="Describe this business type and its characteristics..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label>Required Compliance Frameworks</Label>
+                  <div className="grid grid-cols-3 gap-3 mt-2">
+                    {complianceFrameworks.map((framework) => (
+                      <div key={framework} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`compliance-${framework}`}
+                          checked={editingBusinessType.requiredCompliance.includes(framework)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditingBusinessType({
+                                ...editingBusinessType,
+                                requiredCompliance: [...editingBusinessType.requiredCompliance, framework]
+                              });
+                            } else {
+                              setEditingBusinessType({
+                                ...editingBusinessType,
+                                requiredCompliance: editingBusinessType.requiredCompliance.filter(f => f !== framework)
+                              });
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`compliance-${framework}`} className="uppercase text-sm">{framework}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Default Permissions</Label>
+                  <div className="grid grid-cols-2 gap-3 mt-2 max-h-60 overflow-y-auto border rounded p-3">
+                    {availablePermissions.map((permission) => (
+                      <div key={permission} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`default-permission-${permission}`}
+                          checked={editingBusinessType.defaultPermissions.includes(permission)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditingBusinessType({
+                                ...editingBusinessType,
+                                defaultPermissions: [...editingBusinessType.defaultPermissions, permission]
+                              });
+                            } else {
+                              setEditingBusinessType({
+                                ...editingBusinessType,
+                                defaultPermissions: editingBusinessType.defaultPermissions.filter(p => p !== permission)
+                              });
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`default-permission-${permission}`} className="text-sm">{permission}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="max-tenants">Max Tenants (optional)</Label>
+                    <Input
+                      id="max-tenants"
+                      type="number"
+                      value={editingBusinessType.maxTenants || ''}
+                      onChange={(e) => setEditingBusinessType({ 
+                        ...editingBusinessType, 
+                        maxTenants: e.target.value ? parseInt(e.target.value) : null 
+                      })}
+                      placeholder="Leave empty for unlimited"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-6">
+                    <Switch
+                      id="business-type-active"
+                      checked={editingBusinessType.isActive}
+                      onCheckedChange={(checked) => setEditingBusinessType({ ...editingBusinessType, isActive: checked })}
+                    />
+                    <Label htmlFor="business-type-active">Active Business Type</Label>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingBusinessType(null)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => handleSaveBusinessType(editingBusinessType)}
+                  disabled={!editingBusinessType.name}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Business Type
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
         {/* Default Roles Tab */}
         <TabsContent value="default-roles" className="space-y-4">
           <Card data-testid="card-default-roles">
@@ -506,13 +992,19 @@ export default function RBACConfigPage() {
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-medium">Business Type:</span>
                               <Badge variant="secondary" className="text-xs">
-                                {role.businessType}
+                                {role.businessTypeId ? 
+                                  businessTypesQuery.data?.find(bt => bt.id === role.businessTypeId)?.name || 'Unknown' : 
+                                  'All Types'
+                                }
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-medium">Template:</span>
                               <Badge variant="outline" className="text-xs">
-                                {role.permissionTemplate}
+                                {role.permissionTemplateId ? 
+                                  permissionTemplatesQuery.data?.find(pt => pt.id === role.permissionTemplateId)?.name || 'Unknown' : 
+                                  'No Template'
+                                }
                               </Badge>
                             </div>
                           </div>
@@ -564,6 +1056,168 @@ export default function RBACConfigPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Default Role Modal */}
+      {editingRole && (
+        <Dialog open={!!editingRole} onOpenChange={() => setEditingRole(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingRole.id ? 'Edit Default Role' : 'Create Default Role'}
+              </DialogTitle>
+              <DialogDescription>
+                Configure default roles that will be created for new tenants
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="role-name">Role Name</Label>
+                  <Input
+                    id="role-name"
+                    value={editingRole.name}
+                    onChange={(e) => setEditingRole({ ...editingRole, name: e.target.value })}
+                    placeholder="Admin"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role-priority">Priority</Label>
+                  <Input
+                    id="role-priority"
+                    type="number"
+                    min="1"
+                    value={editingRole.priority}
+                    onChange={(e) => setEditingRole({ ...editingRole, priority: parseInt(e.target.value) || 1 })}
+                    placeholder="1"
+                  />
+                  <span className="text-xs text-gray-500">Lower number = higher priority</span>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="role-description">Description</Label>
+                <Textarea
+                  id="role-description"
+                  value={editingRole.description}
+                  onChange={(e) => setEditingRole({ ...editingRole, description: e.target.value })}
+                  placeholder="Describe the role's purpose and scope..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="business-type-select">Business Type</Label>
+                  <Select 
+                    value={editingRole.businessTypeId || 'none'} 
+                    onValueChange={(value) => setEditingRole({ ...editingRole, businessTypeId: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select business type (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">All Business Types</SelectItem>
+                      {businessTypesQuery.data?.map((businessType) => (
+                        <SelectItem key={businessType.id} value={businessType.id}>
+                          {businessType.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="permission-template-select">Permission Template</Label>
+                  <Select 
+                    value={editingRole.permissionTemplateId || 'none'} 
+                    onValueChange={(value) => setEditingRole({ ...editingRole, permissionTemplateId: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select template (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Template</SelectItem>
+                      {permissionTemplatesQuery.data?.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Permissions</Label>
+                <div className="grid grid-cols-2 gap-3 mt-2 max-h-60 overflow-y-auto border rounded p-3">
+                  {availablePermissions.map((permission) => (
+                    <div key={permission} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`role-permission-${permission}`}
+                        checked={editingRole.permissions.includes(permission)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditingRole({
+                              ...editingRole,
+                              permissions: [...editingRole.permissions, permission]
+                            });
+                          } else {
+                            setEditingRole({
+                              ...editingRole,
+                              permissions: editingRole.permissions.filter(p => p !== permission)
+                            });
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`role-permission-${permission}`} className="text-sm">{permission}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="role-system"
+                    checked={editingRole.isSystemRole}
+                    onCheckedChange={(checked) => setEditingRole({ ...editingRole, isSystemRole: checked })}
+                  />
+                  <Label htmlFor="role-system">System Role</Label>
+                  <span className="text-xs text-gray-500">Cannot be deleted by tenants</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="role-modifiable"
+                    checked={editingRole.canBeModified}
+                    onCheckedChange={(checked) => setEditingRole({ ...editingRole, canBeModified: checked })}
+                  />
+                  <Label htmlFor="role-modifiable">Can Be Modified</Label>
+                  <span className="text-xs text-gray-500">Tenants can edit permissions</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="role-active"
+                    checked={editingRole.isActive}
+                    onCheckedChange={(checked) => setEditingRole({ ...editingRole, isActive: checked })}
+                  />
+                  <Label htmlFor="role-active">Active Role</Label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingRole(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => handleSaveRole(editingRole)}
+                disabled={!editingRole.name || editingRole.permissions.length === 0}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Role
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Note about implementation */}
       <Card className="border-blue-200 bg-blue-50">

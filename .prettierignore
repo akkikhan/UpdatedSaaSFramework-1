@@ -1,0 +1,34 @@
+# Build outputs
+dist
+build
+node_modules
+
+# Package files
+package-lock.json
+yarn.lock
+
+# Generated files
+*.d.ts
+
+# Config files that should maintain their format
+.env
+.env.*
+
+# HTML files (may have specific formatting)
+*.html
+
+# Markdown files (preserve manual formatting)
+*.md
+
+# Log files
+*.log
+
+# Cache directories
+.cache
+.parcel-cache
+.next
+.nuxt
+
+# OS files
+.DS_Store
+Thumbs.db

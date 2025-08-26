@@ -1,0 +1,39 @@
+{
+  "name": "@saas-framework/monitoring",
+  "version": "1.0.0",
+  "description": "Monitoring and alerting SDK for SaaS Framework multi-tenant applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "example-*.js"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "publish-package": "npm publish --access public"
+  },
+  "keywords": [
+    "monitoring",
+    "alerts",
+    "metrics",
+    "health-checks",
+    "multi-tenant",
+    "saas",
+    "observability"
+  ],
+  "author": "SaaS Framework",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-framework/monitoring"
+  },
+  "homepage": "https://github.com/saas-framework/monitoring#readme"
+}

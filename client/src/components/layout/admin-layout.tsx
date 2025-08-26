@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Building, ChartPie, Code, Inbox, Server, LayersIcon, Settings, FileText, Shield } from "lucide-react";
+import { Building, ChartPie, Code, Inbox, Server, LayersIcon, Settings, FileText, Shield, RefreshCw, Lock, Bell, Activity, HardDrive, Wifi, WifiOff } from "lucide-react";
+import { useRealtimeSyncContext } from "@/components/providers/realtime-provider";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartPie, id: "dashboard" },
@@ -12,10 +13,16 @@ const navigation = [
   { name: "SDK Integration", href: "/sdk", icon: Code, id: "sdk" },
   { name: "Email Templates", href: "/emails", icon: Inbox, id: "emails" },
   { name: "System Health", href: "/system", icon: Server, id: "system" },
+  { name: "Config Sync", href: "/sync", icon: RefreshCw, id: "sync" },
+  { name: "Security Admin", href: "/security", icon: Lock, id: "security" },
+  { name: "Notifications", href: "/notifications", icon: Bell, id: "notifications" },
+  { name: "Infrastructure", href: "/infrastructure", icon: HardDrive, id: "infrastructure" },
+  { name: "Monitoring", href: "/monitoring", icon: Activity, id: "monitoring" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { isConnected, reconnect } = useRealtimeSyncContext();
   const [currentPage, setCurrentPage] = useState(() => {
     const path = location === "/" ? "/" : location;
     return navigation.find(item => item.href === path) || navigation[0];
@@ -31,9 +38,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <LayersIcon className="text-white text-lg" size={20} />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-lg font-semibold text-slate-800">SaaS Framework</h1>
               <p className="text-sm text-slate-500">Admin Portal</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
+                  <Wifi className="h-3 w-3 text-green-600" />
+                  <span className="text-xs text-green-700">Live</span>
+                </div>
+              ) : (
+                <button 
+                  onClick={reconnect}
+                  className="flex items-center gap-1 px-2 py-1 bg-red-100 rounded-full hover:bg-red-200 transition-colors"
+                >
+                  <WifiOff className="h-3 w-3 text-red-600" />
+                  <span className="text-xs text-red-700">Offline</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

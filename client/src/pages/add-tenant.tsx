@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Form,
   FormControl,
@@ -78,6 +79,15 @@ type FormData = z.infer<typeof formSchema>;
 export default function AddTenantPage() {
   const [, setLocation] = useLocation();
   const createTenant = useCreateTenant();
+
+  // Fetch RBAC configuration data
+  const { data: permissionTemplates = [] } = useQuery({
+    queryKey: ['/api/rbac-config/permission-templates']
+  });
+
+  const { data: businessTypes = [] } = useQuery({
+    queryKey: ['/api/rbac-config/business-types']
+  });
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -316,33 +326,55 @@ export default function AddTenantPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-sm font-medium">Permission Template</Label>
-                        <Select defaultValue="standard" onValueChange={(value) => {
+                        <Select onValueChange={(value) => {
                           const currentConfigs = form.getValues("moduleConfigs") || {};
+                          const currentBusinessType = currentConfigs.rbac?.businessType || businessTypes.find(bt => bt.isActive)?.name?.toLowerCase() || 'general';
                           form.setValue("moduleConfigs", {
                             ...currentConfigs,
-                            rbac: { permissionTemplate: value, businessType: 'general' }
+                            rbac: { permissionTemplate: value, businessType: currentBusinessType }
                           });
                         }}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select template" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="minimal">Minimal</SelectItem>
-                            <SelectItem value="standard">Standard</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                            {permissionTemplates.filter((template: any) => template.isActive).map((template: any) => (
+                              <SelectItem key={template.id} value={template.name.toLowerCase().replace(/\s+/g, '-')}>
+                                {template.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label className="text-sm font-medium">Business Type</Label>
-                        <Select defaultValue="general">
+                        <Select onValueChange={(value) => {
+                          const currentConfigs = form.getValues("moduleConfigs") || {};
+                          const currentTemplate = currentConfigs.rbac?.permissionTemplate || 'standard';
+                          form.setValue("moduleConfigs", {
+                            ...currentConfigs,
+                            rbac: { permissionTemplate: currentTemplate, businessType: value }
+                          });
+                        }}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select business type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="saas">SaaS</SelectItem>
-                            <SelectItem value="ecommerce">E-commerce</SelectItem>
+                            {businessTypes.filter((businessType: any) => businessType.isActive).map((businessType: any) => (
+                              <SelectItem key={businessType.id} value={businessType.name.toLowerCase().replace(/\s+/g, '-')}>
+                                <div className="flex items-center justify-between w-full">
+                                  <span>{businessType.name}</span>
+                                  <span className={`ml-2 px-1 py-0.5 text-xs rounded ${
+                                    businessType.riskLevel === 'low' ? 'bg-green-100 text-green-800' :
+                                    businessType.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    businessType.riskLevel === 'high' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {businessType.riskLevel.toUpperCase()}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>

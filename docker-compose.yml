@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: saas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: saas_framework
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - saas-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saas_framework"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Caching (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: saas-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - saas-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Main Application (Development)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: saas-app-dev
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/saas_framework
+      - JWT_SECRET=development-jwt-secret-change-in-production
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USERNAME=test
+      - SMTP_PASSWORD=test
+      - FROM_EMAIL=noreply@localhost
+      - FROM_NAME=SaaS Framework Dev
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - saas-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MailHog for Development Email Testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: saas-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - saas-network
+
+  # PgAdmin for Database Management (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: saas-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@localhost
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - saas-network
+    depends_on:
+      - postgres
+
+networks:
+  saas-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local

@@ -200,7 +200,7 @@ export class DatabaseStorage implements IStorage {
       isActive: true
     });
     
-    // Create default roles
+    // Create default roles in both tables for backward compatibility
     const adminRole = await this.createRole({
       tenantId: tenant.id,
       name: 'Admin',
@@ -210,6 +210,31 @@ export class DatabaseStorage implements IStorage {
     });
     
     await this.createRole({
+      tenantId: tenant.id,
+      name: 'User',
+      description: 'Standard user access',
+      permissions: ['user.read'],
+      isSystem: true
+    });
+
+    // Create default tenant-specific roles for the new UI
+    await this.createTenantRole({
+      tenantId: tenant.id,
+      name: 'Admin',
+      description: 'Full administrative access to tenant resources',
+      permissions: ['tenant.admin', 'user.create', 'user.read', 'user.update', 'user.delete', 'role.manage'],
+      isSystem: true
+    });
+    
+    await this.createTenantRole({
+      tenantId: tenant.id,
+      name: 'Manager',
+      description: 'Management-level access with user oversight',
+      permissions: ['user.read', 'user.update', 'role.assign'],
+      isSystem: true
+    });
+    
+    await this.createTenantRole({
       tenantId: tenant.id,
       name: 'User',
       description: 'Standard user access',
@@ -575,13 +600,38 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTenantUsers(tenantId: string, limit: number = 50, offset: number = 0): Promise<TenantUser[]> {
-    return await db
+    // First get all users for the tenant
+    const users = await db
       .select()
       .from(tenantUsers)
       .where(eq(tenantUsers.tenantId, tenantId))
       .orderBy(desc(tenantUsers.createdAt))
       .limit(limit)
       .offset(offset);
+
+    // Then get roles for each user
+    const usersWithRoles = await Promise.all(
+      users.map(async (user) => {
+        const userRoles = await db
+          .select({
+            id: tenantRoles.id,
+            name: tenantRoles.name,
+            description: tenantRoles.description,
+            permissions: tenantRoles.permissions,
+            isSystem: tenantRoles.isSystem
+          })
+          .from(tenantUserRoles)
+          .innerJoin(tenantRoles, eq(tenantUserRoles.roleId, tenantRoles.id))
+          .where(eq(tenantUserRoles.userId, user.id));
+
+        return {
+          ...user,
+          roles: userRoles
+        };
+      })
+    );
+
+    return usersWithRoles as any[];
   }
   
   async getTenantUser(id: string): Promise<TenantUser | null> {
@@ -623,11 +673,29 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTenantRoles(tenantId: string): Promise<TenantRole[]> {
-    return await db
+    // Get all roles for the tenant
+    const roles = await db
       .select()
       .from(tenantRoles)
       .where(eq(tenantRoles.tenantId, tenantId))
       .orderBy(tenantRoles.name);
+
+    // Get user counts for each role
+    const rolesWithCounts = await Promise.all(
+      roles.map(async (role) => {
+        const [{ count }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(tenantUserRoles)
+          .where(eq(tenantUserRoles.roleId, role.id));
+
+        return {
+          ...role,
+          userCount: Number(count) || 0
+        };
+      })
+    );
+
+    return rolesWithCounts as any[];
   }
   
   async getTenantRole(id: string): Promise<TenantRole | null> {

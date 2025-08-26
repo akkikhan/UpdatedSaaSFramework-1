@@ -81,6 +81,7 @@ app.use('/api/register', authLimiter);
 app.use(express.json({ limit: '10mb' })); // Limit payload size
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+// Performance monitoring and logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -92,7 +93,7 @@ app.use((req, res, next) => {
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
-  res.on("finish", () => {
+  res.on("finish", async () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
@@ -105,6 +106,28 @@ app.use((req, res, next) => {
       }
 
       log(logLine);
+
+      // Record performance metrics for monitoring
+      try {
+        const { monitoringService } = await import("./services/monitoring");
+        const tenantId = req.headers['x-tenant-id'] as string || null;
+        
+        await monitoringService.recordApiResponseTime(
+          tenantId,
+          path,
+          req.method,
+          res.statusCode,
+          duration
+        );
+
+        // Record error rates for failed requests
+        if (res.statusCode >= 400) {
+          await monitoringService.recordErrorRate(tenantId, path, 1, 1);
+        }
+      } catch (error) {
+        // Don't let monitoring errors break the request
+        console.error('Monitoring error:', error);
+      }
     }
   });
 
@@ -114,6 +137,19 @@ app.use((req, res, next) => {
 (async () => {
   try {
     console.log("Starting server initialization...");
+    
+    // Initialize services
+    const { monitoringService } = await import("./services/monitoring");
+    const { backupInfrastructureService } = await import("./services/backup-infrastructure");
+    const { configSyncService } = await import("./services/config-sync");
+    const { realtimeSyncService } = await import("./services/realtime-sync");
+    
+    await Promise.all([
+      monitoringService.initialize(),
+      backupInfrastructureService.initialize(),
+      Promise.resolve(configSyncService) // Already initialized in constructor
+    ]);
+    
     const server = await registerRoutes(app);
     console.log("Routes registered successfully");
 
@@ -140,12 +176,48 @@ app.use((req, res, next) => {
     // Other ports are firewalled. Default to 5000 if not specified.
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
-    const port = parseInt(process.env.PORT || '5000', 10);
+    const port = 5000;
     console.log(`Attempting to start server on port ${port}...`);
-    server.listen(port, () => {
+    const httpServer = server.listen(port, () => {
       console.log(`✅ Server successfully started on port ${port}`);
+      console.log(`🔍 Monitoring: Active with real-time alerting`);
+      console.log(`🔄 Config Sync: Bi-directional synchronization enabled`);
+      
+      // Initialize real-time sync with HTTP server
+      realtimeSyncService.initialize(httpServer);
+      
       log(`serving on port ${port}`);
     });
+
+    // Graceful shutdown
+    const shutdown = async (signal: string) => {
+      console.log(`\n🛑 ${signal} received, shutting down gracefully...`);
+      
+      // Stop accepting new connections
+      httpServer.close(async () => {
+        console.log('🔌 HTTP server closed');
+        
+        // Shutdown services
+        const { monitoringService } = await import("./services/monitoring");
+        const { backupInfrastructureService } = await import("./services/backup-infrastructure");
+        const { configSyncService } = await import("./services/config-sync");
+        const { realtimeSyncService } = await import("./services/realtime-sync");
+        
+        await Promise.all([
+          Promise.resolve(monitoringService.shutdown()),
+          backupInfrastructureService.shutdown(),
+          configSyncService.shutdown(),
+          realtimeSyncService.shutdown()
+        ]);
+        
+        console.log('✅ Graceful shutdown complete');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    
   } catch (error) {
     console.error("❌ Server startup failed:", error);
     process.exit(1);

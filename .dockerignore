@@ -1,0 +1,97 @@
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist
+build
+.next
+.nuxt
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+docs/
+
+# Test files
+test/
+coverage/
+*.test.*
+*.spec.*
+
+# Logs
+logs
+*.log
+
+# Cache
+.cache
+.parcel-cache
+
+# Temporary files
+tmp/
+temp/
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Backup files
+*.backup
+*.bak
+
+# Development tools
+.eslintrc*
+.prettierrc*
+.prettierignore
+vitest.config.ts
+
+# Package lock files (will be copied separately)
+package-lock.json
+yarn.lock
+
+# Scripts (except essential ones)
+scripts/quick-start.*
+scripts/validate-setup.ts
+
+# Test interfaces
+*.html
+test-*.js
+test-*.mjs
+test-*.cjs
+
+# Attached assets
+attached_assets/
+
+# Publishing guides
+PUBLISHING*.md
+OAUTH_CONFIGURATION.md
+CONFIG_SYNC_ARCHITECTURE.md
+ONBOARDING_TEST_RESULTS.md

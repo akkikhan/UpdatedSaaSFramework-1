@@ -311,4 +311,13 @@ declare global {
   }
 }
 
+// Export enhanced authentication with all providers
+export { 
+  EnhancedSaaSAuth, 
+  type AzureADConfig, 
+  type Auth0Config, 
+  type SAMLConfig as EnhancedSAMLConfig,
+  type MFAChallenge 
+} from './enhanced-auth';
+
 export default SaaSAuth;

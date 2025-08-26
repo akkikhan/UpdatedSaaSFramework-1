@@ -1,0 +1,40 @@
+{
+  "name": "@saas-framework/notifications",
+  "version": "1.0.0",
+  "description": "Multi-channel notification SDK for SaaS Framework applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "example-*.js"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "publish-package": "npm publish --access public"
+  },
+  "keywords": [
+    "notifications",
+    "email",
+    "sms",
+    "push",
+    "webhooks",
+    "multi-channel",
+    "saas",
+    "messaging"
+  ],
+  "author": "SaaS Framework",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-framework/notifications"
+  },
+  "homepage": "https://github.com/saas-framework/notifications#readme"
+}
