@@ -17,14 +17,22 @@ export class EmailService {
   constructor() {
     // Use environment variables with fallbacks
     const smtpEmail = process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || 'your-email@example.com';
-    const smtpSettings = this.getSmtpSettings(smtpEmail);
+    const fromEmail = process.env.FROM_EMAIL || smtpEmail;
+    
+    // Force Gmail settings if FROM_EMAIL is a Gmail address
+    let smtpSettings;
+    if (fromEmail.includes('@gmail.com')) {
+      smtpSettings = { host: 'smtp.gmail.com', port: 587, secure: false };
+    } else {
+      smtpSettings = this.getSmtpSettings(smtpEmail);
+    }
     
     this.config = {
       smtpHost: process.env.SMTP_HOST || smtpSettings.host,
       smtpPort: parseInt(process.env.SMTP_PORT || '') || smtpSettings.port,
-      smtpUsername: smtpEmail,
+      smtpUsername: fromEmail, // Use FROM_EMAIL as username for authentication
       smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || '',
-      fromEmail: process.env.FROM_EMAIL || smtpEmail,
+      fromEmail: fromEmail,
       fromName: process.env.FROM_NAME || 'SaaS Framework Platform'
     };
 
