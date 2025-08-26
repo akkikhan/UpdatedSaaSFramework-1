@@ -245,7 +245,7 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
   createdAt: true,
   updatedAt: true
 }).extend({
-  enabledModules: z.array(z.enum(["auth", "rbac", "logging", "notifications", "ai-copilot"])).optional(),
+  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml", "logging", "notifications", "ai-copilot"])).optional(),
   moduleConfigs: z.object({
     "auth": z.object({
       providers: z.array(z.object({
