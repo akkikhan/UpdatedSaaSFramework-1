@@ -1,10 +1,80 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import slowDown from "express-slow-down";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Trust proxy configuration for production environments
+app.set('trust proxy', 1); // Trust first proxy (Replit, nginx, cloudflare, etc.)
+
+// Enterprise Security Headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow Vite dev server
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// Rate Limiting - General API Protection
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: "Too many requests from this IP, please try again later.",
+    retryAfter: "15 minutes"
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter Rate Limiting for Authentication Routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 auth attempts per windowMs
+  message: {
+    error: "Too many authentication attempts, please try again later.",
+    retryAfter: "15 minutes"
+  },
+  skipSuccessfulRequests: true,
+});
+
+// Slow Down Middleware for API Routes
+const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  delayAfter: 50, // Allow 50 requests per windowMs without delay
+  delayMs: () => 500, // Add 500ms delay per request after delayAfter
+  maxDelayMs: 5000, // Maximum delay of 5 seconds
+});
+
+// Apply rate limiting to all API routes
+app.use('/api', generalLimiter);
+app.use('/api', speedLimiter);
+
+// Apply stricter limits to auth routes
+app.use('/api/auth', authLimiter);
+app.use('/api/login', authLimiter);
+app.use('/api/register', authLimiter);
+
+app.use(express.json({ limit: '10mb' })); // Limit payload size
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
