@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { emailService } from "./services/email";
 import { authService } from "./services/auth";
 import { authMiddleware, tenantMiddleware } from "./middleware/auth";
-import { insertTenantSchema, insertUserSchema, insertTenantUserSchema, insertTenantRoleSchema, insertTenantUserRoleSchema } from "@shared/schema";
+import { insertTenantSchema, insertUserSchema, insertTenantUserSchema, insertTenantRoleSchema, insertTenantUserRoleSchema, insertPermissionTemplateSchema, insertBusinessTypeSchema, insertDefaultRoleSchema } from "@shared/schema";
 import { notificationService } from "./services/notification";
 import { complianceService } from "./services/compliance";
 import { AzureADService } from "./services/azure-ad";
@@ -1216,6 +1216,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching tenant roles:", error);
       res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  // =============================================================================
+  // PLATFORM ADMIN RBAC CONFIGURATION API
+  // =============================================================================
+
+  // Permission Templates
+  app.get("/api/rbac-config/permission-templates", async (req, res) => {
+    try {
+      const templates = await storage.getPermissionTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching permission templates:", error);
+      res.status(500).json({ message: "Failed to fetch permission templates" });
+    }
+  });
+
+  app.post("/api/rbac-config/permission-templates", async (req, res) => {
+    try {
+      const templateData = insertPermissionTemplateSchema.parse(req.body);
+      const template = await storage.createPermissionTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating permission template:", error);
+      res.status(500).json({ message: "Failed to create permission template" });
+    }
+  });
+
+  app.get("/api/rbac-config/permission-templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const template = await storage.getPermissionTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Permission template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching permission template:", error);
+      res.status(500).json({ message: "Failed to fetch permission template" });
+    }
+  });
+
+  app.put("/api/rbac-config/permission-templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = insertPermissionTemplateSchema.partial().parse(req.body);
+      const template = await storage.updatePermissionTemplate(id, updateData);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating permission template:", error);
+      res.status(500).json({ message: "Failed to update permission template" });
+    }
+  });
+
+  app.delete("/api/rbac-config/permission-templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePermissionTemplate(id);
+      res.json({ message: "Permission template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting permission template:", error);
+      res.status(500).json({ message: "Failed to delete permission template" });
+    }
+  });
+
+  // Business Types
+  app.get("/api/rbac-config/business-types", async (req, res) => {
+    try {
+      const businessTypes = await storage.getBusinessTypes();
+      res.json(businessTypes);
+    } catch (error) {
+      console.error("Error fetching business types:", error);
+      res.status(500).json({ message: "Failed to fetch business types" });
+    }
+  });
+
+  app.post("/api/rbac-config/business-types", async (req, res) => {
+    try {
+      const businessTypeData = insertBusinessTypeSchema.parse(req.body);
+      const businessType = await storage.createBusinessType(businessTypeData);
+      res.status(201).json(businessType);
+    } catch (error) {
+      console.error("Error creating business type:", error);
+      res.status(500).json({ message: "Failed to create business type" });
+    }
+  });
+
+  app.get("/api/rbac-config/business-types/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const businessType = await storage.getBusinessType(id);
+      if (!businessType) {
+        return res.status(404).json({ message: "Business type not found" });
+      }
+      res.json(businessType);
+    } catch (error) {
+      console.error("Error fetching business type:", error);
+      res.status(500).json({ message: "Failed to fetch business type" });
+    }
+  });
+
+  app.put("/api/rbac-config/business-types/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = insertBusinessTypeSchema.partial().parse(req.body);
+      const businessType = await storage.updateBusinessType(id, updateData);
+      res.json(businessType);
+    } catch (error) {
+      console.error("Error updating business type:", error);
+      res.status(500).json({ message: "Failed to update business type" });
+    }
+  });
+
+  app.delete("/api/rbac-config/business-types/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBusinessType(id);
+      res.json({ message: "Business type deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting business type:", error);
+      res.status(500).json({ message: "Failed to delete business type" });
+    }
+  });
+
+  // Default Roles
+  app.get("/api/rbac-config/default-roles", async (req, res) => {
+    try {
+      const defaultRoles = await storage.getDefaultRoles();
+      res.json(defaultRoles);
+    } catch (error) {
+      console.error("Error fetching default roles:", error);
+      res.status(500).json({ message: "Failed to fetch default roles" });
+    }
+  });
+
+  app.post("/api/rbac-config/default-roles", async (req, res) => {
+    try {
+      const roleData = insertDefaultRoleSchema.parse(req.body);
+      const role = await storage.createDefaultRole(roleData);
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("Error creating default role:", error);
+      res.status(500).json({ message: "Failed to create default role" });
+    }
+  });
+
+  app.get("/api/rbac-config/default-roles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const role = await storage.getDefaultRole(id);
+      if (!role) {
+        return res.status(404).json({ message: "Default role not found" });
+      }
+      res.json(role);
+    } catch (error) {
+      console.error("Error fetching default role:", error);
+      res.status(500).json({ message: "Failed to fetch default role" });
+    }
+  });
+
+  app.put("/api/rbac-config/default-roles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = insertDefaultRoleSchema.partial().parse(req.body);
+      const role = await storage.updateDefaultRole(id, updateData);
+      res.json(role);
+    } catch (error) {
+      console.error("Error updating default role:", error);
+      res.status(500).json({ message: "Failed to update default role" });
+    }
+  });
+
+  app.delete("/api/rbac-config/default-roles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDefaultRole(id);
+      res.json({ message: "Default role deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting default role:", error);
+      res.status(500).json({ message: "Failed to delete default role" });
+    }
+  });
+
+  app.get("/api/rbac-config/default-roles/business-type/:businessTypeId", async (req, res) => {
+    try {
+      const { businessTypeId } = req.params;
+      const roles = await storage.getDefaultRolesByBusinessType(businessTypeId);
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching default roles by business type:", error);
+      res.status(500).json({ message: "Failed to fetch default roles" });
     }
   });
   

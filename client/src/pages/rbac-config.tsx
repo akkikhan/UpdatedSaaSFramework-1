@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Edit, Trash2, Save, Shield, Users, Building2, Settings } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 interface PermissionTemplate {
   id: string;
@@ -19,7 +20,9 @@ interface PermissionTemplate {
   permissions: string[];
   businessTypes: string[];
   isDefault: boolean;
+  isActive: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface BusinessType {
@@ -30,6 +33,9 @@ interface BusinessType {
   defaultPermissions: string[];
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   isActive: boolean;
+  maxTenants: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface DefaultRole {
@@ -37,96 +43,34 @@ interface DefaultRole {
   name: string;
   description: string;
   permissions: string[];
-  businessType: string;
-  permissionTemplate: string;
+  businessTypeId: string | null;
+  permissionTemplateId: string | null;
   isSystemRole: boolean;
   canBeModified: boolean;
+  isActive: boolean;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Mock data - in real implementation, these would come from API
-const mockPermissionTemplates: PermissionTemplate[] = [
-  {
-    id: '1',
-    name: 'Standard',
-    description: 'Standard permission set for most business types',
-    permissions: ['read_users', 'create_users', 'update_users', 'read_reports'],
-    businessTypes: ['general', 'retail', 'technology'],
-    isDefault: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    name: 'Healthcare Compliant',
-    description: 'HIPAA compliant permission template for healthcare organizations',
-    permissions: ['read_users', 'create_users', 'update_users', 'read_reports', 'hipaa_audit_access', 'patient_data_access'],
-    businessTypes: ['healthcare', 'medical'],
-    isDefault: false,
-    createdAt: new Date().toISOString()
-  }
-];
+// API data hooks
+const usePermissionTemplates = () => {
+  return useQuery({
+    queryKey: ['/api/rbac-config/permission-templates']
+  });
+};
 
-const mockBusinessTypes: BusinessType[] = [
-  {
-    id: '1',
-    name: 'General',
-    description: 'General business with standard requirements',
-    requiredCompliance: ['sox'],
-    defaultPermissions: ['read_users', 'create_users'],
-    riskLevel: 'low',
-    isActive: true
-  },
-  {
-    id: '2',
-    name: 'Healthcare',
-    description: 'Healthcare organizations requiring HIPAA compliance',
-    requiredCompliance: ['hipaa', 'sox'],
-    defaultPermissions: ['read_users', 'create_users', 'hipaa_audit_access'],
-    riskLevel: 'high',
-    isActive: true
-  },
-  {
-    id: '3',
-    name: 'Financial Services',
-    description: 'Financial institutions requiring SOX and PCI compliance',
-    requiredCompliance: ['sox', 'pci', 'gdpr'],
-    defaultPermissions: ['read_users', 'create_users', 'financial_data_access'],
-    riskLevel: 'critical',
-    isActive: true
-  }
-];
+const useBusinessTypes = () => {
+  return useQuery({
+    queryKey: ['/api/rbac-config/business-types']
+  });
+};
 
-const mockDefaultRoles: DefaultRole[] = [
-  {
-    id: '1',
-    name: 'Admin',
-    description: 'Full administrative access',
-    permissions: ['*'],
-    businessType: 'general',
-    permissionTemplate: 'standard',
-    isSystemRole: true,
-    canBeModified: false
-  },
-  {
-    id: '2',
-    name: 'User Manager',
-    description: 'Can manage users and basic settings',
-    permissions: ['read_users', 'create_users', 'update_users', 'read_reports'],
-    businessType: 'general',
-    permissionTemplate: 'standard',
-    isSystemRole: false,
-    canBeModified: true
-  },
-  {
-    id: '3',
-    name: 'Healthcare Admin',
-    description: 'Healthcare specific administrative role',
-    permissions: ['read_users', 'create_users', 'update_users', 'hipaa_audit_access', 'patient_data_access'],
-    businessType: 'healthcare',
-    permissionTemplate: 'healthcare',
-    isSystemRole: false,
-    canBeModified: true
-  }
-];
+const useDefaultRoles = () => {
+  return useQuery({
+    queryKey: ['/api/rbac-config/default-roles']
+  });
+};
 
 const availablePermissions = [
   'read_users', 'create_users', 'update_users', 'delete_users',
@@ -144,6 +88,12 @@ export default function RBACConfigPage() {
   const [editingBusinessType, setEditingBusinessType] = useState<BusinessType | null>(null);
   const [editingRole, setEditingRole] = useState<DefaultRole | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // API queries
+  const permissionTemplatesQuery = usePermissionTemplates();
+  const businessTypesQuery = useBusinessTypes();
+  const defaultRolesQuery = useDefaultRoles();
 
   const getRiskBadgeColor = (risk: string) => {
     switch (risk) {
@@ -155,31 +105,110 @@ export default function RBACConfigPage() {
     }
   };
 
+  // Mutations
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (template: PermissionTemplate) => {
+      if (template.id) {
+        return await apiRequest(`/api/rbac-config/permission-templates/${template.id}`, 'PUT', template);
+      } else {
+        return await apiRequest('/api/rbac-config/permission-templates', 'POST', template);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/permission-templates'] });
+      toast({
+        title: "Template Saved",
+        description: "Permission template has been saved successfully.",
+      });
+      setEditingTemplate(null);
+    }
+  });
+
+  const saveBusinessTypeMutation = useMutation({
+    mutationFn: async (businessType: BusinessType) => {
+      if (businessType.id) {
+        return await apiRequest(`/api/rbac-config/business-types/${businessType.id}`, 'PUT', businessType);
+      } else {
+        return await apiRequest('/api/rbac-config/business-types', 'POST', businessType);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/business-types'] });
+      toast({
+        title: "Business Type Saved",
+        description: "Business type has been saved successfully.",
+      });
+      setEditingBusinessType(null);
+    }
+  });
+
+  const saveRoleMutation = useMutation({
+    mutationFn: async (role: DefaultRole) => {
+      if (role.id) {
+        return await apiRequest(`/api/rbac-config/default-roles/${role.id}`, 'PUT', role);
+      } else {
+        return await apiRequest('/api/rbac-config/default-roles', 'POST', role);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/default-roles'] });
+      toast({
+        title: "Default Role Saved",
+        description: "Default role has been saved successfully.",
+      });
+      setEditingRole(null);
+    }
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/rbac-config/permission-templates/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/permission-templates'] });
+      toast({
+        title: "Template Deleted",
+        description: "Permission template has been deleted successfully.",
+      });
+    }
+  });
+
+  const deleteBusinessTypeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/rbac-config/business-types/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/business-types'] });
+      toast({
+        title: "Business Type Deleted",
+        description: "Business type has been deleted successfully.",
+      });
+    }
+  });
+
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/rbac-config/default-roles/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rbac-config/default-roles'] });
+      toast({
+        title: "Default Role Deleted",
+        description: "Default role has been deleted successfully.",
+      });
+    }
+  });
+
   const handleSaveTemplate = (template: PermissionTemplate) => {
-    // In real implementation, this would call API
-    toast({
-      title: "Template Saved",
-      description: `Permission template "${template.name}" has been saved successfully.`,
-    });
-    setEditingTemplate(null);
+    saveTemplateMutation.mutate(template);
   };
 
   const handleSaveBusinessType = (businessType: BusinessType) => {
-    // In real implementation, this would call API
-    toast({
-      title: "Business Type Saved",
-      description: `Business type "${businessType.name}" has been saved successfully.`,
-    });
-    setEditingBusinessType(null);
+    saveBusinessTypeMutation.mutate(businessType);
   };
 
   const handleSaveRole = (role: DefaultRole) => {
-    // In real implementation, this would call API
-    toast({
-      title: "Default Role Saved",
-      description: `Default role "${role.name}" has been saved successfully.`,
-    });
-    setEditingRole(null);
+    saveRoleMutation.mutate(role);
   };
 
   return (
@@ -220,7 +249,9 @@ export default function RBACConfigPage() {
                     permissions: [],
                     businessTypes: [],
                     isDefault: false,
-                    createdAt: new Date().toISOString()
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
                   })}
                   data-testid="button-add-template"
                 >
@@ -231,7 +262,9 @@ export default function RBACConfigPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                {mockPermissionTemplates.map((template) => (
+                {permissionTemplatesQuery.isLoading ? (
+                  <div>Loading templates...</div>
+                ) : permissionTemplatesQuery.data?.map((template) => (
                   <Card key={template.id} className="border" data-testid={`template-card-${template.id}`}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -284,6 +317,8 @@ export default function RBACConfigPage() {
                             <Button 
                               variant="destructive" 
                               size="sm"
+                              onClick={() => deleteTemplateMutation.mutate(template.id)}
+                              disabled={deleteTemplateMutation.isPending}
                               data-testid={`button-delete-template-${template.id}`}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -321,7 +356,10 @@ export default function RBACConfigPage() {
                     requiredCompliance: [],
                     defaultPermissions: [],
                     riskLevel: 'low',
-                    isActive: true
+                    isActive: true,
+                    maxTenants: null,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
                   })}
                   data-testid="button-add-business-type"
                 >
@@ -332,7 +370,9 @@ export default function RBACConfigPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                {mockBusinessTypes.map((businessType) => (
+                {businessTypesQuery.isLoading ? (
+                  <div>Loading business types...</div>
+                ) : businessTypesQuery.data?.map((businessType) => (
                   <Card key={businessType.id} className="border" data-testid={`business-type-card-${businessType.id}`}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -389,6 +429,8 @@ export default function RBACConfigPage() {
                           <Button 
                             variant="destructive" 
                             size="sm"
+                            onClick={() => deleteBusinessTypeMutation.mutate(businessType.id)}
+                            disabled={deleteBusinessTypeMutation.isPending}
                             data-testid={`button-delete-business-type-${businessType.id}`}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -423,10 +465,14 @@ export default function RBACConfigPage() {
                     name: '',
                     description: '',
                     permissions: [],
-                    businessType: '',
-                    permissionTemplate: '',
+                    businessTypeId: null,
+                    permissionTemplateId: null,
                     isSystemRole: false,
-                    canBeModified: true
+                    canBeModified: true,
+                    isActive: true,
+                    priority: 1,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
                   })}
                   data-testid="button-add-default-role"
                 >
@@ -437,7 +483,9 @@ export default function RBACConfigPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                {mockDefaultRoles.map((role) => (
+                {defaultRolesQuery.isLoading ? (
+                  <div>Loading default roles...</div>
+                ) : defaultRolesQuery.data?.map((role) => (
                   <Card key={role.id} className="border" data-testid={`default-role-card-${role.id}`}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -499,6 +547,8 @@ export default function RBACConfigPage() {
                             <Button 
                               variant="destructive" 
                               size="sm"
+                              onClick={() => deleteRoleMutation.mutate(role.id)}
+                              disabled={deleteRoleMutation.isPending}
                               data-testid={`button-delete-default-role-${role.id}`}
                             >
                               <Trash2 className="h-4 w-4" />

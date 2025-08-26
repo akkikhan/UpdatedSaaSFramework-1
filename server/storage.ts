@@ -12,6 +12,10 @@ import {
   tenantUsers,
   tenantRoles,
   tenantUserRoles,
+  tenantNotifications,
+  permissionTemplates,
+  businessTypes,
+  defaultRoles,
   type Tenant,
   type InsertTenant,
   type User,
@@ -27,10 +31,18 @@ import {
   type TenantRole,
   type InsertTenantRole,
   type TenantUserRole,
-  type InsertTenantUserRole
+  type InsertTenantUserRole,
+  type TenantNotification,
+  type InsertTenantNotification,
+  type PermissionTemplate,
+  type InsertPermissionTemplate,
+  type BusinessType,
+  type InsertBusinessType,
+  type DefaultRole,
+  type InsertDefaultRole
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { eq, desc, count, asc, and, like, gte, lte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -131,6 +143,34 @@ export interface IStorage {
   assignTenantUserRole(assignment: InsertTenantUserRole): Promise<TenantUserRole>;
   getTenantUserRoles(tenantId: string, userId?: string): Promise<TenantUserRole[]>;
   removeTenantUserRole(userId: string, roleId: string): Promise<void>;
+
+  // Tenant Notification operations
+  createTenantNotification(notification: InsertTenantNotification): Promise<TenantNotification>;
+  getTenantNotifications(tenantId: string, options?: { limit?: number; unreadOnly?: boolean }): Promise<TenantNotification[]>;
+  markNotificationAsRead(notificationId: string): Promise<void>;
+
+  // Platform Admin RBAC Configuration operations
+  // Permission Templates
+  createPermissionTemplate(template: InsertPermissionTemplate): Promise<PermissionTemplate>;
+  getPermissionTemplates(): Promise<PermissionTemplate[]>;
+  getPermissionTemplate(id: string): Promise<PermissionTemplate | undefined>;
+  updatePermissionTemplate(id: string, template: Partial<InsertPermissionTemplate>): Promise<PermissionTemplate>;
+  deletePermissionTemplate(id: string): Promise<void>;
+
+  // Business Types
+  createBusinessType(businessType: InsertBusinessType): Promise<BusinessType>;
+  getBusinessTypes(): Promise<BusinessType[]>;
+  getBusinessType(id: string): Promise<BusinessType | undefined>;
+  updateBusinessType(id: string, businessType: Partial<InsertBusinessType>): Promise<BusinessType>;
+  deleteBusinessType(id: string): Promise<void>;
+
+  // Default Roles
+  createDefaultRole(role: InsertDefaultRole): Promise<DefaultRole>;
+  getDefaultRoles(): Promise<DefaultRole[]>;
+  getDefaultRole(id: string): Promise<DefaultRole | undefined>;
+  updateDefaultRole(id: string, role: Partial<InsertDefaultRole>): Promise<DefaultRole>;
+  deleteDefaultRole(id: string): Promise<void>;
+  getDefaultRolesByBusinessType(businessTypeId: string): Promise<DefaultRole[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -393,7 +433,7 @@ export class DatabaseStorage implements IStorage {
 
     if (conditions.length > 0) {
       const whereCondition = conditions.reduce((acc, condition, index) => 
-        index === 0 ? condition : sql`${acc} AND ${condition}`, sql``);
+        index === 0 ? condition : sql`${acc} AND ${condition}`, conditions[0]);
       query = query.where(whereCondition);
     }
 
@@ -442,7 +482,7 @@ export class DatabaseStorage implements IStorage {
 
     if (conditions.length > 0) {
       const whereCondition = conditions.reduce((acc, condition, index) => 
-        index === 0 ? condition : sql`${acc} AND ${condition}`, sql``);
+        index === 0 ? condition : sql`${acc} AND ${condition}`, conditions[0]);
       query = query.where(whereCondition);
     }
 
@@ -638,6 +678,123 @@ export class DatabaseStorage implements IStorage {
       .where(
         sql`${tenantUserRoles.userId} = ${userId} AND ${tenantUserRoles.roleId} = ${roleId}`
       );
+  }
+
+  // Tenant Notification Implementation
+  async createTenantNotification(notification: InsertTenantNotification): Promise<TenantNotification> {
+    const [result] = await db.insert(tenantNotifications).values(notification).returning();
+    return result;
+  }
+
+  async getTenantNotifications(tenantId: string, options: { limit?: number; unreadOnly?: boolean } = {}): Promise<TenantNotification[]> {
+    let query = db.select().from(tenantNotifications).where(eq(tenantNotifications.tenantId, tenantId));
+    
+    if (options.unreadOnly) {
+      query = query.where(eq(tenantNotifications.isRead, false));
+    }
+    
+    return await query.orderBy(desc(tenantNotifications.createdAt)).limit(options.limit || 50);
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    await db.update(tenantNotifications)
+      .set({ isRead: true, readAt: new Date() })
+      .where(eq(tenantNotifications.id, notificationId));
+  }
+
+  // Platform Admin RBAC Configuration Implementation
+
+  // Permission Templates
+  async createPermissionTemplate(template: InsertPermissionTemplate): Promise<PermissionTemplate> {
+    const [result] = await db.insert(permissionTemplates).values(template).returning();
+    return result;
+  }
+
+  async getPermissionTemplates(): Promise<PermissionTemplate[]> {
+    return await db.select().from(permissionTemplates).where(eq(permissionTemplates.isActive, true)).orderBy(asc(permissionTemplates.name));
+  }
+
+  async getPermissionTemplate(id: string): Promise<PermissionTemplate | undefined> {
+    const [result] = await db.select().from(permissionTemplates).where(eq(permissionTemplates.id, id));
+    return result;
+  }
+
+  async updatePermissionTemplate(id: string, template: Partial<InsertPermissionTemplate>): Promise<PermissionTemplate> {
+    const [result] = await db.update(permissionTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(permissionTemplates.id, id))
+      .returning();
+    return result;
+  }
+
+  async deletePermissionTemplate(id: string): Promise<void> {
+    await db.update(permissionTemplates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(permissionTemplates.id, id));
+  }
+
+  // Business Types
+  async createBusinessType(businessType: InsertBusinessType): Promise<BusinessType> {
+    const [result] = await db.insert(businessTypes).values(businessType).returning();
+    return result;
+  }
+
+  async getBusinessTypes(): Promise<BusinessType[]> {
+    return await db.select().from(businessTypes).where(eq(businessTypes.isActive, true)).orderBy(asc(businessTypes.name));
+  }
+
+  async getBusinessType(id: string): Promise<BusinessType | undefined> {
+    const [result] = await db.select().from(businessTypes).where(eq(businessTypes.id, id));
+    return result;
+  }
+
+  async updateBusinessType(id: string, businessType: Partial<InsertBusinessType>): Promise<BusinessType> {
+    const [result] = await db.update(businessTypes)
+      .set({ ...businessType, updatedAt: new Date() })
+      .where(eq(businessTypes.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteBusinessType(id: string): Promise<void> {
+    await db.update(businessTypes)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(businessTypes.id, id));
+  }
+
+  // Default Roles
+  async createDefaultRole(role: InsertDefaultRole): Promise<DefaultRole> {
+    const [result] = await db.insert(defaultRoles).values(role).returning();
+    return result;
+  }
+
+  async getDefaultRoles(): Promise<DefaultRole[]> {
+    return await db.select().from(defaultRoles).where(eq(defaultRoles.isActive, true)).orderBy(asc(defaultRoles.priority));
+  }
+
+  async getDefaultRole(id: string): Promise<DefaultRole | undefined> {
+    const [result] = await db.select().from(defaultRoles).where(eq(defaultRoles.id, id));
+    return result;
+  }
+
+  async updateDefaultRole(id: string, role: Partial<InsertDefaultRole>): Promise<DefaultRole> {
+    const [result] = await db.update(defaultRoles)
+      .set({ ...role, updatedAt: new Date() })
+      .where(eq(defaultRoles.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteDefaultRole(id: string): Promise<void> {
+    await db.update(defaultRoles)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(defaultRoles.id, id));
+  }
+
+  async getDefaultRolesByBusinessType(businessTypeId: string): Promise<DefaultRole[]> {
+    return await db.select().from(defaultRoles)
+      .where(and(eq(defaultRoles.businessTypeId, businessTypeId), eq(defaultRoles.isActive, true)))
+      .orderBy(asc(defaultRoles.priority));
   }
 }
 

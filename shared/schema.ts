@@ -192,6 +192,51 @@ export const tenantUserRoles = pgTable("tenant_user_roles", {
   assignedBy: uuid("assigned_by").references(() => tenantUsers.id)
 });
 
+// Platform Admin RBAC Configuration Tables
+
+// Permission Templates - Reusable permission sets for different business scenarios
+export const permissionTemplates = pgTable("permission_templates", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  permissions: text("permissions").array().notNull().default(sql`'{}'::text[]`),
+  businessTypes: text("business_types").array().notNull().default(sql`'{}'::text[]`),
+  isDefault: boolean("is_default").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Business Types - Different business categories with specific compliance requirements
+export const businessTypes = pgTable("business_types", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  requiredCompliance: text("required_compliance").array().notNull().default(sql`'{}'::text[]`),
+  defaultPermissions: text("default_permissions").array().notNull().default(sql`'{}'::text[]`),
+  riskLevel: varchar("risk_level", { length: 20 }).notNull().default("low"), // low, medium, high, critical
+  isActive: boolean("is_active").notNull().default(true),
+  maxTenants: integer("max_tenants"), // Optional limit for business type
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Default Roles - Templates for roles that get created for new tenants
+export const defaultRoles = pgTable("default_roles", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  permissions: text("permissions").array().notNull().default(sql`'{}'::text[]`),
+  businessTypeId: uuid("business_type_id").references(() => businessTypes.id, { onDelete: "cascade" }),
+  permissionTemplateId: uuid("permission_template_id").references(() => permissionTemplates.id, { onDelete: "set null" }),
+  isSystemRole: boolean("is_system_role").notNull().default(false),
+  canBeModified: boolean("can_be_modified").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  priority: integer("priority").notNull().default(1), // 1 = highest priority
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -348,6 +393,34 @@ export type InsertTenantUser = z.infer<typeof insertTenantUserSchema>;
 export type TenantRole = typeof tenantRoles.$inferSelect;
 export type InsertTenantRole = z.infer<typeof insertTenantRoleSchema>;
 export type TenantUserRole = typeof tenantUserRoles.$inferSelect;
+
+// Platform Admin RBAC Configuration Types
+export type PermissionTemplate = typeof permissionTemplates.$inferSelect;
+export type BusinessType = typeof businessTypes.$inferSelect;  
+export type DefaultRole = typeof defaultRoles.$inferSelect;
+
+// Insert schemas for RBAC Configuration
+export const insertPermissionTemplateSchema = createInsertSchema(permissionTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertBusinessTypeSchema = createInsertSchema(businessTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertDefaultRoleSchema = createInsertSchema(defaultRoles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertPermissionTemplate = z.infer<typeof insertPermissionTemplateSchema>;
+export type InsertBusinessType = z.infer<typeof insertBusinessTypeSchema>;
+export type InsertDefaultRole = z.infer<typeof insertDefaultRoleSchema>;
 export type InsertTenantUserRole = z.infer<typeof insertTenantUserRoleSchema>;
 export type TenantNotification = typeof tenantNotifications.$inferSelect;
 export type InsertTenantNotification = z.infer<typeof insertTenantNotificationSchema>;
