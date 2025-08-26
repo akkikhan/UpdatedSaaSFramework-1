@@ -5,6 +5,7 @@ import { Building, ChartPie, Code, Inbox, Server, LayersIcon, Settings, FileText
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartPie, id: "dashboard" },
   { name: "Tenants", href: "/tenants", icon: Building, id: "tenants" },
+  { name: "RBAC Config", href: "/rbac-config", icon: Shield, id: "rbac-config" },
   { name: "Module Management", href: "/modules", icon: Settings, id: "modules" },
   { name: "System Logs", href: "/logs", icon: FileText, id: "logs" },
   { name: "Compliance", href: "/compliance", icon: Shield, id: "compliance" },

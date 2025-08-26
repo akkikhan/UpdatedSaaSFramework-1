@@ -19,7 +19,7 @@ interface SystemLog {
   details: any;
   ipAddress: string | null;
   userAgent: string | null;
-  createdAt: string;
+  timestamp: string;
   tenantName: string | null;
 }
 
@@ -220,7 +220,7 @@ export default function LogsPage() {
                               </p>
                               <div className="flex items-center gap-2 text-xs text-slate-500">
                                 <Clock className="h-3 w-3" />
-                                {format(new Date(log.createdAt), 'MMM d, yyyy h:mm a')}
+                                {format(new Date(log.timestamp), 'MMM d, yyyy h:mm a')}
                                 {log.ipAddress && (
                                   <span className="ml-2">IP: {log.ipAddress}</span>
                                 )}
