@@ -28,7 +28,7 @@ const formSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Organization ID can only contain lowercase letters, numbers, and hyphens"),
   adminEmail: z.string().email("Please enter a valid email address"),
   sendEmail: z.boolean().default(true),
-  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml"])).default(["auth", "rbac"]),
+  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml", "logging", "notifications", "ai-copilot"])).default(["auth", "rbac"]),
   moduleConfigs: z.object({
     "rbac": z.object({
       permissionTemplate: z.string().optional(),
@@ -57,6 +57,18 @@ const formSchema = z.object({
       cert: z.string().optional(),
       identifierFormat: z.string().optional(),
       callbackUrl: z.string().optional(),
+    }).optional(),
+    "logging": z.object({
+      levels: z.array(z.string()).optional(),
+      destinations: z.array(z.string()).optional(),
+    }).optional(),
+    "notifications": z.object({
+      channels: z.array(z.string()).optional(),
+      emailProvider: z.string().optional(),
+    }).optional(),
+    "ai-copilot": z.object({
+      provider: z.string().optional(),
+      model: z.string().optional(),
     }).optional(),
   }).default({}),
 });
@@ -256,6 +268,9 @@ export default function AddTenantPage() {
                           { id: "azure-ad", label: "Azure Active Directory", description: "Microsoft Azure AD integration", required: false },
                           { id: "auth0", label: "Auth0", description: "Auth0 identity platform integration", required: false },
                           { id: "saml", label: "SAML", description: "Security Assertion Markup Language integration", required: false },
+                          { id: "logging", label: "Logging & Monitoring", description: "Comprehensive audit trail and security monitoring", required: false },
+                          { id: "notifications", label: "Notifications", description: "Multi-channel messaging and alerts system", required: false },
+                          { id: "ai-copilot", label: "AI Copilot", description: "Intelligent automation and user assistance", required: false },
                         ].map((module) => (
                           <FormField
                             key={module.id}

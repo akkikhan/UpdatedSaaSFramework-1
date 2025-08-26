@@ -32,7 +32,10 @@ import {
   Users, 
   Shield,
   Globe,
-  Zap
+  Zap,
+  FileText,
+  Bell,
+  Bot
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateTenant } from "@/hooks/use-tenants";
@@ -43,7 +46,7 @@ const formSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Organization ID can only contain lowercase letters, numbers, and hyphens"),
   adminEmail: z.string().email("Please enter a valid email address"),
   sendEmail: z.boolean().default(true),
-  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml"])).default(["auth"]),
+  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml", "logging", "notifications", "ai-copilot"])).default(["auth"]),
   moduleConfigs: z.object({
     "rbac": z.object({
       permissionTemplate: z.string().optional(),
@@ -74,6 +77,32 @@ const formSchema = z.object({
       cert: z.string().optional(),
       identifierFormat: z.string().optional(),
       callbackUrl: z.string().optional(),
+    }).optional(),
+    "logging": z.object({
+      levels: z.array(z.string()).optional(),
+      destinations: z.array(z.string()).optional(),
+      retention: z.object({
+        error: z.string().optional(),
+        security: z.string().optional(),
+        audit: z.string().optional(),
+      }).optional(),
+    }).optional(),
+    "notifications": z.object({
+      channels: z.array(z.string()).optional(),
+      emailProvider: z.string().optional(),
+      smsProvider: z.string().optional(),
+      templates: z.object({
+        welcome: z.boolean().optional(),
+        security_alert: z.boolean().optional(),
+      }).optional(),
+    }).optional(),
+    "ai-copilot": z.object({
+      provider: z.string().optional(),
+      model: z.string().optional(),
+      capabilities: z.object({
+        chatSupport: z.boolean().optional(),
+        codeAssistance: z.boolean().optional(),
+      }).optional(),
     }).optional(),
   }).default({}),
 });
@@ -152,6 +181,36 @@ const MODULE_INFO = [
     color: "bg-purple-500",
     recommended: false,
     required: false,
+  },
+  {
+    id: "logging",
+    label: "Logging & Monitoring",
+    description: "Comprehensive audit trail and security monitoring",
+    icon: FileText,
+    color: "bg-slate-500",
+    recommended: true,
+    required: false,
+    priority: "high",
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    description: "Multi-channel messaging and alerts system",
+    icon: Bell,
+    color: "bg-yellow-500",
+    recommended: true,
+    required: false,
+    priority: "medium",
+  },
+  {
+    id: "ai-copilot",
+    label: "AI Copilot",
+    description: "Intelligent automation and user assistance",
+    icon: Bot,
+    color: "bg-indigo-500",
+    recommended: false,
+    required: false,
+    priority: "low",
   },
 ];
 
@@ -897,6 +956,179 @@ export default function OnboardingWizard() {
                                       </FormItem>
                                     )}
                                   />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Logging Module Configuration */}
+                          {watchedModules.includes("logging") && (
+                            <div className="space-y-4 border rounded-lg p-4 bg-slate-50">
+                              <h4 className="text-lg font-semibold flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-slate-500" />
+                                Logging & Monitoring Configuration
+                              </h4>
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-sm font-medium">Log Levels</Label>
+                                    <div className="space-y-2 mt-2">
+                                      {["error", "warn", "info", "debug", "trace"].map((level) => (
+                                        <label key={level} className="flex items-center space-x-2">
+                                          <input type="checkbox" className="rounded" defaultChecked={level === "error" || level === "warn"} />
+                                          <span className="text-sm capitalize">{level}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium">Destinations</Label>
+                                    <div className="space-y-2 mt-2">
+                                      {["database", "elasticsearch", "cloudwatch", "datadog"].map((dest) => (
+                                        <label key={dest} className="flex items-center space-x-2">
+                                          <input type="checkbox" className="rounded" defaultChecked={dest === "database"} />
+                                          <span className="text-sm capitalize">{dest}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="bg-slate-100 p-3 rounded-lg">
+                                  <p className="text-sm font-medium text-slate-700">Retention Settings</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 text-xs text-slate-600">
+                                    <div>Security logs: 7 years</div>
+                                    <div>Error logs: 1 year</div>
+                                    <div>Performance logs: 90 days</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Notifications Module Configuration */}
+                          {watchedModules.includes("notifications") && (
+                            <div className="space-y-4 border rounded-lg p-4 bg-yellow-50">
+                              <h4 className="text-lg font-semibold flex items-center gap-2">
+                                <Bell className="h-5 w-5 text-yellow-500" />
+                                Notifications Configuration
+                              </h4>
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-sm font-medium">Notification Channels</Label>
+                                    <div className="space-y-2 mt-2">
+                                      {["email", "sms", "push", "webhook", "slack"].map((channel) => (
+                                        <label key={channel} className="flex items-center space-x-2">
+                                          <input type="checkbox" className="rounded" defaultChecked={channel === "email"} />
+                                          <span className="text-sm capitalize">{channel}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium">Email Provider</Label>
+                                    <Select defaultValue="sendgrid">
+                                      <SelectTrigger className="mt-2">
+                                        <SelectValue placeholder="Select provider" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="sendgrid">SendGrid</SelectItem>
+                                        <SelectItem value="mailgun">Mailgun</SelectItem>
+                                        <SelectItem value="ses">Amazon SES</SelectItem>
+                                        <SelectItem value="smtp">Custom SMTP</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div className="bg-yellow-100 p-3 rounded-lg">
+                                  <p className="text-sm font-medium text-yellow-800">Default Templates</p>
+                                  <div className="space-y-1 mt-2 text-xs text-yellow-700">
+                                    <div>✓ Welcome email</div>
+                                    <div>✓ Security alerts</div>
+                                    <div>✓ Payment notifications</div>
+                                    <div>✓ Trial ending reminders</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* AI Copilot Module Configuration */}
+                          {watchedModules.includes("ai-copilot") && (
+                            <div className="space-y-4 border rounded-lg p-4 bg-indigo-50">
+                              <h4 className="text-lg font-semibold flex items-center gap-2">
+                                <Bot className="h-5 w-5 text-indigo-500" />
+                                AI Copilot Configuration
+                              </h4>
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-sm font-medium">AI Provider</Label>
+                                    <Select defaultValue="openai" onValueChange={(value) => {
+                                      const currentConfigs = form.getValues("moduleConfigs") || {};
+                                      form.setValue("moduleConfigs", {
+                                        ...currentConfigs,
+                                        "ai-copilot": { provider: value }
+                                      });
+                                    }}>
+                                      <SelectTrigger className="mt-2">
+                                        <SelectValue placeholder="Select AI provider" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="openai">OpenAI</SelectItem>
+                                        <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                                        <SelectItem value="azure-openai">Azure OpenAI</SelectItem>
+                                        <SelectItem value="aws-bedrock">AWS Bedrock</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium">Model</Label>
+                                    <Select defaultValue="gpt-4o">
+                                      <SelectTrigger className="mt-2">
+                                        <SelectValue placeholder="Select model" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                                        <SelectItem value="gpt-4">GPT-4</SelectItem>
+                                        <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
+                                        <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium">AI Capabilities</Label>
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {[
+                                      { id: "chatSupport", label: "Chat Support" },
+                                      { id: "codeAssistance", label: "Code Assistance" },
+                                      { id: "documentAnalysis", label: "Document Analysis" },
+                                      { id: "workflowAutomation", label: "Workflow Automation" }
+                                    ].map((capability) => (
+                                      <label key={capability.id} className="flex items-center space-x-2">
+                                        <input type="checkbox" className="rounded" defaultChecked />
+                                        <span className="text-sm">{capability.label}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="bg-indigo-100 p-3 rounded-lg border border-indigo-200">
+                                  <p className="text-sm font-medium text-indigo-800">Safety Settings</p>
+                                  <div className="space-y-2 mt-2">
+                                    <label className="flex items-center space-x-2">
+                                      <input type="checkbox" className="rounded" defaultChecked />
+                                      <span className="text-sm text-indigo-700">Content filtering</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2">
+                                      <input type="checkbox" className="rounded" defaultChecked />
+                                      <span className="text-sm text-indigo-700">PII detection</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2">
+                                      <input type="checkbox" className="rounded" defaultChecked />
+                                      <span className="text-sm text-indigo-700">Rate limiting</span>
+                                    </label>
+                                  </div>
                                 </div>
                               </div>
                             </div>

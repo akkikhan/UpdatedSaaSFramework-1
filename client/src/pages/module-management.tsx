@@ -25,7 +25,10 @@ import {
   XCircle, 
   Edit,
   Save,
-  Search
+  Search,
+  FileText,
+  Bell,
+  Bot
 } from "lucide-react";
 
 interface Tenant {
@@ -85,6 +88,33 @@ const availableModules = [
     icon: Settings,
     category: 'SSO',
     configurable: true
+  },
+  {
+    id: 'logging',
+    name: 'Logging & Monitoring',
+    description: 'Comprehensive audit trail and security monitoring',
+    icon: FileText,
+    category: 'Operations',
+    configurable: true,
+    priority: 'high'
+  },
+  {
+    id: 'notifications',
+    name: 'Notifications',
+    description: 'Multi-channel messaging and alerts system',
+    icon: Bell,
+    category: 'Communication',
+    configurable: true,
+    priority: 'medium'
+  },
+  {
+    id: 'ai-copilot',
+    name: 'AI Copilot',
+    description: 'Intelligent automation and user assistance',
+    icon: Bot,
+    category: 'AI/ML',
+    configurable: true,
+    priority: 'low'
   }
 ];
 

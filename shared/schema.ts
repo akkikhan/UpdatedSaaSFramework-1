@@ -156,7 +156,7 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
   createdAt: true,
   updatedAt: true
 }).extend({
-  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml"])).optional(),
+  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml", "logging", "notifications", "ai-copilot"])).optional(),
   moduleConfigs: z.object({
     "azure-ad": z.object({
       tenantId: z.string().optional(),
@@ -174,6 +174,48 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
       issuer: z.string().optional(),
       cert: z.string().optional(),
       identifierFormat: z.string().optional(),
+    }).optional(),
+    "logging": z.object({
+      levels: z.array(z.enum(["error", "warn", "info", "debug", "trace"])).optional(),
+      destinations: z.array(z.enum(["database", "elasticsearch", "cloudwatch", "datadog"])).optional(),
+      retention: z.object({
+        error: z.string().optional(),
+        security: z.string().optional(),
+        audit: z.string().optional(),
+        performance: z.string().optional(),
+      }).optional(),
+      alerting: z.object({
+        errorThreshold: z.number().optional(),
+        securityEvents: z.boolean().optional(),
+        performanceDegradation: z.boolean().optional(),
+      }).optional(),
+    }).optional(),
+    "notifications": z.object({
+      channels: z.array(z.enum(["email", "sms", "push", "webhook", "slack"])).optional(),
+      emailProvider: z.enum(["sendgrid", "mailgun", "ses", "smtp"]).optional(),
+      smsProvider: z.enum(["twilio", "vonage", "aws-sns"]).optional(),
+      pushProvider: z.enum(["firebase", "apn", "onesignal"]).optional(),
+      templates: z.object({
+        welcome: z.boolean().optional(),
+        trial_ending: z.boolean().optional(),
+        payment_failed: z.boolean().optional(),
+        security_alert: z.boolean().optional(),
+      }).optional(),
+    }).optional(),
+    "ai-copilot": z.object({
+      provider: z.enum(["openai", "anthropic", "azure-openai", "aws-bedrock"]).optional(),
+      model: z.string().optional(),
+      capabilities: z.object({
+        chatSupport: z.boolean().optional(),
+        codeAssistance: z.boolean().optional(),
+        documentAnalysis: z.boolean().optional(),
+        workflowAutomation: z.boolean().optional(),
+      }).optional(),
+      safety: z.object({
+        contentFiltering: z.boolean().optional(),
+        piiDetection: z.boolean().optional(),
+        rateLimiting: z.boolean().optional(),
+      }).optional(),
     }).optional(),
   }).optional(),
 });
