@@ -110,6 +110,50 @@ export const systemLogs = pgTable("system_logs", {
   timestamp: timestamp("timestamp").defaultNow()
 });
 
+// Compliance audit logs for regulatory requirements
+export const complianceAuditLogs = pgTable("compliance_audit_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").references(() => tenants.id),
+  userId: uuid("user_id").references(() => tenantUsers.id), // End user performing action
+  adminUserId: uuid("admin_user_id").references(() => users.id), // Platform admin
+  eventType: varchar("event_type", { length: 50 }).notNull(), // rbac_change, data_access, security_event, auth_event
+  eventCategory: varchar("event_category", { length: 50 }).notNull(), // create, read, update, delete, access, login, logout
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // user, role, permission, data_record, session
+  entityId: varchar("entity_id", { length: 100 }).notNull(),
+  entityName: varchar("entity_name", { length: 255 }), // Human readable entity name
+  action: varchar("action", { length: 100 }).notNull(), // role_assigned, permission_granted, data_exported, login_failed
+  outcome: varchar("outcome", { length: 20 }).notNull().default("success"), // success, failure, blocked
+  riskLevel: varchar("risk_level", { length: 20 }).notNull().default("low"), // low, medium, high, critical
+  complianceFrameworks: text("compliance_frameworks").array().default(sql`'{}'::text[]`), // gdpr, sox, hipaa, pci, iso27001
+  dataClassification: varchar("data_classification", { length: 50 }).default("public"), // public, internal, confidential, restricted
+  details: jsonb("details").default(sql`'{}'`), // Event-specific details
+  beforeState: jsonb("before_state"), // State before change (for audit purposes)
+  afterState: jsonb("after_state"), // State after change
+  sessionId: varchar("session_id", { length: 255 }), // Session identifier
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  geolocation: jsonb("geolocation"), // Country, region for compliance reporting
+  timestamp: timestamp("timestamp").defaultNow(),
+  retentionUntil: timestamp("retention_until"), // Automatic data purging for compliance
+});
+
+// Security events for threat detection and compliance
+export const securityEvents = pgTable("security_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").references(() => tenants.id),
+  eventType: varchar("event_type", { length: 50 }).notNull(), // suspicious_login, brute_force, privilege_escalation
+  severity: varchar("severity", { length: 20 }).notNull(), // info, warning, alert, critical
+  source: varchar("source", { length: 100 }).notNull(), // api, web, mobile, system
+  userId: uuid("user_id").references(() => tenantUsers.id),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  details: jsonb("details").default(sql`'{}'`),
+  isResolved: boolean("is_resolved").default(false),
+  resolvedBy: uuid("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  timestamp: timestamp("timestamp").defaultNow()
+});
+
 // Tenant Users - The actual end users of each tenant's application
 export const tenantUsers = pgTable("tenant_users", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -275,6 +319,16 @@ export const insertTenantNotificationSchema = createInsertSchema(tenantNotificat
   createdAt: true
 });
 
+export const insertComplianceAuditLogSchema = createInsertSchema(complianceAuditLogs).omit({
+  id: true,
+  timestamp: true
+});
+
+export const insertSecurityEventSchema = createInsertSchema(securityEvents).omit({
+  id: true,
+  timestamp: true
+});
+
 // Types
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
@@ -285,6 +339,10 @@ export type InsertRole = z.infer<typeof insertRoleSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type SystemLog = typeof systemLogs.$inferSelect;
+export type ComplianceAuditLog = typeof complianceAuditLogs.$inferSelect;
+export type InsertComplianceAuditLog = z.infer<typeof insertComplianceAuditLogSchema>;
+export type SecurityEvent = typeof securityEvents.$inferSelect;
+export type InsertSecurityEvent = z.infer<typeof insertSecurityEventSchema>;
 export type TenantUser = typeof tenantUsers.$inferSelect;
 export type InsertTenantUser = z.infer<typeof insertTenantUserSchema>;
 export type TenantRole = typeof tenantRoles.$inferSelect;

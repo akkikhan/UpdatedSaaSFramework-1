@@ -7,6 +7,8 @@ import {
   permissions,
   emailLogs,
   systemLogs,
+  complianceAuditLogs,
+  securityEvents,
   tenantUsers,
   tenantRoles,
   tenantUserRoles,
@@ -18,6 +20,8 @@ import {
   type Session,
   type EmailLog,
   type SystemLog,
+  type ComplianceAuditLog,
+  type SecurityEvent,
   type TenantUser,
   type InsertTenantUser,
   type TenantRole,
@@ -70,6 +74,24 @@ export interface IStorage {
     limit?: number;
     offset?: number;
     action?: string;
+  }): Promise<any[]>;
+
+  // Compliance logging
+  getComplianceAuditLogs(options?: {
+    tenantId?: string;
+    eventType?: string;
+    framework?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]>;
+  getSecurityEvents(options?: {
+    tenantId?: string;
+    severity?: string;
+    eventType?: string;
+    limit?: number;
+    offset?: number;
   }): Promise<any[]>;
   
   // Module management
@@ -315,6 +337,116 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(tenants.id, tenantId));
+  }
+
+  // Compliance audit logs
+  async getComplianceAuditLogs(options: {
+    tenantId?: string;
+    eventType?: string;
+    framework?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<any[]> {
+    let query = db.select({
+      id: complianceAuditLogs.id,
+      tenantId: complianceAuditLogs.tenantId,
+      userId: complianceAuditLogs.userId,
+      adminUserId: complianceAuditLogs.adminUserId,
+      eventType: complianceAuditLogs.eventType,
+      eventCategory: complianceAuditLogs.eventCategory,
+      entityType: complianceAuditLogs.entityType,
+      entityId: complianceAuditLogs.entityId,
+      entityName: complianceAuditLogs.entityName,
+      action: complianceAuditLogs.action,
+      outcome: complianceAuditLogs.outcome,
+      riskLevel: complianceAuditLogs.riskLevel,
+      complianceFrameworks: complianceAuditLogs.complianceFrameworks,
+      dataClassification: complianceAuditLogs.dataClassification,
+      details: complianceAuditLogs.details,
+      ipAddress: complianceAuditLogs.ipAddress,
+      timestamp: complianceAuditLogs.timestamp,
+      tenantName: tenants.name
+    })
+    .from(complianceAuditLogs)
+    .leftJoin(tenants, eq(complianceAuditLogs.tenantId, tenants.id))
+    .orderBy(desc(complianceAuditLogs.timestamp));
+
+    // Apply filters
+    const conditions = [];
+    if (options.tenantId) {
+      conditions.push(eq(complianceAuditLogs.tenantId, options.tenantId));
+    }
+    if (options.eventType) {
+      conditions.push(eq(complianceAuditLogs.eventType, options.eventType));
+    }
+    if (options.framework) {
+      conditions.push(sql`${options.framework} = ANY(${complianceAuditLogs.complianceFrameworks})`);
+    }
+    if (options.startDate) {
+      conditions.push(sql`${complianceAuditLogs.timestamp} >= ${options.startDate}`);
+    }
+    if (options.endDate) {
+      conditions.push(sql`${complianceAuditLogs.timestamp} <= ${options.endDate}`);
+    }
+
+    if (conditions.length > 0) {
+      const whereCondition = conditions.reduce((acc, condition, index) => 
+        index === 0 ? condition : sql`${acc} AND ${condition}`, sql``);
+      query = query.where(whereCondition);
+    }
+
+    return await query.limit(options.limit || 50).offset(options.offset || 0);
+  }
+
+  // Security events
+  async getSecurityEvents(options: {
+    tenantId?: string;
+    severity?: string;
+    eventType?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<any[]> {
+    let query = db.select({
+      id: securityEvents.id,
+      tenantId: securityEvents.tenantId,
+      eventType: securityEvents.eventType,
+      severity: securityEvents.severity,
+      source: securityEvents.source,
+      userId: securityEvents.userId,
+      ipAddress: securityEvents.ipAddress,
+      userAgent: securityEvents.userAgent,
+      details: securityEvents.details,
+      isResolved: securityEvents.isResolved,
+      resolvedBy: securityEvents.resolvedBy,
+      resolvedAt: securityEvents.resolvedAt,
+      timestamp: securityEvents.timestamp,
+      tenantName: tenants.name
+    })
+    .from(securityEvents)
+    .leftJoin(tenants, eq(securityEvents.tenantId, tenants.id))
+    .orderBy(desc(securityEvents.timestamp));
+
+    // Apply filters
+    const conditions = [];
+    if (options.tenantId) {
+      conditions.push(eq(securityEvents.tenantId, options.tenantId));
+    }
+    if (options.severity) {
+      conditions.push(eq(securityEvents.severity, options.severity));
+    }
+    if (options.eventType) {
+      conditions.push(eq(securityEvents.eventType, options.eventType));
+    }
+
+    if (conditions.length > 0) {
+      const whereCondition = conditions.reduce((acc, condition, index) => 
+        index === 0 ? condition : sql`${acc} AND ${condition}`, sql``);
+      query = query.where(whereCondition);
+    }
+
+    return await query.limit(options.limit || 50).offset(options.offset || 0);
   }
 
   // Get email logs for admin

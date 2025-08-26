@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Building, ChartPie, Code, Inbox, Server, LayersIcon, Settings, FileText } from "lucide-react";
+import { Building, ChartPie, Code, Inbox, Server, LayersIcon, Settings, FileText, Shield } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartPie, id: "dashboard" },
   { name: "Tenants", href: "/tenants", icon: Building, id: "tenants" },
   { name: "Module Management", href: "/modules", icon: Settings, id: "modules" },
   { name: "System Logs", href: "/logs", icon: FileText, id: "logs" },
+  { name: "Compliance", href: "/compliance", icon: Shield, id: "compliance" },
   { name: "SDK Integration", href: "/sdk", icon: Code, id: "sdk" },
   { name: "Email Templates", href: "/emails", icon: Inbox, id: "emails" },
   { name: "System Health", href: "/system", icon: Server, id: "system" },

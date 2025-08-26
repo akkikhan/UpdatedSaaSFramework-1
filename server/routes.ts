@@ -6,6 +6,7 @@ import { authService } from "./services/auth";
 import { authMiddleware, tenantMiddleware } from "./middleware/auth";
 import { insertTenantSchema, insertUserSchema, insertTenantUserSchema, insertTenantRoleSchema, insertTenantUserRoleSchema } from "@shared/schema";
 import { notificationService } from "./services/notification";
+import { complianceService } from "./services/compliance";
 import { AzureADService } from "./services/azure-ad";
 import { z } from "zod";
 
@@ -198,6 +199,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Compliance and audit endpoints
+  app.get("/api/compliance/audit-logs", async (req, res) => {
+    try {
+      const {
+        tenantId,
+        eventType,
+        framework,
+        startDate,
+        endDate,
+        limit = '50',
+        offset = '0'
+      } = req.query;
+
+      const options = {
+        tenantId: tenantId as string,
+        eventType: eventType as string,
+        framework: framework as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      };
+
+      const logs = await storage.getComplianceAuditLogs(options);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching compliance audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch compliance audit logs" });
+    }
+  });
+
+  app.get("/api/compliance/security-events", async (req, res) => {
+    try {
+      const {
+        tenantId,
+        severity,
+        eventType,
+        limit = '50',
+        offset = '0'
+      } = req.query;
+
+      const options = {
+        tenantId: tenantId as string,
+        severity: severity as string,
+        eventType: eventType as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      };
+
+      const events = await storage.getSecurityEvents(options);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching security events:", error);
+      res.status(500).json({ message: "Failed to fetch security events" });
+    }
+  });
+
+  app.get("/api/compliance/summary", async (req, res) => {
+    try {
+      const { tenantId, framework, days = '30' } = req.query;
+      const daysBack = parseInt(days as string);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - daysBack);
+
+      // Get recent compliance events
+      const auditLogs = await storage.getComplianceAuditLogs({
+        tenantId: tenantId as string,
+        framework: framework as string,
+        startDate,
+        limit: 1000
+      });
+
+      const securityEvents = await storage.getSecurityEvents({
+        tenantId: tenantId as string,
+        limit: 1000
+      });
+
+      // Calculate summary statistics
+      const summary = {
+        timeframe: `${daysBack} days`,
+        totalAuditEvents: auditLogs.length,
+        rbacChanges: auditLogs.filter(log => log.eventType === 'rbac_change').length,
+        dataAccessEvents: auditLogs.filter(log => log.eventType === 'data_access').length,
+        authEvents: auditLogs.filter(log => log.eventType === 'auth_event').length,
+        highRiskEvents: auditLogs.filter(log => log.riskLevel === 'high' || log.riskLevel === 'critical').length,
+        securityEvents: securityEvents.length,
+        criticalSecurityEvents: securityEvents.filter(event => event.severity === 'critical').length,
+        complianceFrameworks: Array.from(new Set(auditLogs.flatMap(log => log.complianceFrameworks || []))),
+        riskDistribution: {
+          low: auditLogs.filter(log => log.riskLevel === 'low').length,
+          medium: auditLogs.filter(log => log.riskLevel === 'medium').length,
+          high: auditLogs.filter(log => log.riskLevel === 'high').length,
+          critical: auditLogs.filter(log => log.riskLevel === 'critical').length
+        }
+      };
+
+      res.json(summary);
+    } catch (error) {
+      console.error("Error generating compliance summary:", error);
+      res.status(500).json({ message: "Failed to generate compliance summary" });
+    }
+  });
+
   // Module Management Routes
   
   // Update tenant modules
@@ -231,6 +335,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ipAddress: req.ip,
         userAgent: req.get('User-Agent')
       });
+
+      // Log compliance audit events for RBAC changes
+      if (enabled.length > 0 || disabled.length > 0) {
+        for (const module of enabled) {
+          await complianceService.logRBACEvent({
+            tenantId: id,
+            action: 'module_enabled',
+            entityType: 'permission',
+            entityId: module,
+            entityName: `${module.toUpperCase()} Module`,
+            beforeState: { moduleEnabled: false },
+            afterState: { moduleEnabled: true },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            riskLevel: module === 'rbac' ? 'high' : 'medium' // RBAC module changes are high risk
+          });
+        }
+        
+        for (const module of disabled) {
+          await complianceService.logRBACEvent({
+            tenantId: id,
+            action: 'module_disabled',
+            entityType: 'permission',
+            entityId: module,
+            entityName: `${module.toUpperCase()} Module`,
+            beforeState: { moduleEnabled: true },
+            afterState: { moduleEnabled: false },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            riskLevel: module === 'rbac' ? 'critical' : 'high' // Disabling modules is higher risk
+          });
+        }
+      }
       
       // Send notifications for module changes
       if (enabled.length > 0 || disabled.length > 0) {

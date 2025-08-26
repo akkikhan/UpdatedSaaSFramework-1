@@ -21,6 +21,7 @@ import AuthErrorPage from "@/pages/auth-error";
 import TenantSuccessPage from "@/pages/tenant-success";
 import TenantPortalPage from "@/pages/tenant-portal";
 import RBACManagementPage from "@/pages/rbac-management";
+import ComplianceDashboard from "@/pages/compliance-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -49,6 +50,7 @@ function Router() {
             <Route path="/tenants/:tenantId/rbac" component={RBACManagementPage} />
             <Route path="/modules" component={ModuleManagementPage} />
             <Route path="/logs" component={LogsPage} />
+            <Route path="/compliance" component={ComplianceDashboard} />
             <Route path="/sdk" component={SDKIntegrationPage} />
             <Route path="/emails" component={EmailTemplatesPage} />
             <Route path="/system" component={SystemHealthPage} />
