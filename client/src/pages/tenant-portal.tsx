@@ -139,11 +139,13 @@ export default function TenantPortalPage() {
 
       <div className="max-w-7xl mx-auto p-6">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className={`grid w-full ${Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") ? "grid-cols-5" : "grid-cols-4"}`}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="auth">Authentication</TabsTrigger>
-            <TabsTrigger value="rbac">Roles & Permissions</TabsTrigger>
+            {Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") && (
+              <TabsTrigger value="rbac">Roles & Permissions</TabsTrigger>
+            )}
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -175,11 +177,13 @@ export default function TenantPortalPage() {
                       <span className="font-medium">Auth:</span>
                       <span className="font-mono text-xs">{tenant.authApiKey}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Key className="h-4 w-4 text-green-500" />
-                      <span className="font-medium">RBAC:</span>
-                      <span className="font-mono text-xs">{tenant.rbacApiKey}</span>
-                    </div>
+                    {Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Key className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">RBAC:</span>
+                        <span className="font-mono text-xs">{tenant.rbacApiKey}</span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -346,17 +350,18 @@ export default function TenantPortalPage() {
           </TabsContent>
 
           <TabsContent value="rbac" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* RBAC Configuration */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>RBAC Configuration</CardTitle>
-                    <CardDescription>
-                      Role-Based Access Control settings for this tenant
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
+            {Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") ? (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* RBAC Configuration */}
+                <div className="lg:col-span-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>RBAC Configuration</CardTitle>
+                      <CardDescription>
+                        Role-Based Access Control settings for this tenant
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-slate-700">Permission Template</label>
@@ -435,6 +440,44 @@ export default function TenantPortalPage() {
                 </Card>
               </div>
             </div>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-500" />
+                    RBAC Module Not Enabled
+                  </CardTitle>
+                  <CardDescription>
+                    Role-Based Access Control features are not available for this tenant
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center py-8">
+                    <Users className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+                    <h3 className="text-lg font-semibold text-slate-800 mb-2">RBAC Module Required</h3>
+                    <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                      To manage roles and permissions for this tenant, the RBAC module needs to be enabled. 
+                      Contact your platform administrator to enable this feature.
+                    </p>
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-blue-800 mb-2">RBAC Module Features:</h4>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                          <li>• Role creation and management</li>
+                          <li>• Granular permission control</li>
+                          <li>• User role assignments</li>
+                          <li>• Access control enforcement</li>
+                        </ul>
+                      </div>
+                      <Button variant="outline" className="mt-4">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Contact Administrator
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
