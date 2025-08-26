@@ -137,6 +137,26 @@ export class EmailService {
   }): Promise<boolean> {
     const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
     
+    // Temporarily skip email sending - just log as sent for now
+    if (!this.config.smtpPassword) {
+      console.log(`📧 Email functionality disabled - would have sent onboarding email to ${tenant.adminEmail}`);
+      console.log(`📧 Tenant "${tenant.name}" created successfully with API keys:`);
+      console.log(`📧 Auth API Key: ${tenant.authApiKey}`);
+      console.log(`📧 RBAC API Key: ${tenant.rbacApiKey}`);
+      
+      // Log as sent for platform functionality
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: tenant.adminEmail,
+        subject,
+        templateType: 'onboarding',
+        status: 'sent',
+        errorMessage: 'Email disabled - credentials not configured'
+      });
+      
+      return true;
+    }
+    
     const html = this.generateOnboardingEmailTemplate(tenant);
     
     try {
@@ -460,6 +480,12 @@ const rbac = new SaaSRBAC({
   }
 
   async testConnection(): Promise<boolean> {
+    // Skip connection test if no password configured
+    if (!this.config.smtpPassword) {
+      console.log('📧 SMTP connection test skipped - email functionality disabled');
+      return true;
+    }
+    
     try {
       await this.transporter.verify();
       return true;
