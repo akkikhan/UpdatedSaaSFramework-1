@@ -156,24 +156,46 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
   createdAt: true,
   updatedAt: true
 }).extend({
-  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml", "logging", "notifications", "ai-copilot"])).optional(),
+  enabledModules: z.array(z.enum(["auth", "rbac", "logging", "notifications", "ai-copilot"])).optional(),
   moduleConfigs: z.object({
-    "azure-ad": z.object({
-      tenantId: z.string().optional(),
-      clientId: z.string().optional(),
-      clientSecret: z.string().optional(),
-      domain: z.string().optional(),
+    "auth": z.object({
+      providers: z.array(z.object({
+        type: z.enum(["azure-ad", "auth0", "saml", "local"]),
+        name: z.string(), // "Employee SSO", "Customer Auth", etc.
+        priority: z.number().default(1), // 1 = primary, 2 = secondary
+        config: z.object({
+          // Azure AD config
+          tenantId: z.string().optional(),
+          clientId: z.string().optional(),
+          clientSecret: z.string().optional(),
+          domain: z.string().optional(),
+          // Auth0 config
+          auth0Domain: z.string().optional(),
+          audience: z.string().optional(),
+          // SAML config
+          entryPoint: z.string().optional(),
+          issuer: z.string().optional(),
+          cert: z.string().optional(),
+          identifierFormat: z.string().optional(),
+          // Common settings
+          callbackUrl: z.string().optional(),
+          logoutUrl: z.string().optional(),
+        }).optional(),
+        userMapping: z.object({
+          emailField: z.string().default("email"),
+          nameField: z.string().default("name"),
+          roleField: z.string().optional(),
+        }).optional(),
+        enabled: z.boolean().default(true),
+      })).optional(),
+      defaultProvider: z.string().optional(), // Which provider to use by default
+      allowFallback: z.boolean().default(true), // Allow fallback to other providers
     }).optional(),
-    "auth0": z.object({
-      domain: z.string().optional(),
-      clientId: z.string().optional(),
-      clientSecret: z.string().optional(),
-    }).optional(),
-    "saml": z.object({
-      entryPoint: z.string().optional(),
-      issuer: z.string().optional(),
-      cert: z.string().optional(),
-      identifierFormat: z.string().optional(),
+    "rbac": z.object({
+      permissionTemplate: z.enum(["standard", "enterprise", "custom"]).default("standard"),
+      businessType: z.enum(["general", "healthcare", "finance", "education", "government"]).default("general"),
+      customPermissions: z.array(z.string()).optional(),
+      defaultRoles: z.array(z.string()).optional(),
     }).optional(),
     "logging": z.object({
       levels: z.array(z.enum(["error", "warn", "info", "debug", "trace"])).optional(),

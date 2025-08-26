@@ -19,6 +19,8 @@ import AzureTestPage from "@/pages/azure-test";
 import AuthSuccessPage from "@/pages/auth-success";
 import AuthErrorPage from "@/pages/auth-error";
 import TenantSuccessPage from "@/pages/tenant-success";
+import TenantPortalPage from "@/pages/tenant-portal";
+import RBACManagementPage from "@/pages/rbac-management";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -43,6 +45,8 @@ function Router() {
             <Route path="/tenants/add" component={AddTenantPage} />
             <Route path="/tenants/wizard" component={OnboardingWizard} />
             <Route path="/tenants/success" component={TenantSuccessPage} />
+            <Route path="/tenants/:tenantId/portal" component={TenantPortalPage} />
+            <Route path="/tenants/:tenantId/rbac" component={RBACManagementPage} />
             <Route path="/modules" component={ModuleManagementPage} />
             <Route path="/logs" component={LogsPage} />
             <Route path="/sdk" component={SDKIntegrationPage} />
