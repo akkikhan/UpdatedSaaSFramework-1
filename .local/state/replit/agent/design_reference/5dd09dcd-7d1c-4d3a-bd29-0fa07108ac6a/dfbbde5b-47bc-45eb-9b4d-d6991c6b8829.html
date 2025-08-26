@@ -1,0 +1,718 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Framework - Platform Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1976D2',
+                        secondary: '#424242',
+                        accent: '#00C853',
+                        warning: '#FF9800',
+                        error: '#F44336'
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-inter">
+    <!-- @COMPONENT: AdminPortalLayout -->
+    <div class="flex h-screen bg-gray-50">
+        <!-- @COMPONENT: Sidebar -->
+        <aside class="w-64 bg-white shadow-lg border-r border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-layer-group text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-semibold text-gray-900">SaaS Framework</h1>
+                        <p class="text-sm text-gray-500">Admin Portal</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="p-4 space-y-2">
+                <!-- @STATE: activeMenuItem:string = 'dashboard' -->
+                <a href="#dashboard" class="flex items-center space-x-3 px-4 py-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors" data-event="click:setActiveMenuItem('dashboard')">
+                    <i class="fas fa-chart-pie text-lg"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#tenants" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors" data-event="click:setActiveMenuItem('tenants')">
+                    <i class="fas fa-building text-lg"></i>
+                    <span>Tenants</span>
+                </a>
+                <a href="#sdk" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors" data-event="click:setActiveMenuItem('sdk')">
+                    <i class="fas fa-code text-lg"></i>
+                    <span>SDK Integration</span>
+                </a>
+                <a href="#email" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors" data-event="click:setActiveMenuItem('email')">
+                    <i class="fas fa-envelope text-lg"></i>
+                    <span>Email Templates</span>
+                </a>
+            </nav>
+
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900" data-bind="adminUser.name">Platform Admin</p>
+                        <p class="text-xs text-gray-500" data-bind="adminUser.email">admin@yourplatform.com</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600" data-event="click:logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainContent -->
+        <main class="flex-1 overflow-auto">
+            <!-- @COMPONENT: Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200 px-8 py-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gray-900">Dashboard</h2>
+                        <p class="text-gray-600 mt-1">Monitor your SaaS platform performance and manage tenants</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span>All Systems Operational</span>
+                        </div>
+                        <button class="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors" data-event="click:openTenantModal">
+                            <i class="fas fa-plus mr-2"></i>Add Tenant
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <!-- @END_COMPONENT: Header -->
+
+            <!-- @COMPONENT: DashboardContent -->
+            <div class="p-8 space-y-8">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center">
+                            <div class="p-3 bg-blue-100 rounded-lg">
+                                <i class="fas fa-building text-primary text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Total Tenants</p>
+                                <p class="text-3xl font-bold text-gray-900" data-bind="stats.totalTenants">47</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center">
+                            <div class="p-3 bg-green-100 rounded-lg">
+                                <i class="fas fa-check-circle text-accent text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Active Tenants</p>
+                                <p class="text-3xl font-bold text-gray-900" data-bind="stats.activeTenants">42</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center">
+                            <div class="p-3 bg-yellow-100 rounded-lg">
+                                <i class="fas fa-clock text-warning text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Pending</p>
+                                <p class="text-3xl font-bold text-gray-900" data-bind="stats.pendingTenants">5</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center">
+                            <div class="p-3 bg-green-100 rounded-lg">
+                                <i class="fas fa-envelope text-green-600 text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Emails Sent</p>
+                                <p class="text-3xl font-bold text-gray-900" data-bind="stats.emailsSent">234</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity & System Health -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Recent Tenants -->
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">Recent Tenants</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <!-- @MAP: recentTenants.map(tenant => ( -->
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-building text-gray-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900">Acme Corporation</p>
+                                            <p class="text-sm text-gray-600">acme-corp</p>
+                                        </div>
+                                    </div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Active
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-building text-gray-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900">TechStart Inc</p>
+                                            <p class="text-sm text-gray-600">techstart-inc</p>
+                                        </div>
+                                    </div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        Pending
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-building text-gray-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900">Global Solutions</p>
+                                            <p class="text-sm text-gray-600">global-solutions</p>
+                                        </div>
+                                    </div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Active
+                                    </span>
+                                </div>
+                                <!-- @END_MAP )) -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Health -->
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">System Health</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-900">API Gateway</span>
+                                    </div>
+                                    <span class="text-sm text-gray-600">Port 8080</span>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-900">Authentication API</span>
+                                    </div>
+                                    <span class="text-sm text-gray-600">Port 7011</span>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-900">RBAC API</span>
+                                    </div>
+                                    <span class="text-sm text-gray-600">Port 7002</span>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-900">Notification API</span>
+                                    </div>
+                                    <span class="text-sm text-gray-600">Port 7015</span>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-900">Cosmos DB</span>
+                                    </div>
+                                    <span class="text-sm text-gray-600">Serverless</span>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-900">SMTP Service</span>
+                                    </div>
+                                    <span class="text-sm text-gray-600">Office365</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tenant Management Table -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900">Tenant Management</h3>
+                            <div class="flex items-center space-x-3">
+                                <input type="text" placeholder="Search tenants..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm" data-event="input:searchTenants">
+                                <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors" data-event="click:openTenantModal">
+                                    <i class="fas fa-plus mr-2"></i>Add Tenant
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <!-- @MAP: tenants.map(tenant => ( -->
+                                <tr data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="fas fa-building text-gray-600"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-900">Acme Corporation</div>
+                                                <div class="text-sm text-gray-500">acme-corp</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">admin@acme.com</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Active
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2024-01-15</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-primary hover:text-blue-900 mr-3" data-event="click:editTenant">Edit</button>
+                                        <button class="text-green-600 hover:text-green-900 mr-3" data-event="click:resendEmail">Resend Email</button>
+                                        <button class="text-red-600 hover:text-red-900" data-event="click:suspendTenant">Suspend</button>
+                                    </td>
+                                </tr>
+
+                                <tr data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="fas fa-building text-gray-600"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-900">TechStart Inc</div>
+                                                <div class="text-sm text-gray-500">techstart-inc</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">admin@techstart.com</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            Pending
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2024-01-20</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-primary hover:text-blue-900 mr-3" data-event="click:editTenant">Edit</button>
+                                        <button class="text-green-600 hover:text-green-900 mr-3" data-event="click:resendEmail">Resend Email</button>
+                                        <button class="text-red-600 hover:text-red-900" data-event="click:suspendTenant">Suspend</button>
+                                    </td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SDK Integration Guide -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">SDK Integration Guide</h3>
+                        <p class="text-gray-600 mt-1">Step-by-step guide for integrating SaaS Framework SDKs</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Authentication SDK -->
+                            <div class="space-y-4">
+                                <h4 class="text-md font-semibold text-gray-900 flex items-center">
+                                    <i class="fas fa-shield-alt text-primary mr-2"></i>
+                                    Authentication SDK
+                                </h4>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <pre class="text-sm text-gray-800 overflow-x-auto"><code>npm install @saas-framework/auth
+
+import { SaaSAuth } from '@saas-framework/auth';
+
+const auth = new SaaSAuth({
+  apiKey: 'auth_your-tenant-key',
+  baseUrl: 'https://api.yourplatform.com/api/v2/auth'
+});
+
+// Login user
+const session = await auth.login('user@tenant.com', 'password');
+
+// Express middleware
+app.use(auth.middleware());</code></pre>
+                                </div>
+                            </div>
+
+                            <!-- RBAC SDK -->
+                            <div class="space-y-4">
+                                <h4 class="text-md font-semibold text-gray-900 flex items-center">
+                                    <i class="fas fa-users-cog text-primary mr-2"></i>
+                                    RBAC SDK
+                                </h4>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <pre class="text-sm text-gray-800 overflow-x-auto"><code>npm install @saas-framework/rbac
+
+import { SaaSRBAC } from '@saas-framework/rbac';
+
+const rbac = new SaaSRBAC({
+  apiKey: 'rbac_your-tenant-key',
+  baseUrl: 'https://api.yourplatform.com/api/v2/rbac'
+});
+
+// Check permission
+const canCreate = await rbac.hasPermission(userId, 'user.create');
+
+// Permission middleware
+app.use(rbac.middleware(['user.read']));</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="text-center">
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-download text-primary text-xl"></i>
+                                </div>
+                                <h5 class="font-medium text-gray-900 mb-2">1. Install SDKs</h5>
+                                <p class="text-sm text-gray-600">Install the required NPM packages in your application</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-key text-green-600 text-xl"></i>
+                                </div>
+                                <h5 class="font-medium text-gray-900 mb-2">2. Configure API Keys</h5>
+                                <p class="text-sm text-gray-600">Initialize with tenant-specific API keys</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-rocket text-purple-600 text-xl"></i>
+                                </div>
+                                <h5 class="font-medium text-gray-900 mb-2">3. Deploy</h5>
+                                <p class="text-sm text-gray-600">Add middleware and deploy to production</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Configuration -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Email Configuration</h3>
+                        <p class="text-gray-600 mt-1">Real-time SMTP integration with Office365</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- SMTP Settings -->
+                            <div class="space-y-4">
+                                <h4 class="text-md font-semibold text-gray-900">SMTP Configuration</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">SMTP Host</label>
+                                        <input type="text" value="smtp.office365.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                                        <input type="text" value="587" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                        <input type="email" value="dev-saas@primussoft.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly>
+                                    </div>
+                                    <div class="flex items-center space-x-2 text-sm text-green-600">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Connected to Office365</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Email Testing -->
+                            <div class="space-y-4">
+                                <h4 class="text-md font-semibold text-gray-900">Test Email Delivery</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Test Email Address</label>
+                                        <input type="email" placeholder="test@example.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" data-bind="testEmail.address">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Template</label>
+                                        <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            <option>Tenant Onboarding</option>
+                                            <option>Password Reset</option>
+                                            <option>Welcome Email</option>
+                                        </select>
+                                    </div>
+                                    <button class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors" data-event="click:sendTestEmail">
+                                        <i class="fas fa-paper-plane mr-2"></i>Send Test Email
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Email Templates Preview -->
+                        <div class="mt-8">
+                            <h4 class="text-md font-semibold text-gray-900 mb-4">Onboarding Email Template</h4>
+                            <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                <div class="bg-white p-6 rounded-lg shadow-sm max-w-2xl">
+                                    <div class="text-center mb-6">
+                                        <h2 class="text-xl font-bold text-gray-900">Welcome to SaaS Framework</h2>
+                                        <p class="text-gray-600 mt-2">Your tenant is ready!</p>
+                                    </div>
+                                    
+                                    <div class="space-y-4">
+                                        <div class="bg-blue-50 p-4 rounded-lg">
+                                            <h3 class="font-semibold text-gray-900 mb-2">🔗 Tenant Portal</h3>
+                                            <p class="text-sm text-gray-700">https://app.com/tenant/<span class="font-mono bg-yellow-100 px-1">[orgId]</span>/login</p>
+                                        </div>
+
+                                        <div class="bg-green-50 p-4 rounded-lg">
+                                            <h3 class="font-semibold text-gray-900 mb-2">🔐 Login Credentials</h3>
+                                            <p class="text-sm text-gray-700">Email: <span class="font-mono">[adminEmail]</span></p>
+                                            <p class="text-sm text-gray-700">Password: <span class="font-mono">[temporaryPassword]</span></p>
+                                        </div>
+
+                                        <div class="bg-purple-50 p-4 rounded-lg">
+                                            <h3 class="font-semibold text-gray-900 mb-2">📦 API Keys</h3>
+                                            <p class="text-sm text-gray-700">Auth API Key: <span class="font-mono">[authApiKey]</span></p>
+                                            <p class="text-sm text-gray-700">RBAC API Key: <span class="font-mono">[rbacApiKey]</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: DashboardContent -->
+        </main>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+    <!-- @END_COMPONENT: AdminPortalLayout -->
+
+    <!-- @COMPONENT: TenantModal -->
+    <!-- @STATE: showTenantModal:boolean = false -->
+    <div class="fixed inset-0 z-50 overflow-y-auto hidden" id="tenantModal" data-bind="showTenantModal">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" data-event="click:closeTenantModal"></div>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                                Add New Tenant
+                            </h3>
+                            
+                            <form class="space-y-4" data-event="submit:createTenant">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
+                                    <input type="text" name="name" placeholder="Acme Corporation" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Organization ID (URL Slug)</label>
+                                    <input type="text" name="orgId" placeholder="acme-corp" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                                    <p class="text-xs text-gray-500 mt-1">Will be used in URL: /tenant/acme-corp/login</p>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Admin Email</label>
+                                    <input type="email" name="adminEmail" placeholder="admin@acme.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                                    <p class="text-xs text-gray-500 mt-1">Onboarding email will be sent to this address</p>
+                                </div>
+                                
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-gray-900 mb-2">What happens next?</h4>
+                                    <ul class="text-sm text-gray-700 space-y-1">
+                                        <li>• Tenant record created with unique API keys</li>
+                                        <li>• Default admin user and roles configured</li>
+                                        <li>• Onboarding email sent with login credentials</li>
+                                        <li>• Status set to "pending" until first login</li>
+                                    </ul>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm" data-event="click:submitTenantForm">
+                        <i class="fas fa-plus mr-2"></i>Create Tenant & Send Email
+                    </button>
+                    <button type="button" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" data-event="click:closeTenantModal">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: TenantModal -->
+
+    <script>
+        // TODO: Implement business logic, API calls, and state management
+        (function() {
+            // Navigation handling
+            document.querySelectorAll('nav a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all nav items
+                    document.querySelectorAll('nav a').forEach(item => {
+                        item.classList.remove('bg-blue-50', 'text-primary');
+                        item.classList.add('text-gray-700', 'hover:bg-gray-50');
+                    });
+                    
+                    // Add active class to clicked item
+                    this.classList.add('bg-blue-50', 'text-primary');
+                    this.classList.remove('text-gray-700', 'hover:bg-gray-50');
+                    
+                    // Update header title based on navigation
+                    const title = this.querySelector('span').textContent;
+                    document.querySelector('header h2').textContent = title;
+                    
+                    // TODO: Load different content sections based on navigation
+                });
+            });
+
+            // Modal handling
+            const modal = document.getElementById('tenantModal');
+            const openModalBtns = document.querySelectorAll('[data-event*="openTenantModal"]');
+            const closeModalBtns = document.querySelectorAll('[data-event*="closeTenantModal"]');
+
+            openModalBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.remove('hidden');
+                });
+            });
+
+            closeModalBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                });
+            });
+
+            // Close modal on background click
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+
+            // Form submission simulation
+            const tenantForm = document.querySelector('[data-event="submit:createTenant"]');
+            if (tenantForm) {
+                tenantForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // TODO: Implement actual tenant creation logic
+                    console.log('Creating tenant...');
+                    
+                    // Simulate success
+                    setTimeout(() => {
+                        alert('Tenant created successfully! Onboarding email sent.');
+                        modal.classList.add('hidden');
+                        
+                        // TODO: Refresh tenant table
+                    }, 1000);
+                });
+            }
+
+            // Test email functionality
+            const testEmailBtn = document.querySelector('[data-event*="sendTestEmail"]');
+            if (testEmailBtn) {
+                testEmailBtn.addEventListener('click', function() {
+                    // TODO: Implement actual email testing
+                    console.log('Sending test email...');
+                    
+                    // Simulate email sending
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+                    this.disabled = true;
+                    
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-check mr-2"></i>Email Sent!';
+                        this.classList.remove('bg-primary', 'hover:bg-blue-700');
+                        this.classList.add('bg-green-600');
+                        
+                        setTimeout(() => {
+                            this.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Send Test Email';
+                            this.classList.add('bg-primary', 'hover:bg-blue-700');
+                            this.classList.remove('bg-green-600');
+                            this.disabled = false;
+                        }, 2000);
+                    }, 2000);
+                });
+            }
+
+            // Table action buttons
+            document.querySelectorAll('[data-event*="resendEmail"]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // TODO: Implement resend email functionality
+                    console.log('Resending email...');
+                    alert('Email resent successfully!');
+                });
+            });
+
+            document.querySelectorAll('[data-event*="editTenant"]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // TODO: Implement edit tenant functionality
+                    console.log('Edit tenant...');
+                });
+            });
+
+            document.querySelectorAll('[data-event*="suspendTenant"]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // TODO: Implement suspend tenant functionality
+                    if (confirm('Are you sure you want to suspend this tenant?')) {
+                        console.log('Suspending tenant...');
+                    }
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

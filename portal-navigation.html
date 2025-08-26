@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Framework - Tenant Portal Navigation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 { 
+            color: #333; 
+            border-bottom: 3px solid #667eea; 
+            padding-bottom: 15px; 
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h2 { 
+            color: #555; 
+            margin-top: 30px; 
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        .portal-section {
+            margin: 25px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .portal-section h3 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+        }
+        .url-list {
+            list-style: none;
+            padding: 0;
+        }
+        .url-list li {
+            margin: 10px 0;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .url-list a {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .url-list a:hover {
+            text-decoration: underline;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-demo { background: #d1ecf1; color: #0c5460; }
+        .status-admin { background: #f8d7da; color: #721c24; }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .feature-card h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+        }
+        .feature-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .server-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .tenant-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 Multi-Tenant SaaS Framework Portal</h1>
+        
+        <div class="server-info">
+            <h3>📊 Server Status</h3>
+            <p>✅ <strong>Server Running:</strong> http://localhost:3001</p>
+            <p>✅ <strong>Database:</strong> PostgreSQL/Supabase Connected</p>
+            <p>✅ <strong>Email Service:</strong> Office 365 SMTP Configured</p>
+            <p>✅ <strong>Client App:</strong> React/Vite Serving</p>
+        </div>
+
+        <div class="tenant-info">
+            <h3>🏢 Active Tenant Information</h3>
+            <p><strong>Tenant Name:</strong> Acme Corporation</p>
+            <p><strong>Organization ID:</strong> acme</p>
+            <p><strong>Admin Email:</strong> akki@primussoft.com</p>
+            <p><strong>Status:</strong> Active</p>
+        </div>
+
+        <h2>🌐 Portal Access Points</h2>
+
+        <div class="portal-section">
+            <h3>👥 Tenant Portal URLs</h3>
+            <ul class="url-list">
+                <li>
+                    <a href="http://localhost:3001/tenant/acme/login" target="_blank">
+                        Acme Tenant Login
+                    </a>
+                    <span class="status-badge status-active">ACTIVE</span>
+                </li>
+                <li>
+                    <a href="http://localhost:3001/tenant/acme/dashboard" target="_blank">
+                        Acme Tenant Dashboard
+                    </a>
+                    <span class="status-badge status-active">ACTIVE</span>
+                </li>
+                <li>
+                    <a href="http://localhost:3001/tenant/demo-company/login" target="_blank">
+                        Demo Company Login
+                    </a>
+                    <span class="status-badge status-demo">DEMO</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="portal-section">
+            <h3>⚙️ Admin Portal URLs</h3>
+            <ul class="url-list">
+                <li>
+                    <a href="http://localhost:3001/" target="_blank">
+                        Admin Dashboard
+                    </a>
+                    <span class="status-badge status-admin">ADMIN</span>
+                </li>
+                <li>
+                    <a href="http://localhost:3001/tenants" target="_blank">
+                        Tenant Management
+                    </a>
+                    <span class="status-badge status-admin">ADMIN</span>
+                </li>
+                <li>
+                    <a href="http://localhost:3001/tenants/add" target="_blank">
+                        Add New Tenant
+                    </a>
+                    <span class="status-badge status-admin">ADMIN</span>
+                </li>
+                <li>
+                    <a href="http://localhost:3001/tenants/wizard" target="_blank">
+                        Onboarding Wizard
+                    </a>
+                    <span class="status-badge status-admin">ADMIN</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="portal-section">
+            <h3>🛠️ Development & Testing URLs</h3>
+            <ul class="url-list">
+                <li>
+                    <a href="http://localhost:3001/api/health" target="_blank">
+                        API Health Check
+                    </a>
+                    <span class="status-badge status-demo">API</span>
+                </li>
+                <li>
+                    <a href="http://localhost:3001/api/tenants" target="_blank">
+                        Tenants API
+                    </a>
+                    <span class="status-badge status-demo">API</span>
+                </li>
+                <li>
+                    <a href="http://localhost:3001/api/stats" target="_blank">
+                        Statistics API
+                    </a>
+                    <span class="status-badge status-demo">API</span>
+                </li>
+                <li>
+                    <a href="file:///C:/Users/AkkiKhan/Downloads/UpdatedSaaSFramework-1%20(1)/UpdatedSaaSFramework-1/test-onboarding-ui.html" target="_blank">
+                        Onboarding Test Interface
+                    </a>
+                    <span class="status-badge status-demo">TEST</span>
+                </li>
+            </ul>
+        </div>
+
+        <h2>🎯 Features Available</h2>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>👥 Tenant Management</h4>
+                <ul>
+                    <li>Multi-tenant isolation</li>
+                    <li>Tenant creation & activation</li>
+                    <li>Organization ID management</li>
+                    <li>Admin email configuration</li>
+                    <li>Status management</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h4>🔐 Authentication & Security</h4>
+                <ul>
+                    <li>API key generation</li>
+                    <li>RBAC system integration</li>
+                    <li>Tenant-specific auth</li>
+                    <li>Session management</li>
+                    <li>Azure AD integration</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h4>📧 Email & Notifications</h4>
+                <ul>
+                    <li>Onboarding emails</li>
+                    <li>SMTP configuration</li>
+                    <li>Email templates</li>
+                    <li>Notification system</li>
+                    <li>Welcome sequences</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h4>📊 Monitoring & Analytics</h4>
+                <ul>
+                    <li>Tenant statistics</li>
+                    <li>Health monitoring</li>
+                    <li>Activity logging</li>
+                    <li>Performance metrics</li>
+                    <li>Usage tracking</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h4>🛠️ Developer Tools</h4>
+                <ul>
+                    <li>REST API endpoints</li>
+                    <li>SDK integration</li>
+                    <li>Testing interfaces</li>
+                    <li>Documentation</li>
+                    <li>Error handling</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h4>🏗️ Infrastructure</h4>
+                <ul>
+                    <li>PostgreSQL database</li>
+                    <li>Vite client serving</li>
+                    <li>Express.js API</li>
+                    <li>TypeScript support</li>
+                    <li>Hot reload development</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>🚀 Quick Start Guide</h2>
+
+        <div class="portal-section">
+            <h3>For Tenant Users:</h3>
+            <ol>
+                <li>Navigate to: <code>http://localhost:3001/tenant/acme/login</code></li>
+                <li>Use your tenant credentials to log in</li>
+                <li>Access your tenant-specific dashboard</li>
+                <li>Manage your organization's data and users</li>
+            </ol>
+        </div>
+
+        <div class="portal-section">
+            <h3>For System Administrators:</h3>
+            <ol>
+                <li>Navigate to: <code>http://localhost:3001/</code></li>
+                <li>Access the admin dashboard</li>
+                <li>Manage all tenants across the platform</li>
+                <li>Monitor system health and performance</li>
+                <li>Configure global settings and features</li>
+            </ol>
+        </div>
+
+        <div class="portal-section">
+            <h3>For Developers:</h3>
+            <ol>
+                <li>Use the API endpoints for integration</li>
+                <li>Test with the interactive testing interface</li>
+                <li>Monitor health and performance metrics</li>
+                <li>Review logs and debugging information</li>
+            </ol>
+        </div>
+
+        <p style="text-align: center; margin-top: 40px; color: #666;">
+            <strong>✨ Multi-Tenant SaaS Framework - Ready for Production ✨</strong>
+        </p>
+    </div>
+
+    <script>
+        // Add click tracking
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A') {
+                console.log('Opening:', e.target.href);
+            }
+        });
+
+        // Auto-refresh status (optional)
+        setInterval(function() {
+            const timestamp = new Date().toLocaleTimeString();
+            document.title = `SaaS Framework Portal - ${timestamp}`;
+        }, 30000);
+    </script>
+</body>
+</html>

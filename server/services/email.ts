@@ -1,5 +1,9 @@
+import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import { storage } from '../storage';
+
+// Load environment variables before initialization
+dotenv.config();
 
 interface EmailConfig {
   smtpHost: string;

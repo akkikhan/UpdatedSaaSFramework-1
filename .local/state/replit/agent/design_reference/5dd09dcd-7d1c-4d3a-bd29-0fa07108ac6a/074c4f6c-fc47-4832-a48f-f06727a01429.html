@@ -1,0 +1,991 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Framework - Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#EFF6FF',
+                            500: '#3B82F6',
+                            600: '#2563EB',
+                            700: '#1D4ED8'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-slate-50 font-sans">
+    <!-- @COMPONENT: AdminLayout -->
+    <div class="flex h-screen">
+        <!-- @COMPONENT: Sidebar -->
+        <div class="w-64 bg-white shadow-lg border-r border-slate-200">
+            <!-- @COMPONENT: SidebarHeader -->
+            <div class="p-6 border-b border-slate-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-layer-group text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-semibold text-slate-800">SaaS Framework</h1>
+                        <p class="text-sm text-slate-500">Admin Portal</p>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: SidebarHeader -->
+
+            <!-- @COMPONENT: Navigation -->
+            <nav class="p-4 space-y-2">
+                <a href="#dashboard" data-nav="dashboard" class="nav-item active flex items-center space-x-3 px-3 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium">
+                    <i class="fas fa-chart-pie w-5"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#tenants" data-nav="tenants" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">
+                    <i class="fas fa-building w-5"></i>
+                    <span>Tenants</span>
+                </a>
+                <a href="#sdk" data-nav="sdk" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">
+                    <i class="fas fa-code w-5"></i>
+                    <span>SDK Integration</span>
+                </a>
+                <a href="#emails" data-nav="emails" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">
+                    <i class="fas fa-envelope w-5"></i>
+                    <span>Email Templates</span>
+                </a>
+                <a href="#system" data-nav="system" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">
+                    <i class="fas fa-server w-5"></i>
+                    <span>System Health</span>
+                </a>
+            </nav>
+            <!-- @END_COMPONENT: Navigation -->
+
+            <!-- @COMPONENT: AdminProfile -->
+            <div class="absolute bottom-0 w-64 p-4 border-t border-slate-200 bg-white">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-slate-800" data-bind="admin.name">Platform Admin</p>
+                        <p class="text-xs text-slate-500" data-bind="admin.email">admin@yourplatform.com</p>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: AdminProfile -->
+        </div>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainContent -->
+        <div class="flex-1 overflow-hidden">
+            <!-- @COMPONENT: Header -->
+            <div class="bg-white border-b border-slate-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 id="page-title" class="text-2xl font-semibold text-slate-800">Dashboard</h2>
+                        <p id="page-subtitle" class="text-slate-600 mt-1">Monitor your SaaS platform performance and manage tenants</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <!-- @STATE: systemStatus:string = "operational" -->
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span class="text-sm text-slate-600">All Systems Operational</span>
+                        </div>
+                        <button id="add-tenant-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors">
+                            <i class="fas fa-plus"></i>
+                            <span>Add Tenant</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: Header -->
+
+            <!-- @COMPONENT: PageContent -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- @COMPONENT: DashboardPage -->
+                <div id="dashboard-page" class="page-content">
+                    <!-- @COMPONENT: StatsGrid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Total Tenants</p>
+                                    <p class="text-3xl font-bold text-slate-800 mt-2" data-bind="stats.totalTenants">47</p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-building text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Active Tenants</p>
+                                    <p class="text-3xl font-bold text-slate-800 mt-2" data-bind="stats.activeTenants">42</p>
+                                </div>
+                                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Pending</p>
+                                    <p class="text-3xl font-bold text-slate-800 mt-2" data-bind="stats.pendingTenants">5</p>
+                                </div>
+                                <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-clock text-amber-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Emails Sent</p>
+                                    <p class="text-3xl font-bold text-slate-800 mt-2" data-bind="stats.emailsSent">234</p>
+                                </div>
+                                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-envelope text-purple-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: StatsGrid -->
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- @COMPONENT: RecentTenants -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-4">Recent Tenants</h3>
+                            <div class="space-y-4">
+                                <!-- @MAP: recentTenants.map(tenant => ( -->
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                                            <span class="text-primary-600 font-semibold text-sm">AC</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-slate-800">Acme Corp</p>
+                                            <p class="text-sm text-slate-500">admin@acme.com</p>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Active</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                                            <span class="text-primary-600 font-semibold text-sm">TS</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-slate-800">TechStart Inc</p>
+                                            <p class="text-sm text-slate-500">admin@techstart.com</p>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">Pending</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                                            <span class="text-primary-600 font-semibold text-sm">GS</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-slate-800">GlobalSoft</p>
+                                            <p class="text-sm text-slate-500">admin@globalsoft.com</p>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Active</span>
+                                </div>
+                                <!-- @END_MAP )) -->
+                            </div>
+                            <button class="w-full mt-4 text-primary-600 hover:text-primary-700 font-medium text-sm">View All Tenants</button>
+                        </div>
+                        <!-- @END_COMPONENT: RecentTenants -->
+
+                        <!-- @COMPONENT: SystemHealth -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-4">System Health</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-slate-700">API Gateway</span>
+                                    </div>
+                                    <span class="text-green-600 font-medium text-sm">Operational</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-slate-700">Authentication API</span>
+                                    </div>
+                                    <span class="text-green-600 font-medium text-sm">Operational</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-slate-700">RBAC API</span>
+                                    </div>
+                                    <span class="text-green-600 font-medium text-sm">Operational</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-amber-500 rounded-full"></div>
+                                        <span class="text-slate-700">Email Service</span>
+                                    </div>
+                                    <span class="text-amber-600 font-medium text-sm">High Load</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-slate-700">Database</span>
+                                    </div>
+                                    <span class="text-green-600 font-medium text-sm">Operational</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 pt-4 border-t border-slate-200">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-slate-600">Response Time</span>
+                                    <span class="font-medium text-slate-800">124ms</span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm mt-2">
+                                    <span class="text-slate-600">Uptime</span>
+                                    <span class="font-medium text-slate-800">99.9%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: SystemHealth -->
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: DashboardPage -->
+
+                <!-- @COMPONENT: TenantsPage -->
+                <div id="tenants-page" class="page-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+                        <!-- @COMPONENT: TenantsHeader -->
+                        <div class="p-6 border-b border-slate-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-800">Tenant Management</h3>
+                                    <p class="text-slate-600 text-sm mt-1">Manage all your platform tenants</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <div class="relative">
+                                        <input type="text" placeholder="Search tenants..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                                        <i class="fas fa-search absolute left-3 top-3 text-slate-400"></i>
+                                    </div>
+                                    <button class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors">
+                                        <i class="fas fa-plus"></i>
+                                        <span>Add Tenant</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: TenantsHeader -->
+
+                        <!-- @COMPONENT: TenantsTable -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tenant</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Created</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Users</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Last Login</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    <!-- @MAP: tenants.map(tenant => ( -->
+                                    <tr class="hover:bg-slate-50" data-mock="true">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                                                    <span class="text-primary-600 font-semibold text-sm">AC</span>
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-slate-800">Acme Corporation</p>
+                                                    <p class="text-sm text-slate-500">acme-corp</p>
+                                                    <p class="text-sm text-slate-500">admin@acme.com</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Active</span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-slate-500">2024-01-15</td>
+                                        <td class="px-6 py-4 text-sm text-slate-800">24</td>
+                                        <td class="px-6 py-4 text-sm text-slate-500">2 hours ago</td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div class="flex items-center justify-end space-x-2">
+                                                <button class="text-slate-400 hover:text-slate-600" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="text-slate-400 hover:text-slate-600" title="Send Email">
+                                                    <i class="fas fa-envelope"></i>
+                                                </button>
+                                                <button class="text-slate-400 hover:text-slate-600" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="text-red-400 hover:text-red-600" title="Suspend">
+                                                    <i class="fas fa-pause"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="hover:bg-slate-50" data-mock="true">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                                                    <span class="text-primary-600 font-semibold text-sm">TS</span>
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-slate-800">TechStart Inc</p>
+                                                    <p class="text-sm text-slate-500">techstart-inc</p>
+                                                    <p class="text-sm text-slate-500">admin@techstart.com</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">Pending</span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-slate-500">2024-01-20</td>
+                                        <td class="px-6 py-4 text-sm text-slate-800">1</td>
+                                        <td class="px-6 py-4 text-sm text-slate-500">Never</td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div class="flex items-center justify-end space-x-2">
+                                                <button class="text-slate-400 hover:text-slate-600" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="text-primary-400 hover:text-primary-600" title="Resend Email">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                </button>
+                                                <button class="text-slate-400 hover:text-slate-600" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="text-red-400 hover:text-red-600" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- @END_MAP )) -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- @END_COMPONENT: TenantsTable -->
+
+                        <!-- @COMPONENT: Pagination -->
+                        <div class="px-6 py-4 border-t border-slate-200">
+                            <div class="flex items-center justify-between">
+                                <div class="text-sm text-slate-500">
+                                    Showing 1 to 10 of 47 tenants
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50" disabled>Previous</button>
+                                    <button class="px-3 py-1 text-sm bg-primary-600 text-white rounded">1</button>
+                                    <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50">2</button>
+                                    <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50">3</button>
+                                    <button class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50">Next</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: Pagination -->
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: TenantsPage -->
+
+                <!-- @COMPONENT: SDKPage -->
+                <div id="sdk-page" class="page-content hidden">
+                    <div class="space-y-6">
+                        <!-- @COMPONENT: SDKOverview -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-4">SDK Integration</h3>
+                            <p class="text-slate-600 mb-6">Integrate our authentication and RBAC SDKs into your applications for seamless tenant management.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="border border-slate-200 rounded-lg p-4">
+                                    <div class="flex items-center space-x-3 mb-3">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-shield-alt text-blue-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-slate-800">Authentication SDK</h4>
+                                            <p class="text-sm text-slate-500">@saas-framework/auth</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-slate-600 mb-4">Handle user authentication, JWT tokens, and session management.</p>
+                                    <div class="bg-slate-50 rounded-lg p-3 mb-4">
+                                        <code class="text-sm text-slate-800">npm install @saas-framework/auth</code>
+                                    </div>
+                                    <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Documentation</button>
+                                </div>
+                                
+                                <div class="border border-slate-200 rounded-lg p-4">
+                                    <div class="flex items-center space-x-3 mb-3">
+                                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-users-cog text-green-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-slate-800">RBAC SDK</h4>
+                                            <p class="text-sm text-slate-500">@saas-framework/rbac</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-slate-600 mb-4">Manage roles, permissions, and access control for your application.</p>
+                                    <div class="bg-slate-50 rounded-lg p-3 mb-4">
+                                        <code class="text-sm text-slate-800">npm install @saas-framework/rbac</code>
+                                    </div>
+                                    <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Documentation</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: SDKOverview -->
+
+                        <!-- @COMPONENT: CodeExamples -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-4">Code Examples</h3>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <h4 class="font-medium text-slate-800 mb-3">Authentication Setup</h4>
+                                    <div class="bg-slate-900 rounded-lg p-4 overflow-x-auto">
+                                        <pre class="text-sm text-slate-300"><code>import { SaaSAuth } from '@saas-framework/auth';
+
+const auth = new SaaSAuth({
+  apiKey: 'auth_your-tenant-key',
+  baseUrl: 'https://api.yourplatform.com/api/v2/auth'
+});
+
+// Login user
+const session = await auth.login('user@tenant.com', 'password');
+
+// Express middleware
+app.use(auth.middleware());</code></pre>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h4 class="font-medium text-slate-800 mb-3">RBAC Integration</h4>
+                                    <div class="bg-slate-900 rounded-lg p-4 overflow-x-auto">
+                                        <pre class="text-sm text-slate-300"><code>import { SaaSRBAC } from '@saas-framework/rbac';
+
+const rbac = new SaaSRBAC({
+  apiKey: 'rbac_your-tenant-key',
+  baseUrl: 'https://api.yourplatform.com/api/v2/rbac'
+});
+
+// Check permissions
+const canCreate = await rbac.hasPermission(userId, 'user.create');
+
+// Express middleware
+app.use(rbac.middleware(['user.read']));</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: CodeExamples -->
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: SDKPage -->
+
+                <!-- @COMPONENT: EmailsPage -->
+                <div id="emails-page" class="page-content hidden">
+                    <div class="space-y-6">
+                        <!-- @COMPONENT: EmailStats -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-slate-600 text-sm font-medium">Emails Sent Today</p>
+                                        <p class="text-2xl font-bold text-slate-800 mt-2">23</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-envelope text-blue-600"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-slate-600 text-sm font-medium">Delivery Rate</p>
+                                        <p class="text-2xl font-bold text-slate-800 mt-2">98.5%</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-check-circle text-green-600"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-slate-600 text-sm font-medium">Failed Emails</p>
+                                        <p class="text-2xl font-bold text-slate-800 mt-2">3</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: EmailStats -->
+
+                        <!-- @COMPONENT: EmailTemplates -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+                            <div class="p-6 border-b border-slate-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-slate-800">Email Templates</h3>
+                                        <p class="text-slate-600 text-sm mt-1">Manage your email templates and configurations</p>
+                                    </div>
+                                    <button class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors">
+                                        <i class="fas fa-plus"></i>
+                                        <span>New Template</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="p-6">
+                                <div class="space-y-4">
+                                    <div class="border border-slate-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <h4 class="font-medium text-slate-800">Tenant Onboarding</h4>
+                                                <p class="text-sm text-slate-500 mt-1">Welcome email sent to new tenant administrators</p>
+                                                <div class="flex items-center space-x-4 mt-2">
+                                                    <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Active</span>
+                                                    <span class="text-xs text-slate-500">Last sent: 2 hours ago</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <button class="text-slate-400 hover:text-slate-600" title="Preview">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="text-slate-400 hover:text-slate-600" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="text-primary-400 hover:text-primary-600" title="Send Test">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="border border-slate-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <h4 class="font-medium text-slate-800">Password Reset</h4>
+                                                <p class="text-sm text-slate-500 mt-1">Password recovery email for tenant users</p>
+                                                <div class="flex items-center space-x-4 mt-2">
+                                                    <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Active</span>
+                                                    <span class="text-xs text-slate-500">Last sent: 1 day ago</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <button class="text-slate-400 hover:text-slate-600" title="Preview">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="text-slate-400 hover:text-slate-600" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="text-primary-400 hover:text-primary-600" title="Send Test">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: EmailTemplates -->
+
+                        <!-- @COMPONENT: SMTPConfig -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-4">SMTP Configuration</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">SMTP Host</label>
+                                    <input type="text" value="smtp.office365.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">SMTP Port</label>
+                                    <input type="text" value="587" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">From Email</label>
+                                    <input type="email" value="dev-saas@primussoft.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-green-600 font-medium text-sm">Connected</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="mt-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Test Connection</button>
+                        </div>
+                        <!-- @END_COMPONENT: SMTPConfig -->
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: EmailsPage -->
+
+                <!-- @COMPONENT: SystemPage -->
+                <div id="system-page" class="page-content hidden">
+                    <div class="space-y-6">
+                        <!-- @COMPONENT: SystemOverview -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-slate-600 text-sm font-medium">API Requests</p>
+                                        <p class="text-2xl font-bold text-slate-800 mt-2">12.4K</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-chart-line text-blue-600"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-green-600 mt-2">+12% from yesterday</p>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-slate-600 text-sm font-medium">Response Time</p>
+                                        <p class="text-2xl font-bold text-slate-800 mt-2">124ms</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-tachometer-alt text-green-600"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-green-600 mt-2">-5ms improvement</p>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-slate-600 text-sm font-medium">Uptime</p>
+                                        <p class="text-2xl font-bold text-slate-800 mt-2">99.9%</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-server text-green-600"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-2">Last 30 days</p>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-slate-600 text-sm font-medium">Error Rate</p>
+                                        <p class="text-2xl font-bold text-slate-800 mt-2">0.1%</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-green-600 mt-2">-0.02% this week</p>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: SystemOverview -->
+
+                        <!-- @COMPONENT: ServiceStatus -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-6">Service Status</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                                        <div>
+                                            <h4 class="font-medium text-slate-800">API Gateway</h4>
+                                            <p class="text-sm text-slate-500">Port 8080 - Reverse proxy and routing</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-green-600 font-medium text-sm">Operational</span>
+                                        <p class="text-xs text-slate-500">99.9% uptime</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                                        <div>
+                                            <h4 class="font-medium text-slate-800">Authentication API</h4>
+                                            <p class="text-sm text-slate-500">Port 7011 - JWT auth and user management</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-green-600 font-medium text-sm">Operational</span>
+                                        <p class="text-xs text-slate-500">99.8% uptime</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                                        <div>
+                                            <h4 class="font-medium text-slate-800">RBAC API</h4>
+                                            <p class="text-sm text-slate-500">Port 7002 - Roles and permissions</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-green-600 font-medium text-sm">Operational</span>
+                                        <p class="text-xs text-slate-500">99.9% uptime</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-4 border border-amber-200 rounded-lg bg-amber-50">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-4 h-4 bg-amber-500 rounded-full"></div>
+                                        <div>
+                                            <h4 class="font-medium text-slate-800">Notification API</h4>
+                                            <p class="text-sm text-slate-500">Port 7015 - Email service</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-amber-600 font-medium text-sm">High Load</span>
+                                        <p class="text-xs text-slate-500">97.2% uptime</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                                        <div>
+                                            <h4 class="font-medium text-slate-800">PostgreSQL Database</h4>
+                                            <p class="text-sm text-slate-500">Primary data storage</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-green-600 font-medium text-sm">Operational</span>
+                                        <p class="text-xs text-slate-500">99.9% uptime</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_COMPONENT: ServiceStatus -->
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: SystemPage -->
+            </div>
+            <!-- @END_COMPONENT: PageContent -->
+        </div>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+    <!-- @END_COMPONENT: AdminLayout -->
+
+    <!-- @COMPONENT: AddTenantModal -->
+    <div id="add-tenant-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+                <div class="p-6 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-slate-800">Add New Tenant</h3>
+                        <button id="close-modal" class="text-slate-400 hover:text-slate-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <form id="add-tenant-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Organization Name *</label>
+                        <input type="text" name="orgName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Acme Corporation">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Organization ID (URL Slug) *</label>
+                        <input type="text" name="orgId" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="acme-corp">
+                        <p class="text-xs text-slate-500 mt-1">Used in URLs: /tenant/{orgId}/login</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Admin Email *</label>
+                        <input type="email" name="adminEmail" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="admin@acme.com">
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" name="sendEmail" id="send-email" checked class="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500">
+                        <label for="send-email" class="text-sm text-slate-700">Send onboarding email immediately</label>
+                    </div>
+                    
+                    <div class="flex items-center justify-end space-x-3 pt-4">
+                        <button type="button" id="cancel-btn" class="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 font-medium">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium">Create Tenant</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: AddTenantModal -->
+
+    <!-- @COMPONENT: Toast -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+        <div class="bg-white border border-slate-200 rounded-lg shadow-lg p-4 max-w-sm">
+            <div class="flex items-center space-x-3">
+                <div id="toast-icon" class="w-6 h-6 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check text-white text-sm"></i>
+                </div>
+                <div>
+                    <p id="toast-title" class="font-medium text-slate-800">Success</p>
+                    <p id="toast-message" class="text-sm text-slate-600">Tenant created successfully</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: Toast -->
+
+    <script>
+        (() => {
+            // TODO: Implement actual API integration and data binding
+            
+            // Navigation handling
+            const navItems = document.querySelectorAll('.nav-item');
+            const pageContents = document.querySelectorAll('.page-content');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetPage = item.dataset.nav;
+                    
+                    // Update active nav item
+                    navItems.forEach(nav => nav.classList.remove('active', 'bg-primary-50', 'text-primary-700'));
+                    navItems.forEach(nav => nav.classList.add('text-slate-600'));
+                    item.classList.add('active', 'bg-primary-50', 'text-primary-700');
+                    item.classList.remove('text-slate-600');
+                    
+                    // Update page content
+                    pageContents.forEach(page => page.classList.add('hidden'));
+                    const targetPageElement = document.getElementById(`${targetPage}-page`);
+                    if (targetPageElement) {
+                        targetPageElement.classList.remove('hidden');
+                    }
+                    
+                    // Update page title and subtitle
+                    const titleMap = {
+                        dashboard: { title: 'Dashboard', subtitle: 'Monitor your SaaS platform performance and manage tenants' },
+                        tenants: { title: 'Tenant Management', subtitle: 'Manage all your platform tenants' },
+                        sdk: { title: 'SDK Integration', subtitle: 'Integration guides and documentation' },
+                        emails: { title: 'Email Templates', subtitle: 'Manage email templates and delivery' },
+                        system: { title: 'System Health', subtitle: 'Monitor system performance and service status' }
+                    };
+                    
+                    if (titleMap[targetPage]) {
+                        document.getElementById('page-title').textContent = titleMap[targetPage].title;
+                        document.getElementById('page-subtitle').textContent = titleMap[targetPage].subtitle;
+                    }
+                });
+            });
+            
+            // Modal handling
+            const addTenantBtns = document.querySelectorAll('#add-tenant-btn, button:has(i.fa-plus)');
+            const modal = document.getElementById('add-tenant-modal');
+            const closeModalBtn = document.getElementById('close-modal');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const form = document.getElementById('add-tenant-form');
+            
+            addTenantBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.remove('hidden');
+                });
+            });
+            
+            [closeModalBtn, cancelBtn].forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                    form.reset();
+                });
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                    form.reset();
+                }
+            });
+            
+            // Form submission
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // TODO: Implement actual tenant creation API call
+                // const formData = new FormData(form);
+                // const tenantData = Object.fromEntries(formData);
+                
+                // Simulate API call
+                setTimeout(() => {
+                    showToast('success', 'Tenant Created', 'New tenant has been created successfully and onboarding email sent');
+                    modal.classList.add('hidden');
+                    form.reset();
+                    
+                    // TODO: Refresh tenant list and update stats
+                }, 1000);
+            });
+            
+            // Toast notification
+            function showToast(type, title, message) {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                const titleEl = document.getElementById('toast-title');
+                const messageEl = document.getElementById('toast-message');
+                
+                // Configure toast based on type
+                if (type === 'success') {
+                    icon.className = 'w-6 h-6 rounded-full flex items-center justify-center bg-green-500';
+                    icon.innerHTML = '<i class="fas fa-check text-white text-sm"></i>';
+                } else if (type === 'error') {
+                    icon.className = 'w-6 h-6 rounded-full flex items-center justify-center bg-red-500';
+                    icon.innerHTML = '<i class="fas fa-times text-white text-sm"></i>';
+                }
+                
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                
+                // Show toast
+                toast.classList.remove('hidden');
+                
+                // Auto hide after 5 seconds
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 5000);
+            }
+            
+            // Auto-generate org ID from org name
+            const orgNameInput = document.querySelector('input[name="orgName"]');
+            const orgIdInput = document.querySelector('input[name="orgId"]');
+            
+            orgNameInput.addEventListener('input', (e) => {
+                const orgName = e.target.value;
+                const orgId = orgName
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, '')
+                    .replace(/\s+/g, '-')
+                    .substring(0, 30);
+                orgIdInput.value = orgId;
+            });
+        })();
+    </script>
+</body>
+</html>
