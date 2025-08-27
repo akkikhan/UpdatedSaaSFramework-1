@@ -448,12 +448,12 @@ export default function TenantsPage() {
                 <Search className='absolute left-3 top-3 text-slate-400' size={16} />
               </div>
               <Button
-                onClick={() => setLocation('/tenants/wizard')}
+                onClick={() => setLocation('/tenants/enhanced')}
                 className='btn-primary flex items-center space-x-2'
                 data-testid='button-add-tenant'
               >
                 <Plus size={16} />
-                <span>Add New Tenant</span>
+                <span>Create New Tenant</span>
               </Button>
             </div>
           </div>

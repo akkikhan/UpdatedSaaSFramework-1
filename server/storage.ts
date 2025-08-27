@@ -115,6 +115,15 @@ export interface IStorage {
     enabledModules: string[],
     moduleConfigs: any
   ): Promise<void>;
+  updateTenantConfig(
+    tenantId: string,
+    config: {
+      enabledModules?: string[];
+      moduleConfigs?: any;
+      businessType?: string;
+      roleTemplate?: string;
+    }
+  ): Promise<void>;
   getEmailLogs(options?: {
     tenantId?: string;
     limit?: number;
@@ -434,6 +443,35 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(tenants.id, tenantId));
+  }
+
+  async updateTenantConfig(
+    tenantId: string,
+    config: {
+      enabledModules?: string[];
+      moduleConfigs?: any;
+      businessType?: string;
+      roleTemplate?: string;
+    }
+  ): Promise<void> {
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    if (config.enabledModules !== undefined) {
+      updateData.enabledModules = config.enabledModules;
+    }
+    if (config.moduleConfigs !== undefined) {
+      updateData.moduleConfigs = config.moduleConfigs;
+    }
+    if (config.businessType !== undefined) {
+      updateData.businessType = config.businessType;
+    }
+    if (config.roleTemplate !== undefined) {
+      updateData.roleTemplate = config.roleTemplate;
+    }
+
+    await db.update(tenants).set(updateData).where(eq(tenants.id, tenantId));
   }
 
   // Compliance audit logs

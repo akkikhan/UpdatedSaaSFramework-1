@@ -10,6 +10,7 @@ import ComplianceDashboard from '@/pages/compliance-dashboard';
 import ConfigSyncDashboard from '@/pages/config-sync-dashboard';
 import EmailTemplatesPage from '@/pages/email-templates';
 import EnhancedLogin from '@/pages/enhanced-login';
+import EnhancedOnboardingWizard from '@/pages/enhanced-onboarding-wizard';
 import InfrastructureDashboard from '@/pages/infrastructure-dashboard';
 import LogsPage from '@/pages/logs';
 import MfaManagement from '@/pages/mfa-management';
@@ -17,7 +18,6 @@ import ModuleManagementPage from '@/pages/module-management';
 import MonitoringDashboard from '@/pages/monitoring-dashboard';
 import NotFound from '@/pages/not-found';
 import NotificationCenter from '@/pages/notification-center';
-import OnboardingWizard from '@/pages/onboarding-wizard';
 import RBACConfigPage from '@/pages/rbac-config';
 import RBACManagementPage from '@/pages/rbac-management';
 import SDKIntegrationPage from '@/pages/sdk-integration';
@@ -53,8 +53,9 @@ function Router() {
             <Route path='/' component={AdminDashboard} />
             <Route path='/admin' component={AdminDashboard} />
             <Route path='/tenants' component={TenantsPage} />
-            <Route path='/tenants/add' component={OnboardingWizard} />
-            <Route path='/tenants/wizard' component={OnboardingWizard} />
+            <Route path='/tenants/add' component={EnhancedOnboardingWizard} />
+            <Route path='/tenants/wizard' component={EnhancedOnboardingWizard} />
+            <Route path='/tenants/enhanced' component={EnhancedOnboardingWizard} />
             <Route path='/tenants/success' component={TenantSuccessPage} />
             <Route path='/tenants/:tenantId/portal' component={TenantPortalPage} />
             <Route path='/tenants/:tenantId/rbac' component={RBACManagementPage} />

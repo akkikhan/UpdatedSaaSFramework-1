@@ -1576,13 +1576,29 @@ export default function OnboardingWizard() {
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
-                                        <SelectItem value='healthcare'>Healthcare</SelectItem>
-                                        <SelectItem value='finance'>Finance</SelectItem>
-                                        <SelectItem value='retail'>Retail</SelectItem>
-                                        <SelectItem value='education'>Education</SelectItem>
-                                        <SelectItem value='technology'>Technology</SelectItem>
-                                        <SelectItem value='manufacturing'>Manufacturing</SelectItem>
-                                        <SelectItem value='other'>Other</SelectItem>
+                                        {businessTypesLoading ? (
+                                          <SelectItem value='' disabled>
+                                            Loading business types...
+                                          </SelectItem>
+                                        ) : businessTypes.length > 0 ? (
+                                          businessTypes.map((type: any) => (
+                                            <SelectItem key={type.id} value={type.id}>
+                                              {type.name}
+                                            </SelectItem>
+                                          ))
+                                        ) : (
+                                          <>
+                                            <SelectItem value='healthcare'>Healthcare</SelectItem>
+                                            <SelectItem value='finance'>Finance</SelectItem>
+                                            <SelectItem value='retail'>Retail</SelectItem>
+                                            <SelectItem value='education'>Education</SelectItem>
+                                            <SelectItem value='technology'>Technology</SelectItem>
+                                            <SelectItem value='manufacturing'>
+                                              Manufacturing
+                                            </SelectItem>
+                                            <SelectItem value='other'>Other</SelectItem>
+                                          </>
+                                        )}
                                       </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -1606,15 +1622,31 @@ export default function OnboardingWizard() {
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
-                                        <SelectItem value='admin-only'>Admin Only</SelectItem>
-                                        <SelectItem value='basic-hierarchy'>
-                                          Basic Hierarchy
-                                        </SelectItem>
-                                        <SelectItem value='department-based'>
-                                          Department Based
-                                        </SelectItem>
-                                        <SelectItem value='project-based'>Project Based</SelectItem>
-                                        <SelectItem value='custom'>Custom Setup</SelectItem>
+                                        {roleTemplatesLoading ? (
+                                          <SelectItem value='' disabled>
+                                            Loading role templates...
+                                          </SelectItem>
+                                        ) : roleTemplates.length > 0 ? (
+                                          roleTemplates.map((template: any) => (
+                                            <SelectItem key={template.id} value={template.id}>
+                                              {template.name}
+                                            </SelectItem>
+                                          ))
+                                        ) : (
+                                          <>
+                                            <SelectItem value='admin-only'>Admin Only</SelectItem>
+                                            <SelectItem value='basic-hierarchy'>
+                                              Basic Hierarchy
+                                            </SelectItem>
+                                            <SelectItem value='department-based'>
+                                              Department Based
+                                            </SelectItem>
+                                            <SelectItem value='project-based'>
+                                              Project Based
+                                            </SelectItem>
+                                            <SelectItem value='custom'>Custom Setup</SelectItem>
+                                          </>
+                                        )}
                                       </SelectContent>
                                     </Select>
                                     <FormMessage />

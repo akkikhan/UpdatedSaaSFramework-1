@@ -651,6 +651,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update tenant configuration
+  app.put('/api/tenants/:id/config', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { moduleConfigs, enabledModules, businessType, roleTemplate } = req.body;
+
+      // Validate tenant exists
+      const tenant = (await storage.getTenantByOrgId(id)) || (await storage.getTenant(id));
+      if (!tenant) {
+        return res.status(404).json({ message: 'Tenant not found' });
+      }
+
+      // Update tenant configuration
+      const updatedConfig = {
+        moduleConfigs: moduleConfigs || tenant.moduleConfigs,
+        enabledModules: enabledModules || tenant.enabledModules,
+        businessType: businessType || tenant.businessType,
+        roleTemplate: roleTemplate || tenant.roleTemplate
+      };
+
+      await storage.updateTenantConfig(tenant.id, updatedConfig);
+
+      // Trigger configuration sync
+      const { configSyncService } = await import('./services/config-sync');
+      await configSyncService.triggerConfigChange({
+        type: 'module',
+        action: 'update',
+        scope: 'tenant',
+        targetId: tenant.id,
+        config: updatedConfig,
+        triggeredBy: 'tenant-portal'
+      });
+
+      res.json({
+        message: 'Tenant configuration updated successfully',
+        config: updatedConfig,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating tenant configuration:', error);
+      res.status(500).json({ message: 'Failed to update tenant configuration' });
+    }
+  });
+
+  // Get tenant configuration
+  app.get('/api/tenants/:id/config', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Validate tenant exists
+      const tenant = (await storage.getTenantByOrgId(id)) || (await storage.getTenant(id));
+      if (!tenant) {
+        return res.status(404).json({ message: 'Tenant not found' });
+      }
+
+      res.json({
+        tenantId: tenant.id,
+        orgId: tenant.orgId,
+        enabledModules: tenant.enabledModules || [],
+        moduleConfigs: tenant.moduleConfigs || {},
+        businessType: tenant.businessType,
+        roleTemplate: tenant.roleTemplate,
+        lastUpdated: tenant.updatedAt || tenant.createdAt
+      });
+    } catch (error) {
+      console.error('Error fetching tenant configuration:', error);
+      res.status(500).json({ message: 'Failed to fetch tenant configuration' });
+    }
+  });
+
   // Get notifications for a tenant
   app.get('/api/tenants/:id/notifications', async (req, res) => {
     try {
