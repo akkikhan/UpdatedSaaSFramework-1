@@ -297,19 +297,7 @@ export class SaaSAuth {
   }
 }
 
-// Extend Express Request type
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        tenantId: string;
-        permissions: string[];
-      };
-    }
-  }
-}
+// Extend Express Request type (removed - handled by enhanced-auth)
 
 // Export enhanced authentication with all providers
 export { 
