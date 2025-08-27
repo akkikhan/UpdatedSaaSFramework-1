@@ -1,24 +1,30 @@
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 
 // Load environment variables first
 dotenv.config();
 
+import * as schema from '@shared/schema';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from "@shared/schema";
+
+type DatabaseType = NodePgDatabase<typeof schema> | null;
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL || DATABASE_URL.includes('demo:demo@localhost')) {
-  console.warn("⚠️  DATABASE_URL not set or using demo credentials. Database operations will fail.");
-  console.warn("📝 To fix this:");
-  console.warn("   1. Create a free PostgreSQL database at https://neon.tech or https://supabase.com");
-  console.warn("   2. Add DATABASE_URL=your_connection_string to your .env file");
-  console.warn("   3. Restart the application");
+  console.warn(
+    '⚠️  DATABASE_URL not set or using demo credentials. Database operations will fail.'
+  );
+  console.warn('📝 To fix this:');
+  console.warn(
+    '   1. Create a free PostgreSQL database at https://neon.tech or https://supabase.com'
+  );
+  console.warn('   2. Add DATABASE_URL=your_connection_string to your .env file');
+  console.warn('   3. Restart the application');
 }
 
 // Create a mock pool if no database URL is provided (for demo purposes)
-let pool = null;
+let pool: Pool | null = null;
 /**
  * Represents the global database connection instance.
  *
@@ -28,9 +34,9 @@ let pool = null;
  * All database interactions within the application should utilize this instance
  * once it has been established.
  *
- * @type {any | null}
+ * @type {DatabaseType}
  */
-let db = null;
+let db: DatabaseType = null;
 
 if (DATABASE_URL && !DATABASE_URL.includes('demo:demo@localhost')) {
   try {
@@ -41,18 +47,17 @@ if (DATABASE_URL && !DATABASE_URL.includes('demo:demo@localhost')) {
         rejectUnauthorized: false // Handle certificate issues
       }
     };
-    
+
     pool = new Pool(connectionConfig);
     db = drizzle(pool, { schema });
-    console.log("✅ Database connection established");
+    console.log('✅ Database connection established');
   } catch (error) {
-    console.error("❌ Database connection failed:", error);
+    console.error('❌ Database connection failed:', error);
     pool = null;
     db = null;
   }
 } else {
-  console.log("🚧 Running in demo mode without database connection");
+  console.log('🚧 Running in demo mode without database connection');
 }
 
-export { pool };
-export { db };
+export { db, pool };

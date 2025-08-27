@@ -1,7 +1,7 @@
 {
-  "name": "@saas-factory/auth",
-  "version": "1.0.0",
-  "description": "Multi-tenant authentication SDK for SaaS Factory platform",
+  "name": "@akkikhan/saas-framework-auth-sdk",
+  "version": "1.0.0-dev.1",
+  "description": "Multi-tenant authentication SDK for SaaS Framework platform",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

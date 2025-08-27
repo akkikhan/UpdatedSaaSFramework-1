@@ -3,51 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaaS Framework - Tenant Portal Navigation</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            min-height: 100vh;
-        }
-        .container {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        h1 { 
-            color: #333; 
-            border-bottom: 3px solid #667eea; 
-            padding-bottom: 15px; 
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        h2 { 
-            color: #555; 
-            margin-top: 30px; 
-            border-left: 4px solid #667eea;
-            padding-left: 15px;
-        }
-        .portal-section {
-            margin: 25px 0;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background: #f8f9fa;
-        }
-        .portal-section h3 {
-            margin: 0 0 15px 0;
-            color: #667eea;
-        }
-        .url-list {
-            list-style: none;
-            padding: 0;
-        }
+    <title>Multi-Tenant SaaS Framework Portal - All 6 Modules</title>
+    <link rel="stylesheet" href="portal-styles.css">
+</head>
         .url-list li {
             margin: 10px 0;
             padding: 10px 15px;
@@ -113,8 +71,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏢 Multi-Tenant SaaS Framework Portal</h1>
-        
+        <h1>🏢 Multi-Tenant SaaS Framework Portal - All 6 Modules</h1>
+        <p class="portal-description">Complete enterprise platform with Authentication, RBAC, Logging, Monitoring, Notifications, and AI Copilot</p>
+
         <div class="server-info">
             <h3>📊 Server Status</h3>
             <p>✅ <strong>Server Running:</strong> http://localhost:3001</p>
@@ -137,19 +96,19 @@
             <h3>👥 Tenant Portal URLs</h3>
             <ul class="url-list">
                 <li>
-                    <a href="http://localhost:3001/tenant/acme/login" target="_blank">
+                    <a href="http://localhost:3001/tenant/acme/login" target="_blank" rel="noopener">
                         Acme Tenant Login
                     </a>
                     <span class="status-badge status-active">ACTIVE</span>
                 </li>
                 <li>
-                    <a href="http://localhost:3001/tenant/acme/dashboard" target="_blank">
+                    <a href="http://localhost:3001/tenant/acme/dashboard" target="_blank" rel="noopener">
                         Acme Tenant Dashboard
                     </a>
                     <span class="status-badge status-active">ACTIVE</span>
                 </li>
                 <li>
-                    <a href="http://localhost:3001/tenant/demo-company/login" target="_blank">
+                    <a href="http://localhost:3001/tenant/demo-company/login" target="_blank" rel="noopener">
                         Demo Company Login
                     </a>
                     <span class="status-badge status-demo">DEMO</span>
@@ -161,25 +120,25 @@
             <h3>⚙️ Admin Portal URLs</h3>
             <ul class="url-list">
                 <li>
-                    <a href="http://localhost:3001/" target="_blank">
+                    <a href="http://localhost:3001/" target="_blank" rel="noopener">
                         Admin Dashboard
                     </a>
                     <span class="status-badge status-admin">ADMIN</span>
                 </li>
                 <li>
-                    <a href="http://localhost:3001/tenants" target="_blank">
+                    <a href="http://localhost:3001/tenants" target="_blank" rel="noopener">
                         Tenant Management
                     </a>
                     <span class="status-badge status-admin">ADMIN</span>
                 </li>
                 <li>
-                    <a href="http://localhost:3001/tenants/add" target="_blank">
+                    <a href="http://localhost:3001/tenants/add" target="_blank" rel="noopener">
                         Add New Tenant
                     </a>
                     <span class="status-badge status-admin">ADMIN</span>
                 </li>
                 <li>
-                    <a href="http://localhost:3001/tenants/wizard" target="_blank">
+                    <a href="http://localhost:3001/tenants/wizard" target="_blank" rel="noopener">
                         Onboarding Wizard
                     </a>
                     <span class="status-badge status-admin">ADMIN</span>
@@ -191,19 +150,19 @@
             <h3>🛠️ Development & Testing URLs</h3>
             <ul class="url-list">
                 <li>
-                    <a href="http://localhost:3001/api/health" target="_blank">
+                    <a href="http://localhost:3001/api/health" target="_blank" rel="noopener">
                         API Health Check
                     </a>
                     <span class="status-badge status-demo">API</span>
                 </li>
                 <li>
-                    <a href="http://localhost:3001/api/tenants" target="_blank">
+                    <a href="http://localhost:3001/api/tenants" target="_blank" rel="noopener">
                         Tenants API
                     </a>
                     <span class="status-badge status-demo">API</span>
                 </li>
                 <li>
-                    <a href="http://localhost:3001/api/stats" target="_blank">
+                    <a href="http://localhost:3001/api/stats" target="_blank" rel="noopener">
                         Statistics API
                     </a>
                     <span class="status-badge status-demo">API</span>
@@ -320,7 +279,7 @@
             </ol>
         </div>
 
-        <p style="text-align: center; margin-top: 40px; color: #666;">
+        <p class="footer-text">
             <strong>✨ Multi-Tenant SaaS Framework - Ready for Production ✨</strong>
         </p>
     </div>

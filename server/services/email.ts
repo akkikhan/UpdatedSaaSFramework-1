@@ -20,9 +20,10 @@ export class EmailService {
 
   constructor() {
     // Use environment variables with fallbacks
-    const smtpEmail = process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || 'your-email@example.com';
+    const smtpEmail =
+      process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || 'your-email@example.com';
     const fromEmail = process.env.FROM_EMAIL || smtpEmail;
-    
+
     // Force Gmail settings if FROM_EMAIL is a Gmail address
     let smtpSettings;
     if (fromEmail.includes('@gmail.com')) {
@@ -30,7 +31,7 @@ export class EmailService {
     } else {
       smtpSettings = this.getSmtpSettings(smtpEmail);
     }
-    
+
     this.config = {
       smtpHost: process.env.SMTP_HOST || smtpSettings.host,
       smtpPort: parseInt(process.env.SMTP_PORT || '') || smtpSettings.port,
@@ -41,21 +42,31 @@ export class EmailService {
     };
 
     if (!this.config.smtpPassword) {
-      console.warn('⚠️  SMTP_PASSWORD or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled.');
-      console.warn('   For Gmail: Generate an App Password at https://myaccount.google.com/apppasswords');
-      console.warn('   For Outlook/Office365: Generate an App Password at https://account.microsoft.com/security');
+      console.warn(
+        '⚠️  SMTP_PASSWORD or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled.'
+      );
+      console.warn(
+        '   For Gmail: Generate an App Password at https://myaccount.google.com/apppasswords'
+      );
+      console.warn(
+        '   For Outlook/Office365: Generate an App Password at https://account.microsoft.com/security'
+      );
     }
 
-    console.log(`📧 Email service initialized - Host: ${this.config.smtpHost}:${this.config.smtpPort}, From: ${this.config.fromEmail}`);
+    console.log(
+      `📧 Email service initialized - Host: ${this.config.smtpHost}:${this.config.smtpPort}, From: ${this.config.fromEmail}`
+    );
 
     this.transporter = nodemailer.createTransport({
       host: this.config.smtpHost,
       port: this.config.smtpPort,
       secure: this.config.smtpPort === 465, // Use secure for port 465
-      auth: this.config.smtpPassword ? {
-        user: this.config.smtpUsername,
-        pass: this.config.smtpPassword,
-      } : undefined,
+      auth: this.config.smtpPassword
+        ? {
+            user: this.config.smtpUsername,
+            pass: this.config.smtpPassword
+          }
+        : undefined,
       tls: {
         rejectUnauthorized: false,
         ciphers: 'SSLv3'
@@ -65,7 +76,7 @@ export class EmailService {
 
   private getSmtpSettings(email: string): { host: string; port: number; secure: boolean } {
     const domain = email.split('@')[1]?.toLowerCase();
-    
+
     // Common email providers SMTP settings
     const providers: Record<string, { host: string; port: number; secure: boolean }> = {
       'gmail.com': { host: 'smtp.gmail.com', port: 587, secure: false },
@@ -85,18 +96,21 @@ export class EmailService {
     return providers[domain] || { host: 'smtp.gmail.com', port: 587, secure: false };
   }
 
-  async sendModuleStatusEmail(tenant: {
-    id: string;
-    name: string;
-    adminEmail: string;
-  }, changes: {
-    enabled: string[];
-    disabled: string[];
-  }): Promise<boolean> {
+  async sendModuleStatusEmail(
+    tenant: {
+      id: string;
+      name: string;
+      adminEmail: string;
+    },
+    changes: {
+      enabled: string[];
+      disabled: string[];
+    }
+  ): Promise<boolean> {
     const subject = `Module Access Updated - ${tenant.name}`;
-    
+
     const html = this.generateModuleStatusEmailTemplate(tenant, changes);
-    
+
     try {
       await this.transporter.sendMail({
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
@@ -104,7 +118,7 @@ export class EmailService {
         subject,
         html
       });
-      
+
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
@@ -113,11 +127,11 @@ export class EmailService {
         status: 'sent',
         errorMessage: null
       });
-      
+
       return true;
     } catch (error) {
       console.error('Failed to send module status email:', error);
-      
+
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
@@ -126,7 +140,7 @@ export class EmailService {
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : 'Unknown error'
       });
-      
+
       return false;
     }
   }
@@ -138,16 +152,26 @@ export class EmailService {
     adminEmail: string;
     authApiKey: string;
     rbacApiKey: string;
+    loggingApiKey: string;
+    monitoringApiKey: string;
+    notificationsApiKey: string;
+    aiCopilotApiKey: string;
   }): Promise<boolean> {
     const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
-    
+
     // Temporarily skip email sending - just log as sent for now
     if (!this.config.smtpPassword) {
-      console.log(`📧 Email functionality disabled - would have sent onboarding email to ${tenant.adminEmail}`);
-      console.log(`📧 Tenant "${tenant.name}" created successfully with API keys:`);
+      console.log(
+        `📧 Email functionality disabled - would have sent onboarding email to ${tenant.adminEmail}`
+      );
+      console.log(`📧 Tenant "${tenant.name}" created successfully with all 6 module API keys:`);
       console.log(`📧 Auth API Key: ${tenant.authApiKey}`);
       console.log(`📧 RBAC API Key: ${tenant.rbacApiKey}`);
-      
+      console.log(`📧 Logging API Key: ${tenant.loggingApiKey}`);
+      console.log(`📧 Monitoring API Key: ${tenant.monitoringApiKey}`);
+      console.log(`📧 Notifications API Key: ${tenant.notificationsApiKey}`);
+      console.log(`📧 AI Copilot API Key: ${tenant.aiCopilotApiKey}`);
+
       // Log as sent for platform functionality
       await storage.logEmail({
         tenantId: tenant.id,
@@ -157,12 +181,12 @@ export class EmailService {
         status: 'sent',
         errorMessage: 'Email disabled - credentials not configured'
       });
-      
+
       return true;
     }
-    
+
     const html = this.generateOnboardingEmailTemplate(tenant);
-    
+
     try {
       await this.transporter.sendMail({
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
@@ -170,7 +194,7 @@ export class EmailService {
         subject,
         html
       });
-      
+
       // Log successful email
       await storage.logEmail({
         tenantId: tenant.id,
@@ -180,11 +204,11 @@ export class EmailService {
         status: 'sent',
         errorMessage: null
       });
-      
+
       return true;
     } catch (error) {
       console.error('Failed to send onboarding email:', error);
-      
+
       // Log failed email
       await storage.logEmail({
         tenantId: tenant.id,
@@ -194,19 +218,22 @@ export class EmailService {
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : 'Unknown error'
       });
-      
+
       return false;
     }
   }
 
-  private generateModuleStatusEmailTemplate(tenant: {
-    id: string;
-    name: string;
-    adminEmail: string;
-  }, changes: {
-    enabled: string[];
-    disabled: string[];
-  }): string {
+  private generateModuleStatusEmailTemplate(
+    tenant: {
+      id: string;
+      name: string;
+      adminEmail: string;
+    },
+    changes: {
+      enabled: string[];
+      disabled: string[];
+    }
+  ): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -231,42 +258,54 @@ export class EmailService {
             <h1 style="margin: 0; color: #1e293b;">Module Access Updated</h1>
             <p style="margin: 10px 0 0 0; color: #64748b;">Changes to your tenant access</p>
           </div>
-          
+
           <div class="content">
             <p>Hello,</p>
-            
+
             <p>Your tenant <strong>${tenant.name}</strong> module access has been updated by an administrator.</p>
-            
-            ${changes.enabled.length > 0 ? `
+
+            ${
+              changes.enabled.length > 0
+                ? `
             <div class="module-list">
               <h3 class="enabled">✓ Modules Enabled:</h3>
               <ul>
                 ${changes.enabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join('')}
               </ul>
             </div>
-            ` : ''}
-            
-            ${changes.disabled.length > 0 ? `
+            `
+                : ''
+            }
+
+            ${
+              changes.disabled.length > 0
+                ? `
             <div class="module-list">
               <h3 class="disabled">✗ Modules Disabled:</h3>
               <ul>
                 ${changes.disabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join('')}
               </ul>
             </div>
-            ` : ''}
-            
-            ${changes.disabled.length > 0 ? `
+            `
+                : ''
+            }
+
+            ${
+              changes.disabled.length > 0
+                ? `
             <div class="warning">
-              <strong>⚠️ Important:</strong> Disabled modules will immediately restrict access to related features. 
+              <strong>⚠️ Important:</strong> Disabled modules will immediately restrict access to related features.
               Users may receive "access denied" messages when trying to use these features.
             </div>
-            ` : ''}
-            
+            `
+                : ''
+            }
+
             <p>If you have questions about these changes, please contact your administrator.</p>
-            
+
             <p>Best regards,<br>The SaaS Framework Team</p>
           </div>
-          
+
           <div class="footer">
             <p>This is an automated notification from the SaaS Framework Platform.</p>
           </div>
@@ -278,11 +317,11 @@ export class EmailService {
 
   private getModuleDisplayName(module: string): string {
     const displayNames: Record<string, string> = {
-      'auth': 'Authentication',
-      'rbac': 'Role-Based Access Control',
+      auth: 'Authentication',
+      rbac: 'Role-Based Access Control',
       'azure-ad': 'Azure Active Directory',
-      'auth0': 'Auth0 SSO',
-      'saml': 'SAML SSO'
+      auth0: 'Auth0 SSO',
+      saml: 'SAML SSO'
     };
     return displayNames[module] || module;
   }
@@ -293,11 +332,15 @@ export class EmailService {
     adminEmail: string;
     authApiKey: string;
     rbacApiKey: string;
+    loggingApiKey: string;
+    monitoringApiKey: string;
+    notificationsApiKey: string;
+    aiCopilotApiKey: string;
   }): string {
     const baseUrl = process.env.BASE_URL || 'https://localhost:5000';
     const portalUrl = `${baseUrl}/tenant/${tenant.orgId}/login`;
     const docsUrl = `${baseUrl}/docs`;
-    
+
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -414,27 +457,31 @@ export class EmailService {
             <h1>🚀 Welcome to SaaS Framework</h1>
             <p>Your tenant "${tenant.name}" is ready!</p>
         </div>
-        
+
         <div class="content">
             <p class="welcome-text">
                 Congratulations! Your multi-tenant SaaS platform has been successfully created and configured.
             </p>
-            
+
             <div class="info-card">
                 <h3>🔗 Tenant Portal Access</h3>
                 <p><strong>Portal URL:</strong> ${portalUrl}</p>
                 <p><strong>Admin Email:</strong> ${tenant.adminEmail}</p>
                 <p><strong>Temporary Password:</strong> temp123!</p>
             </div>
-            
+
             <a href="${portalUrl}" class="button">Access Your Tenant Portal</a>
-            
+
             <div class="info-card">
-                <h3>🔐 API Keys for Integration</h3>
-                <p><strong>Auth API Key:</strong> ${tenant.authApiKey}</p>
+                <h3>🔐 API Keys for All Modules</h3>
+                <p><strong>Authentication API Key:</strong> ${tenant.authApiKey}</p>
                 <p><strong>RBAC API Key:</strong> ${tenant.rbacApiKey}</p>
+                <p><strong>Logging API Key:</strong> ${tenant.loggingApiKey}</p>
+                <p><strong>Monitoring API Key:</strong> ${tenant.monitoringApiKey}</p>
+                <p><strong>Notifications API Key:</strong> ${tenant.notificationsApiKey}</p>
+                <p><strong>AI Copilot API Key:</strong> ${tenant.aiCopilotApiKey}</p>
             </div>
-            
+
             <div class="steps">
                 <h3>🚀 Next Steps</h3>
                 <ol>
@@ -445,20 +492,33 @@ export class EmailService {
                     <li>Start building your multi-tenant application!</li>
                 </ol>
             </div>
-            
-            <h3>📦 SDK Integration</h3>
-            <p>Install our authentication and RBAC SDKs:</p>
-            
-            <div class="code-block">
-npm install @saas-framework/auth @saas-framework/rbac
-            </div>
-            
-            <p>Example integration:</p>
-            <div class="code-block">
-import { SaaSAuth } from '@saas-framework/auth';
-import { SaaSRBAC } from '@saas-framework/rbac';
 
-const auth = new SaaSAuth({
+            <h3>📦 Available NPM Modules</h3>
+            <p>Install any module you need:</p>
+
+            <div class="code-block">
+# Install individual modules
+npm install @saas-framework/auth
+npm install @saas-framework/rbac
+npm install @saas-framework/logging
+npm install @saas-framework/monitoring
+npm install @saas-framework/notifications
+npm install @saas-framework/ai-copilot
+
+# Or install all at once
+npm install @saas-framework/auth @saas-framework/rbac @saas-framework/logging @saas-framework/monitoring @saas-framework/notifications @saas-framework/ai-copilot
+            </div>
+
+            <p>Example integration with all modules:</p>
+            <div class="code-block">
+import { EnhancedSaaSAuth } from '@saas-framework/auth';
+import { SaaSRBAC } from '@saas-framework/rbac';
+import { SaaSLogging } from '@saas-framework/logging';
+import { SaaSMonitoring } from '@saas-framework/monitoring';
+import { SaaSNotifications } from '@saas-framework/notifications';
+import { SaaSAICopilot } from '@saas-framework/ai-copilot';
+
+const auth = new EnhancedSaaSAuth({
   apiKey: '${tenant.authApiKey}',
   baseUrl: '${baseUrl}/api/v2/auth'
 });
@@ -467,12 +527,32 @@ const rbac = new SaaSRBAC({
   apiKey: '${tenant.rbacApiKey}',
   baseUrl: '${baseUrl}/api/v2/rbac'
 });
+
+const logger = new SaaSLogging({
+  apiKey: '${tenant.loggingApiKey}',
+  baseUrl: '${baseUrl}/api/v2/logs'
+});
+
+const monitoring = new SaaSMonitoring({
+  apiKey: '${tenant.monitoringApiKey}',
+  baseUrl: '${baseUrl}/api/v2/monitoring'
+});
+
+const notifications = new SaaSNotifications({
+  apiKey: '${tenant.notificationsApiKey}',
+  baseUrl: '${baseUrl}/api/v2/notifications'
+});
+
+const aiCopilot = new SaaSAICopilot({
+  apiKey: '${tenant.aiCopilotApiKey}',
+  baseUrl: '${baseUrl}/api/v2/ai'
+});
             </div>
         </div>
-        
+
         <div class="footer">
             <p>
-                Need help? Visit our <a href="${docsUrl}" style="color: #3b82f6;">documentation</a> 
+                Need help? Visit our <a href="${docsUrl}" style="color: #3b82f6;">documentation</a>
                 or contact support at dev-saas@primussoft.com
             </p>
             <p>© 2025 SaaS Framework Platform. All rights reserved.</p>
@@ -489,7 +569,7 @@ const rbac = new SaaSRBAC({
       console.log('📧 SMTP connection test skipped - email functionality disabled');
       return true;
     }
-    
+
     try {
       await this.transporter.verify();
       return true;
@@ -499,7 +579,7 @@ const rbac = new SaaSRBAC({
     }
   }
 
-  async sendSimpleTestEmail(to: string, subject: string = "Test Email"): Promise<boolean> {
+  async sendSimpleTestEmail(to: string, subject: string = 'Test Email'): Promise<boolean> {
     try {
       const html = `
 <!DOCTYPE html>

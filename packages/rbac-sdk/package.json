@@ -1,6 +1,6 @@
 {
-  "name": "@saas-factory/rbac",
-  "version": "1.0.0",
+  "name": "@akkikhan/saas-framework-rbac-sdk",
+  "version": "1.0.0-dev.1",
   "description": "Role-based access control SDK for SaaS Factory platform",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

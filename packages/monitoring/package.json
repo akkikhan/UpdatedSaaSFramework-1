@@ -1,6 +1,6 @@
 {
-  "name": "@saas-framework/monitoring",
-  "version": "1.0.0",
+  "name": "@akkikhan/saas-framework-monitoring",
+  "version": "1.0.0-dev.1",
   "description": "Monitoring and alerting SDK for SaaS Framework multi-tenant applications",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -33,7 +33,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/saas-framework/monitoring"
+    "url": "https://github.com/akkikhan/monitoring"
   },
   "homepage": "https://github.com/saas-framework/monitoring#readme"
 }
