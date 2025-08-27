@@ -3517,6 +3517,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =============================================================================
+  // ADMIN ENDPOINTS FOR ONBOARDING WIZARD
+  // =============================================================================
+
+  // Get modules data for onboarding wizard
+  app.get('/admin/modules', async (req, res) => {
+    try {
+      const modules = [
+        {
+          id: 'auth',
+          label: 'Enhanced Authentication',
+          description: 'Complete authentication suite: JWT, Azure AD, Auth0, SAML, and MFA',
+          icon: 'Key',
+          color: 'bg-blue-500',
+          recommended: true,
+          required: true,
+          npmPackage: '@saas-framework/auth',
+          features: [
+            'Basic JWT Auth',
+            'Azure AD SSO',
+            'Auth0 Integration',
+            'SAML 2.0',
+            'Multi-Factor Auth'
+          ],
+          priority: 'critical'
+        },
+        {
+          id: 'rbac',
+          label: 'Role-Based Access Control',
+          description: 'Advanced role and permission management with compliance frameworks',
+          icon: 'Users',
+          color: 'bg-green-500',
+          recommended: true,
+          required: false,
+          npmPackage: '@saas-framework/rbac',
+          features: [
+            'Custom Roles',
+            'Granular Permissions',
+            'Industry Templates',
+            'Compliance (SOX, HIPAA)'
+          ],
+          priority: 'high'
+        },
+        {
+          id: 'logging',
+          label: 'Logging & Audit Trails',
+          description: 'Comprehensive compliance logging, audit trails, and security monitoring',
+          icon: 'FileText',
+          color: 'bg-slate-500',
+          recommended: true,
+          required: false,
+          npmPackage: '@saas-framework/logging',
+          features: ['Structured Logging', 'Audit Trails', 'Security Events', 'Compliance Reports'],
+          priority: 'high'
+        },
+        {
+          id: 'notifications',
+          label: 'Multi-Channel Notifications',
+          description: 'Email, SMS, push notifications, webhooks with template management',
+          icon: 'Bell',
+          color: 'bg-yellow-500',
+          recommended: true,
+          required: false,
+          npmPackage: '@saas-framework/notifications',
+          features: ['Email (SMTP)', 'SMS (Twilio)', 'Push Notifications', 'Webhooks', 'Templates'],
+          priority: 'medium'
+        },
+        {
+          id: 'ai-copilot',
+          label: 'AI Copilot & Automation',
+          description:
+            'Risk analysis, fraud detection, compliance automation, and intelligent insights',
+          icon: 'Bot',
+          color: 'bg-indigo-500',
+          recommended: false,
+          required: false,
+          npmPackage: '@saas-framework/ai-copilot',
+          features: ['Risk Analysis', 'Fraud Detection', 'Compliance Automation', 'AI Insights'],
+          priority: 'low'
+        }
+      ];
+      res.json(modules);
+    } catch (error) {
+      console.error('Error fetching modules:', error);
+      res.status(500).json({ message: 'Failed to fetch modules' });
+    }
+  });
+
+  // Get business types data for onboarding wizard (use existing RBAC config endpoint)
+  app.get('/admin/business-types', async (req, res) => {
+    try {
+      const businessTypes = await storage.getBusinessTypes();
+      res.json(businessTypes);
+    } catch (error) {
+      console.error('Error fetching business types:', error);
+      res.status(500).json({ message: 'Failed to fetch business types' });
+    }
+  });
+
+  // Get role templates data for onboarding wizard (use existing RBAC config endpoint)
+  app.get('/admin/role-templates', async (req, res) => {
+    try {
+      const permissionTemplates = await storage.getPermissionTemplates();
+      // Transform permission templates to role templates format
+      const roleTemplates = permissionTemplates.map(template => ({
+        id: template.name.toLowerCase().replace(/\s+/g, '-'),
+        name: template.name,
+        description: template.description,
+        permissions: template.permissions,
+        businessTypes: template.businessTypes,
+        roles: template.name.includes('Standard')
+          ? ['admin', 'manager', 'user']
+          : template.name.includes('Healthcare')
+            ? ['admin', 'doctor', 'nurse', 'patient']
+            : template.name.includes('Banking')
+              ? ['admin', 'teller', 'loan_officer', 'compliance']
+              : template.name.includes('Insurance')
+                ? ['admin', 'underwriter', 'claims_adjuster', 'actuary']
+                : ['admin', 'user']
+      }));
+      res.json(roleTemplates);
+    } catch (error) {
+      console.error('Error fetching role templates:', error);
+      res.status(500).json({ message: 'Failed to fetch role templates' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

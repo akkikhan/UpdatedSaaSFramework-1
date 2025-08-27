@@ -1,33 +1,57 @@
-import { useState } from "react";
-import { Plus, Eye, Mail, Edit, Pause, Trash, Search, CheckCircle, ArrowLeft, Copy } from "lucide-react";
-import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import type { Tenant } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+  TableRow
+} from '@/components/ui/table';
+import { useResendOnboardingEmail, useTenants, useUpdateTenantStatus } from '@/hooks/use-tenants';
+import { useToast } from '@/hooks/use-toast';
+import type { Tenant } from '@/lib/api';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import {
+  ArrowLeft,
+  CheckCircle,
+  Copy,
+  Edit,
+  Eye,
+  Mail,
+  Pause,
+  Plus,
+  Search,
+  Trash
+} from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useLocation } from 'wouter';
+import { z } from 'zod';
 
 const editFormSchema = z.object({
-  name: z.string().min(2, "Organization name must be at least 2 characters"),
-  adminEmail: z.string().email("Please enter a valid email address"),
-  status: z.enum(["pending", "active", "suspended"]),
+  name: z.string().min(2, 'Organization name must be at least 2 characters'),
+  adminEmail: z.string().email('Please enter a valid email address'),
+  status: z.enum(['pending', 'active', 'suspended'])
 });
 
 type EditFormData = z.infer<typeof editFormSchema>;
@@ -36,9 +60,9 @@ export default function TenantsPage() {
   const [, setLocation] = useLocation();
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'view' | 'edit'>('list');
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
-  
+
   const { data: tenants, isLoading } = useTenants();
   const updateTenantStatus = useUpdateTenantStatus();
   const resendEmail = useResendOnboardingEmail();
@@ -46,15 +70,15 @@ export default function TenantsPage() {
   const form = useForm<EditFormData>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      name: "",
-      adminEmail: "",
-      status: "pending",
-    },
+      name: '',
+      adminEmail: '',
+      status: 'pending'
+    }
   });
 
   const onSubmit = async (data: EditFormData) => {
     if (!selectedTenant) return;
-    
+
     try {
       if (data.status !== selectedTenant.status) {
         await updateTenantStatus.mutateAsync({ id: selectedTenant.id, status: data.status });
@@ -65,11 +89,13 @@ export default function TenantsPage() {
     }
   };
 
-  const filteredTenants = tenants?.filter(tenant =>
-    tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tenant.adminEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tenant.orgId.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredTenants =
+    tenants?.filter(
+      tenant =>
+        tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tenant.adminEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tenant.orgId.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
   const handleStatusChange = async (id: string, status: string) => {
     await updateTenantStatus.mutateAsync({ id, status });
@@ -103,20 +129,24 @@ export default function TenantsPage() {
     try {
       await navigator.clipboard.writeText(text);
       toast({
-        title: "Copied!",
-        description: `${label} copied to clipboard`,
+        title: 'Copied!',
+        description: `${label} copied to clipboard`
       });
     } catch (err) {
       toast({
-        title: "Failed to copy",
-        description: "Please copy manually",
-        variant: "destructive",
+        title: 'Failed to copy',
+        description: 'Please copy manually',
+        variant: 'destructive'
       });
     }
   };
 
   const handleDeleteTenant = async (tenant: Tenant) => {
-    if (confirm(`Are you sure you want to delete tenant "${tenant.name}"? This action cannot be undone.`)) {
+    if (
+      confirm(
+        `Are you sure you want to delete tenant "${tenant.name}"? This action cannot be undone.`
+      )
+    ) {
       // Implement delete functionality
       console.log('Delete tenant:', tenant.id);
     }
@@ -125,52 +155,62 @@ export default function TenantsPage() {
   // Show inline view/edit forms instead of list
   if (viewMode === 'view' && selectedTenant) {
     return (
-      <div className="space-y-6">
+      <div className='space-y-6'>
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className='flex items-center gap-4'>
           <Button
-            variant="ghost"
+            variant='ghost'
             onClick={handleBackToList}
-            className="flex items-center gap-2"
-            data-testid="button-back-to-list"
+            className='flex items-center gap-2'
+            data-testid='button-back-to-list'
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className='h-4 w-4' />
             Back to Tenants
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-800">Tenant Details</h1>
-            <p className="text-slate-600">View detailed information for {selectedTenant.name}</p>
+            <h1 className='text-2xl font-semibold text-slate-800'>Tenant Details</h1>
+            <p className='text-slate-600'>View detailed information for {selectedTenant.name}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
           {/* Basic Info */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className='space-y-4'>
               <div>
-                <label className="text-sm font-medium text-slate-700">Organization Name</label>
-                <p className="text-slate-900 font-medium">{selectedTenant.name}</p>
+                <label className='text-sm font-medium text-slate-700'>Organization Name</label>
+                <p className='text-slate-900 font-medium'>{selectedTenant.name}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Organization ID</label>
-                <p className="text-slate-900 font-mono">{selectedTenant.orgId}</p>
+                <label className='text-sm font-medium text-slate-700'>Organization ID</label>
+                <p className='text-slate-900 font-mono'>{selectedTenant.orgId}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Admin Email</label>
-                <p className="text-slate-900">{selectedTenant.adminEmail}</p>
+                <label className='text-sm font-medium text-slate-700'>Admin Email</label>
+                <p className='text-slate-900'>{selectedTenant.adminEmail}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Status</label>
-                <Badge variant={selectedTenant.status === 'active' ? 'default' : selectedTenant.status === 'pending' ? 'secondary' : 'destructive'}>
+                <label className='text-sm font-medium text-slate-700'>Status</label>
+                <Badge
+                  variant={
+                    selectedTenant.status === 'active'
+                      ? 'default'
+                      : selectedTenant.status === 'pending'
+                        ? 'secondary'
+                        : 'destructive'
+                  }
+                >
                   {selectedTenant.status.charAt(0).toUpperCase() + selectedTenant.status.slice(1)}
                 </Badge>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Created</label>
-                <p className="text-slate-900">{format(new Date(selectedTenant.createdAt), 'PPpp')}</p>
+                <label className='text-sm font-medium text-slate-700'>Created</label>
+                <p className='text-slate-900'>
+                  {format(new Date(selectedTenant.createdAt), 'PPpp')}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -181,32 +221,36 @@ export default function TenantsPage() {
               <CardTitle>API Keys</CardTitle>
               <CardDescription>Integration keys for this tenant</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className='space-y-4'>
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-slate-700">Auth API Key</label>
+                <div className='flex items-center justify-between mb-2'>
+                  <label className='text-sm font-medium text-slate-700'>Auth API Key</label>
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    variant='ghost'
+                    size='sm'
                     onClick={() => copyToClipboard(selectedTenant.authApiKey, 'Auth API Key')}
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className='h-4 w-4' />
                   </Button>
                 </div>
-                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">{selectedTenant.authApiKey}</p>
+                <p className='text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded'>
+                  {selectedTenant.authApiKey}
+                </p>
               </div>
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-slate-700">RBAC API Key</label>
+                <div className='flex items-center justify-between mb-2'>
+                  <label className='text-sm font-medium text-slate-700'>RBAC API Key</label>
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    variant='ghost'
+                    size='sm'
                     onClick={() => copyToClipboard(selectedTenant.rbacApiKey, 'RBAC API Key')}
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className='h-4 w-4' />
                   </Button>
                 </div>
-                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">{selectedTenant.rbacApiKey}</p>
+                <p className='text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded'>
+                  {selectedTenant.rbacApiKey}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -217,9 +261,11 @@ export default function TenantsPage() {
               <CardTitle>Enabled Modules</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {(selectedTenant.enabledModules as string[] || ['auth', 'rbac']).map((module) => (
-                  <Badge key={module} variant="outline">{module}</Badge>
+              <div className='flex flex-wrap gap-2'>
+                {((selectedTenant.enabledModules as string[]) || ['auth', 'rbac']).map(module => (
+                  <Badge key={module} variant='outline'>
+                    {module}
+                  </Badge>
                 ))}
               </div>
             </CardContent>
@@ -230,22 +276,22 @@ export default function TenantsPage() {
             <CardHeader>
               <CardTitle>Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className='space-y-2'>
               <Button
-                className="w-full justify-start"
-                variant="outline"
+                className='w-full justify-start'
+                variant='outline'
                 onClick={() => handleEditTenant(selectedTenant)}
               >
-                <Edit className="h-4 w-4 mr-2" />
+                <Edit className='h-4 w-4 mr-2' />
                 Edit Tenant
               </Button>
               <Button
-                className="w-full justify-start"
-                variant="outline"
+                className='w-full justify-start'
+                variant='outline'
                 onClick={() => handleResendEmail(selectedTenant.id)}
                 disabled={resendEmail.isPending}
               >
-                <Mail className="h-4 w-4 mr-2" />
+                <Mail className='h-4 w-4 mr-2' />
                 Resend Welcome Email
               </Button>
             </CardContent>
@@ -257,35 +303,35 @@ export default function TenantsPage() {
 
   if (viewMode === 'edit' && selectedTenant) {
     return (
-      <div className="space-y-6">
+      <div className='space-y-6'>
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className='flex items-center gap-4'>
           <Button
-            variant="ghost"
+            variant='ghost'
             onClick={handleBackToList}
-            className="flex items-center gap-2"
-            data-testid="button-back-to-list"
+            className='flex items-center gap-2'
+            data-testid='button-back-to-list'
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className='h-4 w-4' />
             Back to Tenants
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-800">Edit Tenant</h1>
-            <p className="text-slate-600">Update tenant information for {selectedTenant.name}</p>
+            <h1 className='text-2xl font-semibold text-slate-800'>Edit Tenant</h1>
+            <p className='text-slate-600'>Update tenant information for {selectedTenant.name}</p>
           </div>
         </div>
 
-        <Card className="max-w-2xl">
+        <Card className='max-w-2xl'>
           <CardHeader>
             <CardTitle>Tenant Information</CardTitle>
             <CardDescription>Update the tenant's status and configuration</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
                 <FormField
                   control={form.control}
-                  name="name"
+                  name='name'
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Organization Name</FormLabel>
@@ -293,8 +339,8 @@ export default function TenantsPage() {
                         <Input
                           {...field}
                           disabled
-                          className="bg-slate-100"
-                          data-testid="input-edit-name"
+                          className='bg-slate-100'
+                          data-testid='input-edit-name'
                         />
                       </FormControl>
                       <FormMessage />
@@ -307,14 +353,14 @@ export default function TenantsPage() {
                   <Input
                     value={selectedTenant.orgId}
                     disabled
-                    className="bg-slate-100"
-                    data-testid="input-edit-org-id"
+                    className='bg-slate-100'
+                    data-testid='input-edit-org-id'
                   />
                 </div>
 
                 <FormField
                   control={form.control}
-                  name="adminEmail"
+                  name='adminEmail'
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Admin Email</FormLabel>
@@ -322,8 +368,8 @@ export default function TenantsPage() {
                         <Input
                           {...field}
                           disabled
-                          className="bg-slate-100"
-                          data-testid="input-edit-email"
+                          className='bg-slate-100'
+                          data-testid='input-edit-email'
                         />
                       </FormControl>
                       <FormMessage />
@@ -333,20 +379,20 @@ export default function TenantsPage() {
 
                 <FormField
                   control={form.control}
-                  name="status"
+                  name='status'
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-edit-status">
-                            <SelectValue placeholder="Select status" />
+                          <SelectTrigger data-testid='select-edit-status'>
+                            <SelectValue placeholder='Select status' />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="suspended">Suspended</SelectItem>
+                          <SelectItem value='pending'>Pending</SelectItem>
+                          <SelectItem value='active'>Active</SelectItem>
+                          <SelectItem value='suspended'>Suspended</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -354,21 +400,21 @@ export default function TenantsPage() {
                   )}
                 />
 
-                <div className="flex items-center justify-end space-x-3 pt-4">
+                <div className='flex items-center justify-end space-x-3 pt-4'>
                   <Button
-                    type="button"
-                    variant="outline"
+                    type='button'
+                    variant='outline'
                     onClick={handleBackToList}
-                    data-testid="button-edit-cancel"
+                    data-testid='button-edit-cancel'
                   >
                     Cancel
                   </Button>
                   <Button
-                    type="submit"
+                    type='submit'
                     disabled={updateTenantStatus.isPending}
-                    data-testid="button-edit-save"
+                    data-testid='button-edit-save'
                   >
-                    {updateTenantStatus.isPending ? "Saving..." : "Save Changes"}
+                    {updateTenantStatus.isPending ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
               </form>
@@ -381,124 +427,123 @@ export default function TenantsPage() {
 
   return (
     <div>
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <div className='bg-white rounded-xl shadow-sm border border-slate-200'>
         {/* Header */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
+        <div className='p-6 border-b border-slate-200'>
+          <div className='flex items-center justify-between'>
             <div>
-              <h3 className="text-lg font-semibold text-slate-800">Tenant Management</h3>
-              <p className="text-slate-600 text-sm mt-1">Manage all your platform tenants</p>
+              <h3 className='text-lg font-semibold text-slate-800'>Tenant Management</h3>
+              <p className='text-slate-600 text-sm mt-1'>Manage all your platform tenants</p>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="relative">
+            <div className='flex items-center space-x-3'>
+              <div className='relative'>
                 <Input
-                  type="text"
-                  placeholder="Search tenants..."
+                  type='text'
+                  placeholder='Search tenants...'
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2"
-                  data-testid="input-search-tenants"
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className='pl-10 pr-4 py-2'
+                  data-testid='input-search-tenants'
                 />
-                <Search className="absolute left-3 top-3 text-slate-400" size={16} />
+                <Search className='absolute left-3 top-3 text-slate-400' size={16} />
               </div>
               <Button
-                onClick={() => setLocation("/tenants/wizard")}
-                className="btn-primary flex items-center space-x-2"
-                data-testid="button-guided-setup"
+                onClick={() => setLocation('/tenants/wizard')}
+                className='btn-primary flex items-center space-x-2'
+                data-testid='button-add-tenant'
               >
                 <Plus size={16} />
-                <span>Guided Setup</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setLocation("/tenants/add")}
-                className="flex items-center space-x-2"
-                data-testid="button-add-tenant"
-              >
-                <Plus size={16} />
-                <span>Quick Add</span>
+                <span>Add New Tenant</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className='overflow-x-auto'>
           {isLoading ? (
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
+            <div className='p-6 space-y-4'>
+              <Skeleton className='h-16' />
+              <Skeleton className='h-16' />
+              <Skeleton className='h-16' />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-6 py-3">Tenant</TableHead>
-                  <TableHead className="px-6 py-3">Status</TableHead>
-                  <TableHead className="px-6 py-3">Created</TableHead>
-                  <TableHead className="px-6 py-3">API Keys</TableHead>
-                  <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                  <TableHead className='px-6 py-3'>Tenant</TableHead>
+                  <TableHead className='px-6 py-3'>Status</TableHead>
+                  <TableHead className='px-6 py-3'>Created</TableHead>
+                  <TableHead className='px-6 py-3'>API Keys</TableHead>
+                  <TableHead className='px-6 py-3 text-right'>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTenants.length > 0 ? (
-                  filteredTenants.map((tenant) => (
-                    <TableRow key={tenant.id} className="table-row" data-testid={`tenant-row-${tenant.orgId}`}>
-                      <TableCell className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <span className="text-blue-600 font-semibold text-sm">
+                  filteredTenants.map(tenant => (
+                    <TableRow
+                      key={tenant.id}
+                      className='table-row'
+                      data-testid={`tenant-row-${tenant.orgId}`}
+                    >
+                      <TableCell className='px-6 py-4'>
+                        <div className='flex items-center space-x-3'>
+                          <div className='w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center'>
+                            <span className='text-blue-600 font-semibold text-sm'>
                               {tenant.name.substring(0, 2).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium text-slate-800">{tenant.name}</p>
-                            <p className="text-sm text-slate-500">{tenant.orgId}</p>
-                            <p className="text-sm text-slate-500">{tenant.adminEmail}</p>
+                            <p className='font-medium text-slate-800'>{tenant.name}</p>
+                            <p className='text-sm text-slate-500'>{tenant.orgId}</p>
+                            <p className='text-sm text-slate-500'>{tenant.adminEmail}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4">
+                      <TableCell className='px-6 py-4'>
                         <span
                           className={`status-badge ${
                             tenant.status === 'active'
                               ? 'status-active'
                               : tenant.status === 'pending'
-                              ? 'status-pending'
-                              : 'status-suspended'
+                                ? 'status-pending'
+                                : 'status-suspended'
                           }`}
                           data-testid={`status-${tenant.orgId}`}
                         >
                           {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
                         </span>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-sm text-slate-500">
+                      <TableCell className='px-6 py-4 text-sm text-slate-500'>
                         {format(new Date(tenant.createdAt), 'MMM d, yyyy')}
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="text-xs text-slate-500">Auth: {tenant.authApiKey.substring(0, 12)}...</div>
-                          <div className="text-xs text-slate-500">RBAC: {tenant.rbacApiKey.substring(0, 12)}...</div>
+                      <TableCell className='px-6 py-4'>
+                        <div className='space-y-1'>
+                          <div className='text-xs text-slate-500'>
+                            Auth: {tenant.authApiKey.substring(0, 12)}...
+                          </div>
+                          <div className='text-xs text-slate-500'>
+                            RBAC: {tenant.rbacApiKey.substring(0, 12)}...
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end space-x-2">
+                      <TableCell className='px-6 py-4 text-right'>
+                        <div className='flex items-center justify-end space-x-2'>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-slate-400 hover:text-slate-600"
-                            title="View Details"
+                            variant='ghost'
+                            size='sm'
+                            className='text-slate-400 hover:text-slate-600'
+                            title='View Details'
                             onClick={() => handleViewTenant(tenant)}
                             data-testid={`button-view-${tenant.orgId}`}
                           >
                             <Eye size={16} />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-slate-400 hover:text-slate-600"
-                            title="Send Email"
+                            variant='ghost'
+                            size='sm'
+                            className='text-slate-400 hover:text-slate-600'
+                            title='Send Email'
                             onClick={() => handleResendEmail(tenant.id)}
                             disabled={resendEmail.isPending}
                             data-testid={`button-email-${tenant.orgId}`}
@@ -506,10 +551,10 @@ export default function TenantsPage() {
                             <Mail size={16} />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-slate-400 hover:text-slate-600"
-                            title="Edit"
+                            variant='ghost'
+                            size='sm'
+                            className='text-slate-400 hover:text-slate-600'
+                            title='Edit'
                             onClick={() => handleEditTenant(tenant)}
                             data-testid={`button-edit-${tenant.orgId}`}
                           >
@@ -517,10 +562,10 @@ export default function TenantsPage() {
                           </Button>
                           {tenant.status === 'active' ? (
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-400 hover:text-red-600"
-                              title="Suspend"
+                              variant='ghost'
+                              size='sm'
+                              className='text-red-400 hover:text-red-600'
+                              title='Suspend'
                               onClick={() => handleStatusChange(tenant.id, 'suspended')}
                               disabled={updateTenantStatus.isPending}
                               data-testid={`button-suspend-${tenant.orgId}`}
@@ -529,10 +574,10 @@ export default function TenantsPage() {
                             </Button>
                           ) : tenant.status === 'pending' ? (
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-400 hover:text-red-600"
-                              title="Delete"
+                              variant='ghost'
+                              size='sm'
+                              className='text-red-400 hover:text-red-600'
+                              title='Delete'
                               onClick={() => handleDeleteTenant(tenant)}
                               data-testid={`button-delete-${tenant.orgId}`}
                             >
@@ -540,10 +585,10 @@ export default function TenantsPage() {
                             </Button>
                           ) : (
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-green-400 hover:text-green-600"
-                              title="Activate"
+                              variant='ghost'
+                              size='sm'
+                              className='text-green-400 hover:text-green-600'
+                              title='Activate'
                               onClick={() => handleStatusChange(tenant.id, 'active')}
                               disabled={updateTenantStatus.isPending}
                               data-testid={`button-activate-${tenant.orgId}`}
@@ -557,8 +602,10 @@ export default function TenantsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                      {searchQuery ? "No tenants found matching your search." : "No tenants found. Create your first tenant to get started."}
+                    <TableCell colSpan={5} className='text-center py-8 text-slate-500'>
+                      {searchQuery
+                        ? 'No tenants found matching your search.'
+                        : 'No tenants found. Create your first tenant to get started.'}
                     </TableCell>
                   </TableRow>
                 )}
@@ -569,16 +616,15 @@ export default function TenantsPage() {
 
         {/* Pagination */}
         {filteredTenants.length > 0 && (
-          <div className="px-6 py-4 border-t border-slate-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-500">
+          <div className='px-6 py-4 border-t border-slate-200'>
+            <div className='flex items-center justify-between'>
+              <div className='text-sm text-slate-500'>
                 Showing 1 to {filteredTenants.length} of {filteredTenants.length} tenants
               </div>
             </div>
           </div>
         )}
       </div>
-
     </div>
   );
 }
