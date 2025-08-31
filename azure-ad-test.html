@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure AD OAuth Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .code { background: #f8f9fa; padding: 10px; border-left: 4px solid #007bff; margin: 10px 0; font-family: monospace; }
+        .step { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Azure AD OAuth Integration Test</h1>
+    
+    <div class="section info">
+        <h2>📋 Prerequisites</h2>
+        <p><strong>Before testing, ensure you have:</strong></p>
+        <ul>
+            <li>✅ Azure AD Developer Tenant</li>
+            <li>✅ App Registration configured</li>
+            <li>✅ Platform Admin account created</li>
+            <li>✅ Server running on localhost:3000</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🚀 Step 1: Platform Admin Login</h2>
+        <p>First, login as platform admin to configure Azure AD for a tenant.</p>
+        
+        <div class="step">
+            <h4>Platform Admin Credentials:</h4>
+            <input type="email" id="adminEmail" placeholder="admin@yourcompany.com" value="admin@yourcompany.com">
+            <input type="password" id="adminPassword" placeholder="admin123" value="admin123">
+            <button onclick="loginPlatformAdmin()">Login as Platform Admin</button>
+            <div id="platformLoginResult"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>⚙️ Step 2: Configure Azure AD for Tenant</h2>
+        <p>Configure Azure AD authentication for a test tenant.</p>
+        
+        <div class="step">
+            <h4>Azure AD Configuration:</h4>
+            <input type="text" id="tenantId" placeholder="Your Azure Tenant ID">
+            <input type="text" id="clientId" placeholder="Your Azure Client ID">
+            <input type="password" id="clientSecret" placeholder="Your Azure Client Secret">
+            <input type="text" id="callbackUrl" placeholder="http://localhost:3000/api/auth/azure/callback" value="http://localhost:3000/api/auth/azure/callback">
+            
+            <h4>Target Tenant:</h4>
+            <select id="targetTenant">
+                <option value="">Select a tenant...</option>
+            </select>
+            
+            <br><br>
+            <button onclick="configureAzureAD()">Configure Azure AD</button>
+            <button onclick="testAzureADConfig()">Test Configuration</button>
+            <div id="configResult"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔑 Step 3: Test OAuth Flow</h2>
+        <p>Test the complete Azure AD OAuth authentication flow.</p>
+        
+        <div class="step">
+            <input type="text" id="testOrgId" placeholder="Tenant orgId (e.g. 'test')" value="test">
+            <button onclick="startOAuthFlow()">Start Azure AD OAuth</button>
+            <div id="oauthResult"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📊 Step 4: View Results</h2>
+        <div class="step">
+            <button onclick="viewSystemLogs()">View System Logs</button>
+            <button onclick="viewTenants()">View All Tenants</button>
+            <div id="resultsArea"></div>
+        </div>
+    </div>
+
+    <script>
+        let platformAdminToken = '';
+        let selectedTenantId = '';
+
+        // Platform Admin Login
+        async function loginPlatformAdmin() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const resultDiv = document.getElementById('platformLoginResult');
+
+            try {
+                const response = await fetch('/api/platform/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    platformAdminToken = data.token;
+                    resultDiv.innerHTML = `<div class="success">✅ Platform admin logged in: ${data.admin.name}</div>`;
+                    loadTenants();
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Login failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Load tenants for selection
+        async function loadTenants() {
+            if (!platformAdminToken) return;
+
+            try {
+                const response = await fetch('/api/tenants', {
+                    headers: { 'Authorization': `Bearer ${platformAdminToken}` }
+                });
+
+                const tenants = await response.json();
+                const select = document.getElementById('targetTenant');
+                
+                select.innerHTML = '<option value="">Select a tenant...</option>';
+                tenants.forEach(tenant => {
+                    select.innerHTML += `<option value="${tenant.id}">${tenant.name} (${tenant.orgId})</option>`;
+                });
+
+                select.addEventListener('change', (e) => {
+                    selectedTenantId = e.target.value;
+                });
+            } catch (error) {
+                console.error('Error loading tenants:', error);
+            }
+        }
+
+        // Configure Azure AD for tenant
+        async function configureAzureAD() {
+            if (!platformAdminToken || !selectedTenantId) {
+                alert('Please login as platform admin and select a tenant first');
+                return;
+            }
+
+            const tenantId = document.getElementById('tenantId').value;
+            const clientId = document.getElementById('clientId').value;
+            const clientSecret = document.getElementById('clientSecret').value;
+            const callbackUrl = document.getElementById('callbackUrl').value;
+            const resultDiv = document.getElementById('configResult');
+
+            if (!tenantId || !clientId || !clientSecret) {
+                alert('Please fill in all Azure AD configuration fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tenants/${selectedTenantId}/azure-ad/config`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${platformAdminToken}`
+                    },
+                    body: JSON.stringify({ tenantId, clientId, clientSecret, callbackUrl })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ ${data.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Configuration failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Test Azure AD configuration
+        async function testAzureADConfig() {
+            if (!platformAdminToken || !selectedTenantId) {
+                alert('Please configure Azure AD first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('configResult');
+
+            try {
+                const response = await fetch(`/api/tenants/${selectedTenantId}/azure-ad/test`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${platformAdminToken}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Configuration test passed!</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Configuration test failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Test error: ${error.message}</div>`;
+            }
+        }
+
+        // Start OAuth Flow
+        async function startOAuthFlow() {
+            const orgId = document.getElementById('testOrgId').value;
+            const resultDiv = document.getElementById('oauthResult');
+
+            if (!orgId) {
+                alert('Please enter a tenant orgId');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/auth/azure/${orgId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ OAuth URL generated successfully!<br>
+                            <a href="${data.authUrl}" target="_blank" style="color: #007bff; font-weight: bold;">
+                                🔗 Click here to test Azure AD login
+                            </a>
+                        </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ OAuth failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // View system logs
+        async function viewSystemLogs() {
+            if (!platformAdminToken) {
+                alert('Please login as platform admin first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('resultsArea');
+
+            try {
+                const response = await fetch('/api/logs/system?limit=10', {
+                    headers: { 'Authorization': `Bearer ${platformAdminToken}` }
+                });
+
+                const logs = await response.json();
+
+                let logsHtml = '<h3>📝 Recent System Logs:</h3><div class="code">';
+                logs.forEach(log => {
+                    logsHtml += `[${log.timestamp}] ${log.action} - ${log.entityType}:${log.entityId}<br>`;
+                });
+                logsHtml += '</div>';
+
+                resultDiv.innerHTML = logsHtml;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error loading logs: ${error.message}</div>`;
+            }
+        }
+
+        // View all tenants
+        async function viewTenants() {
+            if (!platformAdminToken) {
+                alert('Please login as platform admin first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('resultsArea');
+
+            try {
+                const response = await fetch('/api/tenants', {
+                    headers: { 'Authorization': `Bearer ${platformAdminToken}` }
+                });
+
+                const tenants = await response.json();
+
+                let tenantsHtml = '<h3>🏢 All Tenants:</h3><div class="code">';
+                tenants.forEach(tenant => {
+                    const azureEnabled = tenant.enabledModules?.includes('auth') ? '✅' : '❌';
+                    tenantsHtml += `${azureEnabled} ${tenant.name} (${tenant.orgId}) - Status: ${tenant.status}<br>`;
+                });
+                tenantsHtml += '</div>';
+
+                resultDiv.innerHTML = tenantsHtml;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error loading tenants: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-load on page load if admin token exists
+        window.addEventListener('load', () => {
+            // Check if we have a token in localStorage from previous session
+            const savedToken = localStorage.getItem('platformAdminToken');
+            if (savedToken) {
+                platformAdminToken = savedToken;
+                loadTenants();
+                document.getElementById('platformLoginResult').innerHTML = 
+                    '<div class="info">ℹ️ Using saved platform admin session</div>';
+            }
+        });
+
+        // Save token to localStorage for convenience
+        window.addEventListener('beforeunload', () => {
+            if (platformAdminToken) {
+                localStorage.setItem('platformAdminToken', platformAdminToken);
+            }
+        });
+    </script>
+
+    <div class="section info">
+        <h2>🧪 Testing Instructions</h2>
+        <ol>
+            <li><strong>Start the server:</strong> <code>npm run dev</code></li>
+            <li><strong>Create platform admin:</strong> <code>npm run setup:platform-admin</code></li>
+            <li><strong>Login as platform admin</strong> using the credentials above</li>
+            <li><strong>Configure Azure AD</strong> for your test tenant</li>
+            <li><strong>Test the configuration</strong> to ensure it's valid</li>
+            <li><strong>Start OAuth flow</strong> and complete Azure AD login</li>
+            <li><strong>Check system logs</strong> to verify all events were logged</li>
+        </ol>
+        
+        <div class="code">
+            💡 <strong>Pro tip:</strong> Check your browser's developer console for detailed error messages and network requests.
+        </div>
+    </div>
+</body>
+</html>

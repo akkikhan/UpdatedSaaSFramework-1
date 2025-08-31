@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  # Redis for testing (isolated instance)
+  redis-test:
+    image: redis:7-alpine
+    container_name: saas-redis-test
+    ports:
+      - "6380:6379"
+    command: redis-server --requirepass testpassword123
+    networks:
+      - test-network
+
+  # PostgreSQL for testing (isolated instance)
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: saas-postgres-test
+    environment:
+      POSTGRES_DB: saas_test_db
+      POSTGRES_USER: saas_test_user
+      POSTGRES_PASSWORD: testpassword123
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - test-network
+
+  # Test runner
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: saas-test-runner
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://saas_test_user:testpassword123@postgres-test:5432/saas_test_db
+      REDIS_URL: redis://:testpassword123@redis-test:6379
+      JWT_SECRET: test-jwt-secret-key
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - redis-test
+      - postgres-test
+    networks:
+      - test-network
+    command: npm run test
+
+networks:
+  test-network:
+    driver: bridge

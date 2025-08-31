@@ -1,0 +1,52 @@
+# Prettier ignore patterns
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+
+# Environment files
+.env*
+
+# Package files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.tsbuildinfo
+
+# Documentation assets that shouldn't be reformatted
+CHANGELOG.md
+LICENSE
+*.min.js
+*.min.css
+
+# Migration files (preserve exact formatting)
+migrations/*.sql
+
+# Demo and test files with specific formatting
+demo-app/
+*.demo.js
+*.demo.ts
+test-*.html
+senior-management-presentation.html
+portal-navigation.html
