@@ -1,9 +1,9 @@
-import dotenv from 'dotenv';
-import nodemailer from 'nodemailer';
-import { storage } from '../storage';
+import { config } from "dotenv";
+import * as nodemailer from "nodemailer";
+import { storage } from "../storage";
 
 // Load environment variables before initialization
-dotenv.config();
+config();
 
 interface EmailConfig {
   smtpHost: string;
@@ -20,113 +20,127 @@ export class EmailService {
 
   constructor() {
     // Use environment variables with fallbacks
-    const smtpEmail = process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || 'your-email@example.com';
+    const smtpEmail =
+      process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || "your-email@example.com";
     const fromEmail = process.env.FROM_EMAIL || smtpEmail;
-    
+
     // Force Gmail settings if FROM_EMAIL is a Gmail address
     let smtpSettings;
-    if (fromEmail.includes('@gmail.com')) {
-      smtpSettings = { host: 'smtp.gmail.com', port: 587, secure: false };
+    if (fromEmail.includes("@gmail.com")) {
+      smtpSettings = { host: "smtp.gmail.com", port: 587, secure: false };
     } else {
       smtpSettings = this.getSmtpSettings(smtpEmail);
     }
-    
+
     this.config = {
       smtpHost: process.env.SMTP_HOST || smtpSettings.host,
-      smtpPort: parseInt(process.env.SMTP_PORT || '') || smtpSettings.port,
+      smtpPort: parseInt(process.env.SMTP_PORT || "") || smtpSettings.port,
       smtpUsername: fromEmail, // Use FROM_EMAIL as username for authentication
-      smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || '',
+      smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || "",
       fromEmail: fromEmail,
-      fromName: process.env.FROM_NAME || 'SaaS Framework Platform'
+      fromName: process.env.FROM_NAME || "SaaS Framework Platform",
     };
 
     if (!this.config.smtpPassword) {
-      console.warn('⚠️  SMTP_PASSWORD or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled.');
-      console.warn('   For Gmail: Generate an App Password at https://myaccount.google.com/apppasswords');
-      console.warn('   For Outlook/Office365: Generate an App Password at https://account.microsoft.com/security');
+      console.warn(
+        "⚠️  SMTP_PASSWORD or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled."
+      );
+      console.warn(
+        "   For Gmail: Generate an App Password at https://myaccount.google.com/apppasswords"
+      );
+      console.warn(
+        "   For Outlook/Office365: Generate an App Password at https://account.microsoft.com/security"
+      );
     }
 
-    console.log(`📧 Email service initialized - Host: ${this.config.smtpHost}:${this.config.smtpPort}, From: ${this.config.fromEmail}`);
+    console.log(
+      `📧 Email service initialized - Host: ${this.config.smtpHost}:${this.config.smtpPort}, From: ${this.config.fromEmail}`
+    );
 
     this.transporter = nodemailer.createTransport({
       host: this.config.smtpHost,
       port: this.config.smtpPort,
       secure: this.config.smtpPort === 465, // Use secure for port 465
-      auth: this.config.smtpPassword ? {
-        user: this.config.smtpUsername,
-        pass: this.config.smtpPassword,
-      } : undefined,
+      auth: this.config.smtpPassword
+        ? {
+            user: this.config.smtpUsername,
+            pass: this.config.smtpPassword,
+          }
+        : undefined,
       tls: {
         rejectUnauthorized: false,
-        ciphers: 'SSLv3'
-      }
+        ciphers: "SSLv3",
+      },
     });
   }
 
   private getSmtpSettings(email: string): { host: string; port: number; secure: boolean } {
-    const domain = email.split('@')[1]?.toLowerCase();
-    
+    const domain = email.split("@")[1]?.toLowerCase();
+
     // Common email providers SMTP settings
     const providers: Record<string, { host: string; port: number; secure: boolean }> = {
-      'gmail.com': { host: 'smtp.gmail.com', port: 587, secure: false },
-      'googlemail.com': { host: 'smtp.gmail.com', port: 587, secure: false },
-      'outlook.com': { host: 'smtp-mail.outlook.com', port: 587, secure: false },
-      'hotmail.com': { host: 'smtp-mail.outlook.com', port: 587, secure: false },
-      'live.com': { host: 'smtp-mail.outlook.com', port: 587, secure: false },
-      'office365.com': { host: 'smtp.office365.com', port: 587, secure: false },
-      'primussoft.com': { host: 'smtp.office365.com', port: 587, secure: false },
-      'yahoo.com': { host: 'smtp.mail.yahoo.com', port: 587, secure: false },
-      'yahoo.co.uk': { host: 'smtp.mail.yahoo.com', port: 587, secure: false },
-      'icloud.com': { host: 'smtp.mail.me.com', port: 587, secure: false },
-      'me.com': { host: 'smtp.mail.me.com', port: 587, secure: false },
-      'mac.com': { host: 'smtp.mail.me.com', port: 587, secure: false }
+      "gmail.com": { host: "smtp.gmail.com", port: 587, secure: false },
+      "googlemail.com": { host: "smtp.gmail.com", port: 587, secure: false },
+      "outlook.com": { host: "smtp-mail.outlook.com", port: 587, secure: false },
+      "hotmail.com": { host: "smtp-mail.outlook.com", port: 587, secure: false },
+      "live.com": { host: "smtp-mail.outlook.com", port: 587, secure: false },
+      "office365.com": { host: "smtp.office365.com", port: 587, secure: false },
+      "primussoft.com": { host: "smtp.office365.com", port: 587, secure: false },
+      "yahoo.com": { host: "smtp.mail.yahoo.com", port: 587, secure: false },
+      "yahoo.co.uk": { host: "smtp.mail.yahoo.com", port: 587, secure: false },
+      "icloud.com": { host: "smtp.mail.me.com", port: 587, secure: false },
+      "me.com": { host: "smtp.mail.me.com", port: 587, secure: false },
+      "mac.com": { host: "smtp.mail.me.com", port: 587, secure: false },
     };
 
-    return providers[domain] || { host: 'smtp.gmail.com', port: 587, secure: false };
+    return providers[domain] || { host: "smtp.gmail.com", port: 587, secure: false };
   }
 
-  async sendModuleStatusEmail(tenant: {
-    id: string;
-    name: string;
-    adminEmail: string;
-  }, changes: {
-    enabled: string[];
-    disabled: string[];
-  }): Promise<boolean> {
+  async sendModuleStatusEmail(
+    tenant: {
+      id: string;
+      name: string;
+      adminEmail: string;
+    },
+    changes: {
+      enabled: string[];
+      disabled: string[];
+    }
+  ): Promise<boolean> {
     const subject = `Module Access Updated - ${tenant.name}`;
-    
+
     const html = this.generateModuleStatusEmailTemplate(tenant, changes);
-    
+
     try {
       await this.transporter.sendMail({
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to: tenant.adminEmail,
         subject,
-        html
+        html,
       });
-      
+
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: 'module_status',
-        status: 'sent',
-        errorMessage: null
+        templateType: "module_status",
+        status: "sent",
+        errorMessage: null,
       });
-      
+
       return true;
     } catch (error) {
-      console.error('Failed to send module status email:', error);
-      
+      console.error("Failed to send module status email:", error);
+
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: 'module_status',
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        templateType: "module_status",
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
-      
+
       return false;
     }
   }
@@ -140,73 +154,78 @@ export class EmailService {
     rbacApiKey: string;
   }): Promise<boolean> {
     const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
-    
+
     // Temporarily skip email sending - just log as sent for now
     if (!this.config.smtpPassword) {
-      console.log(`📧 Email functionality disabled - would have sent onboarding email to ${tenant.adminEmail}`);
+      console.log(
+        `📧 Email functionality disabled - would have sent onboarding email to ${tenant.adminEmail}`
+      );
       console.log(`📧 Tenant "${tenant.name}" created successfully with API keys:`);
       console.log(`📧 Auth API Key: ${tenant.authApiKey}`);
       console.log(`📧 RBAC API Key: ${tenant.rbacApiKey}`);
-      
+
       // Log as sent for platform functionality
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: 'onboarding',
-        status: 'sent',
-        errorMessage: 'Email disabled - credentials not configured'
+        templateType: "onboarding",
+        status: "sent",
+        errorMessage: "Email disabled - credentials not configured",
       });
-      
+
       return true;
     }
-    
+
     const html = this.generateOnboardingEmailTemplate(tenant);
-    
+
     try {
       await this.transporter.sendMail({
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to: tenant.adminEmail,
         subject,
-        html
+        html,
       });
-      
+
       // Log successful email
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: 'onboarding',
-        status: 'sent',
-        errorMessage: null
+        templateType: "onboarding",
+        status: "sent",
+        errorMessage: null,
       });
-      
+
       return true;
     } catch (error) {
-      console.error('Failed to send onboarding email:', error);
-      
+      console.error("Failed to send onboarding email:", error);
+
       // Log failed email
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: 'onboarding',
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        templateType: "onboarding",
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
-      
+
       return false;
     }
   }
 
-  private generateModuleStatusEmailTemplate(tenant: {
-    id: string;
-    name: string;
-    adminEmail: string;
-  }, changes: {
-    enabled: string[];
-    disabled: string[];
-  }): string {
+  private generateModuleStatusEmailTemplate(
+    tenant: {
+      id: string;
+      name: string;
+      adminEmail: string;
+    },
+    changes: {
+      enabled: string[];
+      disabled: string[];
+    }
+  ): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -237,30 +256,42 @@ export class EmailService {
             
             <p>Your tenant <strong>${tenant.name}</strong> module access has been updated by an administrator.</p>
             
-            ${changes.enabled.length > 0 ? `
+            ${
+              changes.enabled.length > 0
+                ? `
             <div class="module-list">
               <h3 class="enabled">✓ Modules Enabled:</h3>
               <ul>
-                ${changes.enabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join('')}
+                ${changes.enabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join("")}
               </ul>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
-            ${changes.disabled.length > 0 ? `
+            ${
+              changes.disabled.length > 0
+                ? `
             <div class="module-list">
               <h3 class="disabled">✗ Modules Disabled:</h3>
               <ul>
-                ${changes.disabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join('')}
+                ${changes.disabled.map(module => `<li>${this.getModuleDisplayName(module)}</li>`).join("")}
               </ul>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
-            ${changes.disabled.length > 0 ? `
+            ${
+              changes.disabled.length > 0
+                ? `
             <div class="warning">
               <strong>⚠️ Important:</strong> Disabled modules will immediately restrict access to related features. 
               Users may receive "access denied" messages when trying to use these features.
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <p>If you have questions about these changes, please contact your administrator.</p>
             
@@ -278,11 +309,11 @@ export class EmailService {
 
   private getModuleDisplayName(module: string): string {
     const displayNames: Record<string, string> = {
-      'auth': 'Authentication',
-      'rbac': 'Role-Based Access Control',
-      'azure-ad': 'Azure Active Directory',
-      'auth0': 'Auth0 SSO',
-      'saml': 'SAML SSO'
+      auth: "Authentication",
+      rbac: "Role-Based Access Control",
+      "azure-ad": "Azure Active Directory",
+      auth0: "Auth0 SSO",
+      saml: "SAML SSO",
     };
     return displayNames[module] || module;
   }
@@ -294,10 +325,10 @@ export class EmailService {
     authApiKey: string;
     rbacApiKey: string;
   }): string {
-    const baseUrl = process.env.BASE_URL || 'https://localhost:5000';
+    const baseUrl = process.env.BASE_URL || "https://localhost:5000";
     const portalUrl = `${baseUrl}/tenant/${tenant.orgId}/login`;
     const docsUrl = `${baseUrl}/docs`;
-    
+
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -486,15 +517,15 @@ const rbac = new SaaSRBAC({
   async testConnection(): Promise<boolean> {
     // Skip connection test if no password configured
     if (!this.config.smtpPassword) {
-      console.log('📧 SMTP connection test skipped - email functionality disabled');
+      console.log("📧 SMTP connection test skipped - email functionality disabled");
       return true;
     }
-    
+
     try {
       await this.transporter.verify();
       return true;
     } catch (error) {
-      console.error('SMTP connection test failed:', error);
+      console.error("SMTP connection test failed:", error);
       return false;
     }
   }
@@ -528,13 +559,13 @@ const rbac = new SaaSRBAC({
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to,
         subject,
-        html
+        html,
       });
 
       console.log(`Test email sent successfully to ${to}`);
       return true;
     } catch (error) {
-      console.error('Failed to send test email:', error);
+      console.error("Failed to send test email:", error);
       return false;
     }
   }

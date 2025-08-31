@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { tenantNotifications, tenants } from "@shared/schema";
-import type { InsertTenantNotification } from "@shared/schema";
+import { tenantNotifications, tenants } from "../../shared/schema";
+import type { InsertTenantNotification } from "../../shared/schema";
 import { emailService } from "./email";
 import { eq } from "drizzle-orm";
 
@@ -49,9 +49,9 @@ export class NotificationService {
     try {
       const [updated] = await db
         .update(tenantNotifications)
-        .set({ 
-          isRead: true, 
-          readAt: new Date() 
+        .set({
+          isRead: true,
+          readAt: new Date(),
         })
         .where(eq(tenantNotifications.id, notificationId))
         .returning();
@@ -89,7 +89,7 @@ export class NotificationService {
               <div class="notification">
                 <h3>${notification.title}</h3>
                 <p>${notification.message}</p>
-                ${notification.metadata ? `<p><strong>Details:</strong> ${JSON.stringify(notification.metadata, null, 2)}</p>` : ''}
+                ${notification.metadata ? `<p><strong>Details:</strong> ${JSON.stringify(notification.metadata, null, 2)}</p>` : ""}
               </div>
               <div class="footer">
                 <p>This notification was sent automatically from your SaaS platform.</p>
@@ -107,14 +107,19 @@ export class NotificationService {
         {
           id: tenant.id,
           name: tenant.name,
-          adminEmail: tenant.adminEmail
+          adminEmail: tenant.adminEmail,
         },
         {
-          enabled: notification.type === 'module_enabled' ? [notification.metadata?.module || 'unknown'] : [],
-          disabled: notification.type === 'module_disabled' ? [notification.metadata?.module || 'unknown'] : []
+          enabled:
+            notification.type === "module_enabled"
+              ? [notification.metadata?.module || "unknown"]
+              : [],
+          disabled:
+            notification.type === "module_disabled"
+              ? [notification.metadata?.module || "unknown"]
+              : [],
         }
       );
-
     } catch (error) {
       console.error("Error sending email notification:", error);
       // Don't throw here - notification should still be created even if email fails
@@ -122,10 +127,15 @@ export class NotificationService {
   }
 
   // Helper methods for specific notification types
-  async notifyModuleStatusChange(tenantId: string, moduleName: string, enabled: boolean, adminAction = true) {
+  async notifyModuleStatusChange(
+    tenantId: string,
+    moduleName: string,
+    enabled: boolean,
+    adminAction = true
+  ) {
     const action = enabled ? "enabled" : "disabled";
     const title = `${moduleName.toUpperCase()} Module ${enabled ? "Enabled" : "Disabled"}`;
-    const message = adminAction 
+    const message = adminAction
       ? `The ${moduleName} authentication module has been ${action} by the platform administrator. This change is effective immediately.`
       : `The ${moduleName} authentication module has been ${action} for your organization.`;
 
@@ -135,13 +145,13 @@ export class NotificationService {
       title,
       message,
       metadata: { module: moduleName, enabled, adminAction },
-      isRead: false
+      isRead: false,
     });
   }
 
   async notifyTenantStatusChange(tenantId: string, newStatus: string, reason?: string) {
     const title = `Tenant Status Changed: ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`;
-    const message = `Your tenant status has been updated to "${newStatus}". ${reason ? `Reason: ${reason}` : ''}`;
+    const message = `Your tenant status has been updated to "${newStatus}". ${reason ? `Reason: ${reason}` : ""}`;
 
     return this.createNotification({
       tenantId,
@@ -149,7 +159,7 @@ export class NotificationService {
       title,
       message,
       metadata: { newStatus, reason },
-      isRead: false
+      isRead: false,
     });
   }
 
@@ -163,7 +173,7 @@ export class NotificationService {
       title,
       message,
       metadata: { configType, changes },
-      isRead: false
+      isRead: false,
     });
   }
 }

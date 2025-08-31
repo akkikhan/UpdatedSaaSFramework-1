@@ -1,7 +1,7 @@
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
+import * as jwt from "jsonwebtoken";
+import * as bcrypt from "bcryptjs";
 import { storage } from "../storage";
-import type { PlatformAdmin, InsertPlatformAdmin } from "@shared/schema";
+import type { PlatformAdmin, InsertPlatformAdmin } from "../../shared/schema";
 
 export interface PlatformAdminLoginResult {
   token: string;

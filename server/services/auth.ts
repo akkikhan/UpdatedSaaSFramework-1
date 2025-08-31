@@ -1,6 +1,6 @@
-import jwt from 'jsonwebtoken';
-import { storage } from '../storage';
-import type { User, Session } from '@shared/schema';
+import * as jwt from "jsonwebtoken";
+import { storage } from "../storage";
+import type { User, Session } from "../shared/schema";
 
 export interface JWTPayload {
   userId: string;
@@ -14,18 +14,22 @@ export class AuthService {
   private jwtExpiryMinutes: number;
 
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+    this.jwtSecret = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
     this.jwtExpiryMinutes = 60; // 1 hour
   }
 
-  async login(email: string, password: string, tenantId: string): Promise<{
+  async login(
+    email: string,
+    password: string,
+    tenantId: string
+  ): Promise<{
     token: string;
-    user: Omit<User, 'passwordHash'>;
+    user: Omit<User, "passwordHash">;
     expiresAt: Date;
   } | null> {
     // Get user by email and tenant
     const user = await storage.getUserByEmail(email, tenantId);
-    
+
     if (!user || !user.isActive) {
       return null;
     }
@@ -44,11 +48,11 @@ export class AuthService {
       userId: user.id,
       tenantId: user.tenantId,
       email: user.email,
-      permissions: [] // TODO: Get user permissions from RBAC
+      permissions: [], // TODO: Get user permissions from RBAC
     };
 
     const token = jwt.sign(payload, this.jwtSecret, {
-      expiresIn: `${this.jwtExpiryMinutes}m`
+      expiresIn: `${this.jwtExpiryMinutes}m`,
     });
 
     // Store session
@@ -56,7 +60,7 @@ export class AuthService {
       tenantId: user.tenantId,
       userId: user.id,
       token,
-      expiresAt
+      expiresAt,
     });
 
     // Update last login
@@ -67,14 +71,14 @@ export class AuthService {
     return {
       token,
       user: userWithoutPassword,
-      expiresAt
+      expiresAt,
     };
   }
 
   async verifyToken(token: string): Promise<JWTPayload | null> {
     try {
       const payload = jwt.verify(token, this.jwtSecret) as JWTPayload;
-      
+
       // Check if session exists and is valid
       const session = await storage.getSession(token);
       if (!session || session.expiresAt < new Date()) {
@@ -102,7 +106,7 @@ export class AuthService {
     expiresAt.setMinutes(expiresAt.getMinutes() + this.jwtExpiryMinutes);
 
     const newToken = jwt.sign(payload, this.jwtSecret, {
-      expiresIn: `${this.jwtExpiryMinutes}m`
+      expiresIn: `${this.jwtExpiryMinutes}m`,
     });
 
     // Remove old session and create new one
@@ -111,14 +115,14 @@ export class AuthService {
       tenantId: payload.tenantId,
       userId: payload.userId,
       token: newToken,
-      expiresAt
+      expiresAt,
     });
 
     return newToken;
   }
 
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
-    const bcrypt = await import('bcryptjs');
+    const bcrypt = await import("bcryptjs");
     return bcrypt.compare(password, hash);
   }
 }

@@ -4,7 +4,7 @@ import {
   CryptoProvider,
 } from "@azure/msal-node";
 import { storage } from "../storage";
-import type { TenantUser } from "@shared/schema";
+import type { TenantUser } from "../../shared/schema";
 
 interface AzureADConfig {
   tenantId: string;

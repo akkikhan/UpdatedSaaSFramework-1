@@ -43,8 +43,8 @@ import {
   type InsertDefaultRole,
   type PlatformAdmin,
   type InsertPlatformAdmin,
-} from "@shared/schema";
-import { db } from "./db";
+} from "../shared/schema.ts";
+import { db } from "./db.ts";
 import { eq, desc, count, asc, and, like, gte, lte, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 

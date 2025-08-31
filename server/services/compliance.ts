@@ -1,9 +1,8 @@
-import { db } from '../db';
-import { complianceAuditLogs, securityEvents } from '../../shared/schema';
-import type { InsertComplianceAuditLog, InsertSecurityEvent } from '../../shared/schema';
+import { db } from "../db";
+import { complianceAuditLogs, securityEvents } from "../../shared/schema";
+import type { InsertComplianceAuditLog, InsertSecurityEvent } from "../../shared/schema";
 
 export class ComplianceService {
-  
   /**
    * Log RBAC-related compliance events
    */
@@ -12,7 +11,7 @@ export class ComplianceService {
     userId?: string;
     adminUserId?: string;
     action: string; // role_assigned, role_removed, permission_granted, permission_revoked
-    entityType: 'user' | 'role' | 'permission';
+    entityType: "user" | "role" | "permission";
     entityId: string;
     entityName?: string;
     beforeState?: any;
@@ -20,34 +19,39 @@ export class ComplianceService {
     sessionId?: string;
     ipAddress?: string;
     userAgent?: string;
-    riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+    riskLevel?: "low" | "medium" | "high" | "critical";
   }) {
     const auditLog: InsertComplianceAuditLog = {
       tenantId: data.tenantId,
       userId: data.userId || null,
       adminUserId: data.adminUserId || null,
-      eventType: 'rbac_change',
+      eventType: "rbac_change",
       eventCategory: this.getEventCategory(data.action),
       entityType: data.entityType,
       entityId: data.entityId,
       entityName: data.entityName || null,
       action: data.action,
-      outcome: 'success',
-      riskLevel: data.riskLevel || 'medium', // RBAC changes are typically medium risk
-      complianceFrameworks: ['sox', 'iso27001'], // RBAC is relevant for these frameworks
-      dataClassification: 'internal',
+      outcome: "success",
+      riskLevel: data.riskLevel || "medium", // RBAC changes are typically medium risk
+      complianceFrameworks: ["sox", "iso27001"], // RBAC is relevant for these frameworks
+      dataClassification: "internal",
       details: {
         action: data.action,
         entityType: data.entityType,
-        changes: data.afterState ? Object.keys(data.afterState) : []
-      },
+        changes: data.afterState ? Object.keys(data.afterState) : [],
+      } as any, // Temporary any cast to handle JSON type issues
       beforeState: data.beforeState || null,
       afterState: data.afterState || null,
       sessionId: data.sessionId || null,
       ipAddress: data.ipAddress || null,
       userAgent: data.userAgent || null,
-      retentionUntil: this.calculateRetentionDate('rbac', 7) // 7 years for SOX compliance
+      retentionUntil: this.calculateRetentionDate("rbac", 7), // 7 years for SOX compliance
     };
+
+    if (!db) {
+      console.error("Database not available for compliance audit logging");
+      return;
+    }
 
     await db.insert(complianceAuditLogs).values(auditLog);
   }
@@ -59,56 +63,56 @@ export class ComplianceService {
     tenantId: string;
     userId?: string;
     action: string; // login_success, login_failed, logout, password_reset, mfa_enabled
-    outcome: 'success' | 'failure' | 'blocked';
+    outcome: "success" | "failure" | "blocked";
     sessionId?: string;
     ipAddress?: string;
     userAgent?: string;
     geolocation?: any;
-    riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+    riskLevel?: "low" | "medium" | "high" | "critical";
   }) {
     const auditLog: InsertComplianceAuditLog = {
       tenantId: data.tenantId,
       userId: data.userId || null,
       adminUserId: null,
-      eventType: 'auth_event',
+      eventType: "auth_event",
       eventCategory: this.getEventCategory(data.action),
-      entityType: 'session',
-      entityId: data.sessionId || 'unknown',
+      entityType: "session",
+      entityId: data.sessionId || "unknown",
       entityName: null,
       action: data.action,
       outcome: data.outcome,
-      riskLevel: data.riskLevel || (data.outcome === 'failure' ? 'medium' : 'low'),
-      complianceFrameworks: ['gdpr', 'sox'],
-      dataClassification: 'confidential',
+      riskLevel: data.riskLevel || (data.outcome === "failure" ? "medium" : "low"),
+      complianceFrameworks: ["gdpr", "sox"],
+      dataClassification: "confidential",
       details: {
         action: data.action,
         outcome: data.outcome,
         ipAddress: data.ipAddress,
-        userAgent: data.userAgent
+        userAgent: data.userAgent,
       },
       sessionId: data.sessionId || null,
       ipAddress: data.ipAddress || null,
       userAgent: data.userAgent || null,
       geolocation: data.geolocation || null,
-      retentionUntil: this.calculateRetentionDate('auth', 3) // 3 years for auth logs
+      retentionUntil: this.calculateRetentionDate("auth", 3), // 3 years for auth logs
     };
 
     await db.insert(complianceAuditLogs).values(auditLog);
 
     // Also create security event if it's a failed login
-    if (data.outcome === 'failure' && data.action.includes('login')) {
+    if (data.outcome === "failure" && data.action.includes("login")) {
       await this.logSecurityEvent({
         tenantId: data.tenantId,
-        eventType: 'authentication_failure',
-        severity: 'warning',
-        source: 'api',
+        eventType: "authentication_failure",
+        severity: "warning",
+        source: "api",
         userId: data.userId,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
         details: {
           action: data.action,
-          sessionId: data.sessionId
-        }
+          sessionId: data.sessionId,
+        },
       });
     }
   }
@@ -124,7 +128,7 @@ export class ComplianceService {
     entityType: string;
     entityId: string;
     entityName?: string;
-    dataClassification: 'public' | 'internal' | 'confidential' | 'restricted';
+    dataClassification: "public" | "internal" | "confidential" | "restricted";
     sessionId?: string;
     ipAddress?: string;
     userAgent?: string;
@@ -133,25 +137,25 @@ export class ComplianceService {
       tenantId: data.tenantId,
       userId: data.userId || null,
       adminUserId: data.adminUserId || null,
-      eventType: 'data_access',
+      eventType: "data_access",
       eventCategory: this.getEventCategory(data.action),
       entityType: data.entityType,
       entityId: data.entityId,
       entityName: data.entityName || null,
       action: data.action,
-      outcome: 'success',
+      outcome: "success",
       riskLevel: this.getRiskLevelForDataAccess(data.action, data.dataClassification),
       complianceFrameworks: this.getComplianceFrameworks(data.dataClassification),
       dataClassification: data.dataClassification,
       details: {
         action: data.action,
         entityType: data.entityType,
-        dataClassification: data.dataClassification
+        dataClassification: data.dataClassification,
       },
       sessionId: data.sessionId || null,
       ipAddress: data.ipAddress || null,
       userAgent: data.userAgent || null,
-      retentionUntil: this.calculateRetentionDate('data_access', 6) // 6 years for GDPR
+      retentionUntil: this.calculateRetentionDate("data_access", 6), // 6 years for GDPR
     };
 
     await db.insert(complianceAuditLogs).values(auditLog);
@@ -184,39 +188,43 @@ export class ComplianceService {
         highRiskEvents: 0,
         complianceViolations: 0,
         dataAccessEvents: 0,
-        rbacChanges: 0
+        rbacChanges: 0,
       },
       events: [],
-      recommendations: []
+      recommendations: [],
     };
   }
 
   // Helper methods
   private getEventCategory(action: string): string {
-    if (action.includes('create') || action.includes('assign')) return 'create';
-    if (action.includes('read') || action.includes('access') || action.includes('view')) return 'read';
-    if (action.includes('update') || action.includes('modify')) return 'update';
-    if (action.includes('delete') || action.includes('remove')) return 'delete';
-    if (action.includes('login')) return 'access';
-    if (action.includes('logout')) return 'access';
-    return 'access';
+    if (action.includes("create") || action.includes("assign")) return "create";
+    if (action.includes("read") || action.includes("access") || action.includes("view"))
+      return "read";
+    if (action.includes("update") || action.includes("modify")) return "update";
+    if (action.includes("delete") || action.includes("remove")) return "delete";
+    if (action.includes("login")) return "access";
+    if (action.includes("logout")) return "access";
+    return "access";
   }
 
-  private getRiskLevelForDataAccess(action: string, classification: string): 'low' | 'medium' | 'high' | 'critical' {
-    if (classification === 'restricted') return 'critical';
-    if (classification === 'confidential') return 'high';
-    if (action.includes('export') || action.includes('delete')) return 'high';
-    if (classification === 'internal') return 'medium';
-    return 'low';
+  private getRiskLevelForDataAccess(
+    action: string,
+    classification: string
+  ): "low" | "medium" | "high" | "critical" {
+    if (classification === "restricted") return "critical";
+    if (classification === "confidential") return "high";
+    if (action.includes("export") || action.includes("delete")) return "high";
+    if (classification === "internal") return "medium";
+    return "low";
   }
 
   private getComplianceFrameworks(dataClassification: string): string[] {
-    const frameworks = ['gdpr']; // GDPR applies to all personal data
-    
-    if (dataClassification === 'restricted' || dataClassification === 'confidential') {
-      frameworks.push('sox', 'iso27001');
+    const frameworks = ["gdpr"]; // GDPR applies to all personal data
+
+    if (dataClassification === "restricted" || dataClassification === "confidential") {
+      frameworks.push("sox", "iso27001");
     }
-    
+
     return frameworks;
   }
 

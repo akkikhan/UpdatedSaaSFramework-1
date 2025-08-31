@@ -1,19 +1,22 @@
 import dotenv from "dotenv";
-
-// Load environment variables FIRST before any other imports
 dotenv.config();
 
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { registerRoutes } from "./server/routes";
+import { log } from "./server/vite";
+
+console.log("🔍 Testing full server WITHOUT Vite...");
 
 const app = express();
 
 // Trust proxy configuration for production environments
-app.set("trust proxy", 1); // Trust first proxy (Replit, nginx, cloudflare, etc.)
+app.set("trust proxy", 1);
+
+// Force production mode to skip Vite
+app.set("env", "production");
 
 // Enterprise Security Headers
 app.use(
@@ -31,19 +34,19 @@ app.use(
         frameSrc: ["'none'"],
       },
     },
-    crossOriginEmbedderPolicy: false, // Allow Vite dev server
+    crossOriginEmbedderPolicy: false,
     hsts: {
-      maxAge: 31536000, // 1 year
+      maxAge: 31536000,
       includeSubDomains: true,
       preload: true,
     },
   })
 );
 
-// Rate Limiting - General API Protection
+// Rate Limiting
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
     error: "Too many requests from this IP, please try again later.",
     retryAfter: "15 minutes",
@@ -52,10 +55,9 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Stricter Rate Limiting for Authentication Routes
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 auth attempts per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: {
     error: "Too many authentication attempts, please try again later.",
     retryAfter: "15 minutes",
@@ -63,26 +65,24 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-// Slow Down Middleware for API Routes
 const speedLimiter = slowDown({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  delayAfter: 50, // Allow 50 requests per windowMs without delay
-  delayMs: () => 500, // Add 500ms delay per request after delayAfter
-  maxDelayMs: 5000, // Maximum delay of 5 seconds
+  windowMs: 15 * 60 * 1000,
+  delayAfter: 50,
+  delayMs: () => 500,
+  maxDelayMs: 5000,
 });
 
-// Apply rate limiting to all API routes
+// Apply middleware
 app.use("/api", generalLimiter);
 app.use("/api", speedLimiter);
-
-// Apply stricter limits to auth routes
 app.use("/api/auth", authLimiter);
 app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
 
-app.use(express.json({ limit: "10mb" })); // Limit payload size
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -101,11 +101,9 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
       log(logLine);
     }
   });
@@ -122,32 +120,27 @@ app.use((req, res, next) => {
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-
       console.error("Express error handler:", err);
       res.status(status).json({ message });
-      // DO NOT throw err here - it crashes the server!
     });
 
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
-      console.log("Setting up Vite...");
-      await setupVite(app, server);
-      console.log("Vite setup complete");
-    } else {
-      serveStatic(app);
-    }
+    console.log("Skipping Vite setup (forced production mode)");
 
-    // ALWAYS serve the app on the port specified in the environment variable PORT
-    // Other ports are firewalled. Default to 5000 if not specified.
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    const port = parseInt(process.env.PORT || "5000", 10);
+    const port = parseInt(process.env.PORT || "3001", 10);
     console.log(`Attempting to start server on port ${port}...`);
+
     server.listen(port, () => {
       console.log(`✅ Server successfully started on port ${port}`);
       log(`serving on port ${port}`);
+
+      console.log("🎯 Keeping server running for 5 seconds...");
+      setTimeout(() => {
+        console.log("⏹️ Shutting down server");
+        server.close(() => {
+          console.log("✅ Server shut down cleanly");
+          process.exit(0);
+        });
+      }, 5000);
     });
   } catch (error) {
     console.error("❌ Server startup failed:", error);

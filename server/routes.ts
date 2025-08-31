@@ -16,9 +16,9 @@ import {
   insertPermissionTemplateSchema,
   insertBusinessTypeSchema,
   insertDefaultRoleSchema,
-} from "@shared/schema";
+} from "../shared/schema";
 import { notificationService } from "./services/notification";
-import { complianceService } from "./services/compliance";
+import { complianceService } from "./services/compliance-temp";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -277,70 +277,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Azure AD OAuth Routes
 
-  // Start Azure AD OAuth flow
-  app.get("/api/auth/azure/:orgId", async (req, res) => {
-    try {
-      const { orgId } = req.params;
-
-      console.log(`Starting Azure AD OAuth for orgId: ${orgId}`);
-
-      // Get tenant by orgId
-      const tenant = await storage.getTenantByOrgId(orgId);
-      if (!tenant) {
-        console.log(`Tenant not found for orgId: ${orgId}`);
-        return res.status(404).json({ message: "Tenant not found" });
-      }
-
-      console.log(`Found tenant: ${tenant.name} (ID: ${tenant.id})`);
-
-      // Check if tenant has Azure AD configured
-      const moduleConfigs = (tenant.moduleConfigs as any) || {};
-      const authConfig = moduleConfigs.auth;
-
-      if (!authConfig?.providers) {
-        return res.status(400).json({ message: "Authentication not configured for this tenant" });
-      }
-
-      // Find Azure AD provider
-      const azureProvider = authConfig.providers.find((p: any) => p.type === "azure-ad");
-      if (!azureProvider || !azureProvider.enabled) {
-        return res
-          .status(400)
-          .json({ message: "Azure AD authentication not enabled for this tenant" });
-      }
-
-      console.log(`Azure AD provider found for tenant ${tenant.name}`);
-
-      // Create Azure AD service instance
-      const azureADService = new AzureADService({
-        tenantId: azureProvider.config.tenantId,
-        clientId: azureProvider.config.clientId,
-        clientSecret: azureProvider.config.clientSecret,
-        redirectUri:
-          azureProvider.config.callbackUrl ||
-          `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
-      });
-
-      // Generate authorization URL
-      const authUrl = await azureADService.getAuthorizationUrl(
-        ["User.Read", "User.ReadBasic.All"],
-        tenant.id
-      );
-
-      console.log(`Generated Azure AD auth URL for tenant ${tenant.name}`);
-
-      res.json({ authUrl });
-    } catch (error) {
-      console.error("Error starting Azure AD OAuth:", error);
-      res.status(500).json({ message: "Failed to start Azure AD authentication" });
-    }
-  });
-
-  // Handle Azure AD OAuth callback - CLEAN IMPLEMENTATION
+  // Handle Azure AD OAuth callback - MUST COME BEFORE PARAMETERIZED ROUTE
   app.get("/api/auth/azure/callback", async (req, res) => {
-    console.log("=== AZURE AD CALLBACK START ===");
-    console.log("Callback URL accessed:", req.url);
-    console.log("Query parameters:", req.query);
+    console.log("🚀 =================================");
+    console.log("🚀 AZURE AD CALLBACK ROUTE HIT!!!");
+    console.log("🚀 =================================");
+    console.log("🚀 Timestamp:", new Date().toISOString());
+    console.log("🚀 Method:", req.method);
+    console.log("🚀 Full URL:", req.url);
+    console.log("🚀 Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("🚀 Query parameters:", JSON.stringify(req.query, null, 2));
+    console.log("🚀 Body:", JSON.stringify(req.body, null, 2));
+    console.log("🚀 =================================");
 
     try {
       const { code, state, error } = req.query;
@@ -493,6 +441,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const errorUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/error?error=${encodeURIComponent("Authentication failed")}`;
       res.redirect(errorUrl);
+    }
+  });
+
+  // Start Azure AD OAuth flow (MUST COME AFTER CALLBACK ROUTE)
+  app.get("/api/auth/azure/:orgId", async (req, res) => {
+    try {
+      const { orgId } = req.params;
+
+      console.log(`Starting Azure AD OAuth for orgId: ${orgId}`);
+
+      // Get tenant by orgId
+      const tenant = await storage.getTenantByOrgId(orgId);
+      if (!tenant) {
+        console.log(`Tenant not found for orgId: ${orgId}`);
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      console.log(`Found tenant: ${tenant.name} (ID: ${tenant.id})`);
+
+      // Check if tenant has Azure AD configured
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = moduleConfigs.auth;
+
+      if (!authConfig?.providers) {
+        return res.status(400).json({ message: "Authentication not configured for this tenant" });
+      }
+
+      // Find Azure AD provider
+      const azureProvider = authConfig.providers.find((p: any) => p.type === "azure-ad");
+      if (!azureProvider || !azureProvider.enabled) {
+        return res
+          .status(400)
+          .json({ message: "Azure AD authentication not enabled for this tenant" });
+      }
+
+      console.log(`Azure AD provider found for tenant ${tenant.name}`);
+
+      // Create Azure AD service instance
+      const azureADService = new AzureADService({
+        tenantId: azureProvider.config.tenantId,
+        clientId: azureProvider.config.clientId,
+        clientSecret: azureProvider.config.clientSecret,
+        redirectUri:
+          azureProvider.config.callbackUrl ||
+          `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+      });
+
+      // Generate authorization URL
+      const authUrl = await azureADService.getAuthorizationUrl(
+        ["User.Read", "User.ReadBasic.All"],
+        tenant.id
+      );
+
+      console.log(`Generated Azure AD auth URL for tenant ${tenant.name}`);
+
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Error starting Azure AD OAuth:", error);
+      res.status(500).json({ message: "Failed to start Azure AD authentication" });
     }
   });
 

@@ -1,24 +1,28 @@
-import dotenv from "dotenv";
+import { config } from "dotenv";
 
 // Load environment variables first
-dotenv.config();
+config();
 
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from "@shared/schema";
+import { Pool } from "pg";
+import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
+import * as schema from "../shared/schema";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
-if (!DATABASE_URL || DATABASE_URL.includes('demo:demo@localhost')) {
-  console.warn("⚠️  DATABASE_URL not set or using demo credentials. Database operations will fail.");
+if (!DATABASE_URL || DATABASE_URL.includes("demo:demo@localhost")) {
+  console.warn(
+    "⚠️  DATABASE_URL not set or using demo credentials. Database operations will fail."
+  );
   console.warn("📝 To fix this:");
-  console.warn("   1. Create a free PostgreSQL database at https://neon.tech or https://supabase.com");
+  console.warn(
+    "   1. Create a free PostgreSQL database at https://neon.tech or https://supabase.com"
+  );
   console.warn("   2. Add DATABASE_URL=your_connection_string to your .env file");
   console.warn("   3. Restart the application");
 }
 
 // Create a mock pool if no database URL is provided (for demo purposes)
-let pool = null;
+let pool: Pool | null = null;
 /**
  * Represents the global database connection instance.
  *
@@ -28,20 +32,20 @@ let pool = null;
  * All database interactions within the application should utilize this instance
  * once it has been established.
  *
- * @type {any | null}
+ * @type {NodePgDatabase<typeof schema> | null}
  */
-let db = null;
+let db: NodePgDatabase<typeof schema> | null = null;
 
-if (DATABASE_URL && !DATABASE_URL.includes('demo:demo@localhost')) {
+if (DATABASE_URL && !DATABASE_URL.includes("demo:demo@localhost")) {
   try {
     // Use standard PostgreSQL driver with SSL configuration
     const connectionConfig = {
       connectionString: DATABASE_URL,
       ssl: {
-        rejectUnauthorized: false // Handle certificate issues
-      }
+        rejectUnauthorized: false, // Handle certificate issues
+      },
     };
-    
+
     pool = new Pool(connectionConfig);
     db = drizzle(pool, { schema });
     console.log("✅ Database connection established");
