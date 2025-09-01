@@ -24,6 +24,7 @@ import RBACManagementPage from "@/pages/rbac-management";
 import RBACConfigPage from "@/pages/rbac-config";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
 import NotFound from "@/pages/not-found";
+import { useEffect } from "react";
 
 function Router() {
   return (
@@ -31,12 +32,12 @@ function Router() {
       {/* Authentication Result Pages */}
       <Route path="/auth-success" component={AuthSuccessPage} />
       <Route path="/auth-error" component={AuthErrorPage} />
-      
+
       {/* Tenant Portal Routes */}
       <Route path="/tenant/:orgId/login" component={TenantLogin} />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
       <Route path="/tenant/:orgId/*" component={TenantDashboard} />
-      
+
       {/* Admin Portal Routes */}
       <Route>
         <AdminLayout>
@@ -66,6 +67,34 @@ function Router() {
 }
 
 function App() {
+  // Handle token from URL when redirected from Azure AD login
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    const isAdmin = urlParams.get("admin");
+
+    if (token) {
+      // Store token in localStorage for persistence
+      localStorage.setItem("platformAdminToken", token);
+
+      // Clear URL parameters to clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+
+      // Refresh the query client to re-fetch data with the new token
+      queryClient.invalidateQueries();
+
+      console.log("Platform admin token stored from URL");
+    }
+
+    // Check if token exists in localStorage
+    const existingToken = localStorage.getItem("platformAdminToken");
+    if (!existingToken && window.location.pathname !== "/admin/login") {
+      // If no token and not on login page, user might need to login
+      console.log("No platform admin token found");
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
