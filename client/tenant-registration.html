@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Your Organization - SaaS Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <div class="mx-auto h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-building text-white text-xl"></i>
+                </div>
+                <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                    Register Your Organization
+                </h2>
+                <p class="mt-2 text-sm text-gray-600">
+                    Get started with our SaaS platform
+                </p>
+            </div>
+
+            <div class="form-container rounded-xl shadow-lg p-8">
+                <form id="registrationForm" class="space-y-6">
+                    <div>
+                        <label for="orgName" class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-building mr-2"></i>Organization Name
+                        </label>
+                        <input 
+                            id="orgName" 
+                            name="orgName" 
+                            type="text" 
+                            required 
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                            placeholder="Your Company Name"
+                        />
+                    </div>
+
+                    <div>
+                        <label for="orgId" class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-link mr-2"></i>Organization ID (URL slug)
+                        </label>
+                        <div class="mt-1 flex rounded-lg shadow-sm">
+                            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                yourorg.app/
+                            </span>
+                            <input 
+                                id="orgId" 
+                                name="orgId" 
+                                type="text" 
+                                required 
+                                pattern="[a-z0-9-]+"
+                                class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="mycompany"
+                            />
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">Only lowercase letters, numbers, and hyphens</p>
+                    </div>
+
+                    <div>
+                        <label for="adminEmail" class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-envelope mr-2"></i>Admin Email
+                        </label>
+                        <input 
+                            id="adminEmail" 
+                            name="adminEmail" 
+                            type="email" 
+                            required 
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                            placeholder="admin@yourcompany.com"
+                        />
+                    </div>
+
+                    <div>
+                        <label for="adminName" class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-user mr-2"></i>Admin Name
+                        </label>
+                        <input 
+                            id="adminName" 
+                            name="adminName" 
+                            type="text" 
+                            required 
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                            placeholder="John Doe"
+                        />
+                    </div>
+
+                    <div>
+                        <label for="adminPassword" class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-lock mr-2"></i>Admin Password
+                        </label>
+                        <input 
+                            id="adminPassword" 
+                            name="adminPassword" 
+                            type="password" 
+                            required 
+                            minlength="8"
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                            placeholder="••••••••"
+                        />
+                        <p class="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            <i class="fas fa-puzzle-piece mr-2"></i>Select Modules
+                        </label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="modules" value="auth" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <span class="ml-2 text-sm text-gray-700">Authentication (Required)</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="modules" value="rbac" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <span class="ml-2 text-sm text-gray-700">Role-Based Access Control</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="modules" value="azure-ad" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <span class="ml-2 text-sm text-gray-700">Azure Active Directory</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="modules" value="auth0" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <span class="ml-2 text-sm text-gray-700">Auth0 Integration</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input 
+                            id="agree" 
+                            name="agree" 
+                            type="checkbox" 
+                            required 
+                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label for="agree" class="ml-2 block text-sm text-gray-900">
+                            I agree to the <a href="#" class="text-blue-600 hover:text-blue-500">Terms of Service</a>
+                        </label>
+                    </div>
+
+                    <div>
+                        <button 
+                            type="submit" 
+                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                        >
+                            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                                <i class="fas fa-rocket"></i>
+                            </span>
+                            Create Organization
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Status Messages -->
+                <div id="statusMessage" class="mt-4 hidden"></div>
+                
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="mt-4 text-center hidden">
+                    <i class="fas fa-spinner fa-spin text-blue-600"></i>
+                    <span class="ml-2 text-sm text-gray-600">Creating your organization...</span>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <p class="text-sm text-gray-600">
+                    Already have an account? 
+                    <a href="/" class="font-medium text-blue-600 hover:text-blue-500">
+                        Sign in
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {};
+            
+            // Get form fields
+            data.name = formData.get('orgName');
+            data.orgId = formData.get('orgId');
+            data.adminEmail = formData.get('adminEmail');
+            data.adminName = formData.get('adminName');
+            data.adminPassword = formData.get('adminPassword');
+            
+            // Get selected modules
+            const moduleCheckboxes = document.querySelectorAll('input[name="modules"]:checked');
+            data.enabledModules = Array.from(moduleCheckboxes).map(cb => cb.value);
+            
+            // Validate orgId format
+            const orgIdPattern = /^[a-z0-9-]+$/;
+            if (!orgIdPattern.test(data.orgId)) {
+                showStatus('Organization ID can only contain lowercase letters, numbers, and hyphens', 'error');
+                return;
+            }
+            
+            // Show loading
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/tenants', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showStatus('Organization created successfully! Check your email for setup instructions.', 'success');
+                    // Redirect to success page after delay
+                    setTimeout(() => {
+                        window.location.href = `/tenant/${data.orgId}/login`;
+                    }, 2000);
+                } else {
+                    showStatus(result.message || 'Registration failed. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showStatus('Network error. Please check your connection and try again.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Auto-generate orgId from organization name
+        document.getElementById('orgName').addEventListener('input', function(e) {
+            const orgName = e.target.value;
+            const orgId = orgName
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            
+            document.getElementById('orgId').value = orgId;
+        });
+
+        function showLoading(show) {
+            const indicator = document.getElementById('loadingIndicator');
+            const form = document.getElementById('registrationForm');
+            
+            if (show) {
+                indicator.classList.remove('hidden');
+                form.style.opacity = '0.6';
+                form.style.pointerEvents = 'none';
+            } else {
+                indicator.classList.add('hidden');
+                form.style.opacity = '1';
+                form.style.pointerEvents = 'auto';
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = `mt-4 p-3 rounded-lg text-sm ${
+                type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' :
+                type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
+                'bg-blue-50 text-blue-700 border border-blue-200'
+            }`;
+            statusEl.textContent = message;
+            statusEl.classList.remove('hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusEl.classList.add('hidden');
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>

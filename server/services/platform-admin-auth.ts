@@ -1,4 +1,4 @@
-import * as jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import * as bcrypt from "bcryptjs";
 import { storage } from "../storage";
 import type { PlatformAdmin, InsertPlatformAdmin } from "../../shared/schema";
@@ -163,6 +163,19 @@ export class PlatformAdminAuthService {
     }
 
     return await storage.updatePlatformAdmin(id, updates);
+  }
+
+  async generateToken(admin: PlatformAdmin): Promise<string> {
+    const tokenPayload = {
+      adminId: admin.id,
+      email: admin.email,
+      name: admin.name,
+      role: admin.role,
+      type: "platform_admin",
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: "8h" });
+    return token;
   }
 }
 

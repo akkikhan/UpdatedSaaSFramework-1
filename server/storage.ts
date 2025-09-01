@@ -652,6 +652,16 @@ export class DatabaseStorage implements IStorage {
     return updatedUser || null;
   }
 
+  async updateTenantUserLastLogin(userId: string): Promise<void> {
+    await db
+      .update(tenantUsers)
+      .set({
+        lastLoginAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(tenantUsers.id, userId));
+  }
+
   async deleteTenantUser(id: string): Promise<void> {
     await db.delete(tenantUsers).where(eq(tenantUsers.id, id));
   }

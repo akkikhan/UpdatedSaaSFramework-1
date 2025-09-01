@@ -1,20 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+// ❌ REMOVED: Replit plugins causing local development issues
+// import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-        ]
-      : []),
+    // ❌ REMOVED: runtimeErrorOverlay() - Replit-specific plugin
+    // ❌ REMOVED: Replit cartographer plugin - cloud environment only
   ],
   resolve: {
     alias: {
@@ -29,9 +23,12 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: "127.0.0.1", // ✅ LOCAL: Bind to localhost for local development
+    port: 3000, // ✅ LOCAL: Fixed port for Vite dev server
+    strictPort: false, // ✅ LOCAL: Allow port fallback if busy
     fs: {
-      strict: true,
-      deny: ["**/.*"],
+      strict: false, // ✅ LOCAL: Less restrictive for local development
+      allow: [".."], // ✅ LOCAL: Allow parent directory access
     },
   },
 });

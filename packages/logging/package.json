@@ -1,0 +1,42 @@
+{
+  "name": "@saas-framework/logging",
+  "version": "1.0.0",
+  "description": "Enterprise logging and audit SDK with search, alerting, and compliance features",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "examples"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "publish-package": "npm publish --access public"
+  },
+  "keywords": [
+    "logging",
+    "audit",
+    "compliance",
+    "monitoring",
+    "search",
+    "alerts",
+    "saas"
+  ],
+  "author": "SaaS Framework Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/saas-framework.git",
+    "directory": "packages/logging"
+  }
+}

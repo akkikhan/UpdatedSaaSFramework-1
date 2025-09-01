@@ -64,6 +64,26 @@ export class AzureADService {
   }
 
   /**
+   * Normalize Azure AD email format (handle external user mangling)
+   */
+  private normalizeEmail(email: string): string {
+    if (!email) return email;
+
+    // Handle Azure AD external user format: khan.aakib_outlook.com#EXT#@tenant.onmicrosoft.com
+    // Convert back to: khan.aakib@outlook.com
+    const externalUserPattern = /^(.+)_(.+)\.com#EXT#@.*$/;
+    const match = email.match(externalUserPattern);
+
+    if (match) {
+      const [, localPart, domain] = match;
+      return `${localPart}@${domain}.com`;
+    }
+
+    // Return email as-is if no external user pattern detected
+    return email;
+  }
+
+  /**
    * Generate Microsoft authorization URL with PKCE support
    */
   async getAuthorizationUrl(
@@ -94,6 +114,64 @@ export class AzureADService {
       console.error("Error generating authorization URL:", error);
       throw new Error(
         `Failed to generate Azure AD authorization URL: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
+  /**
+   * Handle OAuth callback for platform admin authentication (no tenant user provisioning)
+   */
+  async handlePlatformAdminCallback(
+    code: string,
+    state: string
+  ): Promise<{ user: any; accessToken: string; expiresAt: Date }> {
+    try {
+      // Parse state to get code verifier
+      let stateData;
+      try {
+        stateData = JSON.parse(state);
+      } catch {
+        throw new Error("Invalid state parameter");
+      }
+
+      if (!stateData.codeVerifier) {
+        throw new Error("Missing code verifier in state");
+      }
+
+      // Exchange authorization code for tokens
+      const tokenRequest = {
+        code,
+        scopes: ["User.Read", "User.ReadBasic.All"],
+        redirectUri:
+          this.config.redirectUri ||
+          process.env.AZURE_REDIRECT_URI ||
+          "http://localhost:3000/auth/azure/callback",
+        codeVerifier: stateData.codeVerifier,
+      };
+
+      const response = await this.msalApp.acquireTokenByCode(tokenRequest);
+
+      if (!response) {
+        throw new Error("Failed to acquire token from Azure AD");
+      }
+
+      // Get user profile from Microsoft Graph
+      const azureUser = await this.getUserProfile(response.accessToken);
+
+      // Calculate token expiration
+      const expiresAt = new Date(
+        Date.now() + (response.expiresOn ? response.expiresOn.getTime() - Date.now() : 3600 * 1000)
+      );
+
+      return {
+        user: azureUser,
+        accessToken: response.accessToken,
+        expiresAt,
+      };
+    } catch (error) {
+      console.error("Error handling Azure AD platform admin callback:", error);
+      throw new Error(
+        `Azure AD platform admin callback failed: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
   }
@@ -202,7 +280,7 @@ export class AzureADService {
 
       return {
         id: userInfo.id,
-        email: userInfo.mail || userInfo.userPrincipalName,
+        email: this.normalizeEmail(userInfo.mail || userInfo.userPrincipalName),
         displayName: userInfo.displayName,
         firstName: userInfo.givenName,
         lastName: userInfo.surname,

@@ -1,0 +1,45 @@
+{
+  "name": "@saas-framework/email",
+  "version": "1.0.0",
+  "description": "Enterprise email notification SDK with SMTP, templates, and critical alerts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "examples"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "publish-package": "npm publish --access public"
+  },
+  "keywords": [
+    "email",
+    "smtp",
+    "notifications",
+    "templates",
+    "saas",
+    "multi-tenant"
+  ],
+  "author": "SaaS Framework Team",
+  "license": "MIT",
+  "dependencies": {
+    "nodemailer": "^6.9.8"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^6.4.14",
+    "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/saas-framework.git",
+    "directory": "packages/email"
+  }
+}

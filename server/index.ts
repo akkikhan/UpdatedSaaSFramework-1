@@ -3,6 +3,15 @@ import dotenv from "dotenv";
 // Load environment variables FIRST before any other imports
 dotenv.config();
 
+import { validateEnvironment } from "./config/environment";
+
+// Validate environment before starting server
+try {
+  validateEnvironment();
+} catch (error) {
+  process.exit(1);
+}
+
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -12,8 +21,9 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
+// ❌ REMOVED: Replit proxy trust - not needed for local development
 // Trust proxy configuration for production environments
-app.set("trust proxy", 1); // Trust first proxy (Replit, nginx, cloudflare, etc.)
+// app.set("trust proxy", 1); // Trust first proxy (Replit, nginx, cloudflare, etc.)
 
 // Enterprise Security Headers
 app.use(
@@ -79,6 +89,7 @@ app.use("/api", speedLimiter);
 app.use("/api/auth", authLimiter);
 app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
+app.use("/api/platform/auth", authLimiter); // Added Azure AD platform auth protection
 
 app.use(express.json({ limit: "10mb" })); // Limit payload size
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
@@ -145,8 +156,11 @@ app.use((req, res, next) => {
     // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || "5000", 10);
     console.log(`Attempting to start server on port ${port}...`);
-    server.listen(port, () => {
-      console.log(`✅ Server successfully started on port ${port}`);
+
+    // ✅ LOCAL: Bind to all interfaces for local development
+    server.listen(port, "0.0.0.0", () => {
+      console.log(`✅ Server successfully started on http://0.0.0.0:${port}`);
+      console.log(`   Access via: http://localhost:${port} or http://127.0.0.1:${port}`);
       log(`serving on port ${port}`);
     });
   } catch (error) {

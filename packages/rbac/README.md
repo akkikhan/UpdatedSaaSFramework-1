@@ -1,235 +1,138 @@
-# @saas-framework/rbac
+# @saas-framework/auth
 
-A powerful Role-Based Access Control (RBAC) SDK for multi-tenant SaaS applications built with the SaaS Framework.
+Enterprise authentication and authorization SDK with Azure AD, Auth0, MFA, and
+SAML support for SaaS applications.
 
 ## Features
 
-- **Role Management**: Create and manage user roles
-- **Permission System**: Granular permission control
-- **Express Middleware**: Easy integration with Express.js routes
-- **Multi-tenant Support**: Isolated RBAC per tenant
-- **TypeScript Support**: Full TypeScript definitions included
-- **Flexible Authorization**: Support for AND/OR permission logic
+- **Multi-Provider OAuth**: Azure AD, Auth0, Google, GitHub integration
+- **Multi-Factor Authentication**: TOTP, SMS, email-based MFA
+- **Password Security**: Advanced password policies and breach detection
+- **Session Management**: Secure JWT tokens with refresh capabilities
+- **SAML Support**: Enterprise SSO integration
+- **Security Monitoring**: Real-time threat detection and logging
+- **Multi-tenant**: Tenant-isolated authentication configurations
+- **Compliance**: GDPR, SOC2, and enterprise security standards
 
 ## Installation
 
 ```bash
-npm install @saas-framework/rbac
+npm install @saas-framework/auth
 ```
 
 ## Quick Start
 
 ```typescript
-import { SaaSRBAC } from '@saas-framework/rbac';
+import { SaaSAuth } from "@saas-framework/auth";
 
-const rbac = new SaaSRBAC({
-  apiKey: 'your-tenant-rbac-api-key',
-  baseUrl: 'https://your-saas-platform.com/api/v2/rbac'
+const auth = new SaaSAuth({
+  apiKey: "your-api-key",
+  baseUrl: "https://api.yoursaas.com",
+  jwtSecret: "your-jwt-secret",
+  azureAD: {
+    clientId: "your-azure-client-id",
+    clientSecret: "your-azure-client-secret",
+    tenantId: "your-azure-tenant-id",
+  },
 });
 
-// Check user permission
-const canEdit = await rbac.hasPermission('user123', 'posts.edit');
+// Login with email/password
+const result = await auth.login({
+  tenantId: "tenant-123",
+  email: "user@example.com",
+  password: "user-password",
+});
 
-// Get user roles
-const roles = await rbac.getUserRoles('user123');
-
-// Get user permissions
-const permissions = await rbac.getUserPermissions('user123');
+if (result.success) {
+  console.log("Access token:", result.accessToken);
+  console.log("Refresh token:", result.refreshToken);
+}
 ```
 
-## Express.js Integration
+## Authentication Methods
 
-### Permission-Based Protection
+### Email/Password Authentication
 
 ```typescript
-import express from 'express';
-import { SaaSRBAC } from '@saas-framework/rbac';
+// Register new user
+const registration = await auth.register({
+  tenantId: "tenant-123",
+  email: "newuser@example.com",
+  password: "SecurePass123!",
+  firstName: "John",
+  lastName: "Doe",
+});
+
+// Login
+const login = await auth.login({
+  tenantId: "tenant-123",
+  email: "user@example.com",
+  password: "SecurePass123!",
+});
+```
+
+### Azure AD OAuth
+
+```typescript
+// Get Azure AD login URL
+const authUrl = await auth.getAzureADAuthUrl({
+  tenantId: "tenant-123",
+  state: "custom-state-value",
+});
+
+// Handle OAuth callback
+const result = await auth.handleAzureADCallback({
+  tenantId: "tenant-123",
+  code: "oauth-authorization-code",
+  state: "custom-state-value",
+});
+```
+
+## Multi-Factor Authentication
+
+### Setup TOTP
+
+```typescript
+// Generate MFA setup for user
+const mfaSetup = await auth.setupMFA({
+  userId: "user-123",
+  type: "totp",
+  deviceName: "iPhone 12",
+});
+
+// Returns QR code URL and backup codes
+console.log("QR Code:", mfaSetup.qrCodeUrl);
+console.log("Backup codes:", mfaSetup.backupCodes);
+```
+
+### Verify MFA
+
+```typescript
+// Verify TOTP code
+const verification = await auth.verifyMFA({
+  userId: "user-123",
+  code: "123456",
+  type: "totp",
+});
+```
+
+## Express Middleware
+
+```typescript
+import express from "express";
 
 const app = express();
-const rbac = new SaaSRBAC({ /* config */ });
 
-// Require specific permission
-app.get('/api/posts', 
-  rbac.middleware(['posts.read']),
-  (req, res) => {
-    res.json({ posts: [] });
-  }
-);
-
-// Require multiple permissions (OR logic)
-app.post('/api/posts',
-  rbac.middleware(['posts.create', 'posts.admin']),
-  (req, res) => {
-    // User needs either posts.create OR posts.admin
-  }
-);
-
-// Require all permissions (AND logic)
-app.delete('/api/posts/:id',
-  rbac.middleware(['posts.delete', 'posts.admin'], { requireAll: true }),
-  (req, res) => {
-    // User needs BOTH posts.delete AND posts.admin
-  }
-);
-```
-
-### Role-Based Protection
-
-```typescript
-// Require specific role
-app.get('/api/admin',
-  rbac.roleMiddleware(['admin']),
-  (req, res) => {
-    res.json({ message: 'Admin access granted' });
-  }
-);
-```
-
-## API Reference
-
-### Constructor
-
-```typescript
-new SaaSRBAC(config: SaaSRBACConfig)
-```
-
-#### SaaSRBACConfig
-
-- `apiKey` (string): Your tenant's RBAC API key
-- `baseUrl` (string): Base URL of your SaaS platform's RBAC endpoints
-
-### Permission Methods
-
-#### `hasPermission(userId: string, permission: string): Promise<boolean>`
-
-Checks if a user has a specific permission.
-
-#### `hasPermissions(userId: string, permissions: string[]): Promise<{ [key: string]: boolean }>`
-
-Checks multiple permissions for a user.
-
-#### `getUserPermissions(userId: string): Promise<string[]>`
-
-Gets all effective permissions for a user.
-
-### Role Methods
-
-#### `getUserRoles(userId: string): Promise<Role[]>`
-
-Gets all roles assigned to a user.
-
-#### `getRoles(): Promise<Role[]>`
-
-Gets all available roles in the tenant.
-
-#### `assignRole(userId: string, roleId: string): Promise<void>`
-
-Assigns a role to a user.
-
-#### `removeRole(userId: string, roleId: string): Promise<void>`
-
-Removes a role from a user.
-
-### System Methods
-
-#### `getPermissions(): Promise<Permission[]>`
-
-Gets all available permissions in the tenant.
-
-### Middleware Methods
-
-#### `middleware(permissions: string[], options?: MiddlewareOptions): RequestHandler`
-
-Express middleware for permission-based route protection.
-
-**Options:**
-- `requireAll` (boolean, default: false): Whether user must have ALL permissions (AND) vs ANY permission (OR)
-
-#### `roleMiddleware(roles: string[]): RequestHandler`
-
-Express middleware for role-based route protection.
-
-## Data Types
-
-```typescript
-interface Role {
-  id: string;
-  tenantId: string;
-  name: string;
-  description: string;
-  permissions: string[];
-  isSystem: boolean;
-}
-
-interface Permission {
-  id: string;
-  tenantId: string;
-  key: string;
-  description: string;
-  category: string;
-  isSystem: boolean;
-}
-```
-
-## Usage Examples
-
-### Complex Permission Checking
-
-```typescript
-// Check multiple permissions
-const results = await rbac.hasPermissions('user123', [
-  'posts.create',
-  'posts.edit',
-  'posts.delete'
-]);
-
-console.log(results);
-// { 'posts.create': true, 'posts.edit': true, 'posts.delete': false }
-```
-
-### Role Management
-
-```typescript
-// Assign admin role to user
-await rbac.assignRole('user123', 'admin-role-id');
-
-// Remove role from user
-await rbac.removeRole('user123', 'editor-role-id');
-```
-
-## Error Handling
-
-All methods throw descriptive errors:
-
-```typescript
-try {
-  await rbac.assignRole(userId, roleId);
-} catch (error) {
-  console.error('Role assignment failed:', error.message);
-}
-```
-
-## Integration with Authentication
-
-Use this package alongside `@saas-framework/auth`:
-
-```typescript
-import { SaaSAuth } from '@saas-framework/auth';
-import { SaaSRBAC } from '@saas-framework/rbac';
-
-const auth = new SaaSAuth({ /* config */ });
-const rbac = new SaaSRBAC({ /* config */ });
-
-app.use('/api/protected', 
-  auth.middleware(),           // Authenticate first
-  rbac.middleware(['admin'])   // Then authorize
+// Protect routes with authentication
+app.use(
+  "/api/protected",
+  auth.middleware({
+    requireMFA: false,
+    allowRefreshToken: false,
+  })
 );
 ```
 
 ## License
 
-MIT
-
-## Support
-
-For issues and questions, please visit: [GitHub Issues](https://github.com/saas-framework/rbac/issues)
+MIT License - see [LICENSE](LICENSE) file for details.

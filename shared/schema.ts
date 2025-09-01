@@ -18,7 +18,7 @@ export const platformAdmins = pgTable("platform_admins", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  passwordHash: varchar("password_hash", { length: 255 }), // Nullable for SSO users
   name: varchar("name", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).notNull().default("admin"), // admin, super_admin
   isActive: boolean("is_active").default(true),

@@ -20,9 +20,37 @@ import {
 import { notificationService } from "./services/notification";
 import { complianceService } from "./services/compliance-temp";
 import { z } from "zod";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public routes
+
+  // Tenant Registration Page
+  app.get("/register", (req, res) => {
+    const registrationPagePath = path.resolve(__dirname, "../client/tenant-registration.html");
+    res.sendFile(registrationPagePath);
+  });
+
+  // Platform Admin Login Page - Azure AD Integration
+  app.get("/admin/login", (req, res) => {
+    const loginPagePath = path.resolve(__dirname, "../client/platform-admin-login.html");
+    res.sendFile(loginPagePath);
+  });
+
+  // Admin redirect route
+  app.get("/admin", (req, res) => {
+    // Check if user is authenticated, if not redirect to login
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.redirect("/admin/login");
+    }
+    // If authenticated, redirect to main app with admin flag
+    res.redirect("/?admin=true");
+  });
 
   // Health check
   app.get("/api/health", async (req, res) => {
@@ -72,6 +100,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Platform admin token verification
+  app.get("/api/platform/auth/verify", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "No valid authorization token provided" });
+      }
+
+      const token = authHeader.split(" ")[1];
+      const result = await platformAdminAuthService.verifyToken(token);
+
+      if (!result) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
+
+      res.json({
+        valid: true,
+        admin: result.admin,
+      });
+    } catch (error) {
+      console.error("Platform admin token verification error:", error);
+      res.status(401).json({ message: "Token verification failed" });
+    }
+  });
+
+  // Azure AD Authentication Routes
+
+  // Authorized platform admin emails
+  const AUTHORIZED_ADMIN_EMAILS = (process.env.AUTHORIZED_ADMIN_EMAILS || "")
+    .split(",")
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  // Add default admin email if no emails configured
+  if (AUTHORIZED_ADMIN_EMAILS.length === 0) {
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@yourcompany.com";
+    AUTHORIZED_ADMIN_EMAILS.push(adminEmail.toLowerCase());
+  }
+
+  // Initialize Azure AD service
+  const azureADService = new AzureADService({
+    tenantId: process.env.AZURE_TENANT_ID || "common",
+    clientId: process.env.AZURE_CLIENT_ID || "",
+    clientSecret: process.env.AZURE_CLIENT_SECRET || "",
+    redirectUri:
+      process.env.AZURE_REDIRECT_URI || "http://localhost:5000/api/platform/auth/azure/callback",
+  });
+
+  // Azure AD login - redirect to Microsoft
+  app.get("/api/platform/auth/azure/login", async (req, res) => {
+    try {
+      // For khan.aakib@outlook.com - we'll check this email is authorized
+      const authorizedEmails = ["khan.aakib@outlook.com", "admin@yourcompany.com"];
+
+      const authUrl = await azureADService.getAuthorizationUrl();
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error("Azure AD login initiation error:", error);
+      res.redirect("/admin/login?error=azure_login_failed");
+    }
+  });
+
+  // Azure AD callback - handle response from Microsoft
+  app.get("/api/platform/auth/azure/callback", async (req, res) => {
+    try {
+      const { code, error, error_description, state } = req.query;
+
+      if (error) {
+        console.error("Azure AD callback error:", error, error_description);
+        const errorMessage =
+          (typeof error_description === "string" ? error_description : String(error)) ||
+          "unknown_error";
+        return res.redirect("/admin/login?error=" + encodeURIComponent(errorMessage));
+      }
+
+      if (!code || typeof code !== "string") {
+        return res.redirect("/admin/login?error=no_authorization_code");
+      }
+
+      if (!state || typeof state !== "string") {
+        return res.redirect("/admin/login?error=invalid_state");
+      }
+
+      // Exchange code for tokens and get user info (platform admin - no tenant provisioning)
+      const authResult = await azureADService.handlePlatformAdminCallback(code, state);
+
+      // Check if user email is authorized
+      const userEmail = authResult.user.email?.toLowerCase();
+
+      if (!AUTHORIZED_ADMIN_EMAILS.includes(userEmail)) {
+        console.log(`Unauthorized email attempted login: ${userEmail}`);
+        console.log(`Authorized emails: ${AUTHORIZED_ADMIN_EMAILS.join(", ")}`);
+        return res.redirect("/admin/login?error=unauthorized_email");
+      }
+
+      // Create or update platform admin record for Azure AD user
+      let platformAdmin = await storage.getPlatformAdminByEmail(authResult.user.email);
+
+      if (!platformAdmin) {
+        // Create new platform admin
+        platformAdmin = await storage.createPlatformAdmin({
+          email: authResult.user.email,
+          name:
+            authResult.user.firstName && authResult.user.lastName
+              ? `${authResult.user.firstName} ${authResult.user.lastName}`
+              : authResult.user.email,
+          role: "super_admin",
+          passwordHash: "AZURE_AD_SSO", // Placeholder for SSO users - not a real password
+          isActive: true,
+        });
+      } else {
+        // Update last login
+        await storage.updatePlatformAdminLastLogin(platformAdmin.id);
+      }
+
+      // Log Azure AD login
+      await storage.logSystemActivity({
+        action: "platform_admin_azure_login",
+        entityType: "platform_admin",
+        entityId: platformAdmin.id,
+        details: {
+          email: authResult.user.email,
+          provider: "azure_ad",
+          userId: authResult.user.id,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get("User-Agent"),
+      });
+
+      // Generate a platform admin token for this user
+      const platformAdminToken = await platformAdminAuthService.generateToken(platformAdmin);
+
+      // Redirect to main app with token (React dashboard)
+      res.redirect(`/?token=${platformAdminToken}&admin=true`);
+    } catch (error) {
+      console.error("Azure AD callback processing error:", error);
+      res.redirect("/admin/login?error=callback_processing_failed");
+    }
+  });
+
+  // Platform admin token verification
   app.get("/api/platform/auth/verify", platformAdminMiddleware, async (req, res) => {
     try {
       res.json({
@@ -87,6 +255,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Platform admin logout
+  app.post("/api/platform/auth/logout", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "No token provided" });
+      }
+
+      const token = authHeader.split(" ")[1];
+
+      // Remove from any session storage if implemented
+      // For JWT tokens, we'll rely on client-side removal and short expiry
+
+      console.log("👋 Platform admin logout requested");
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  // Platform admin token refresh
+  app.post("/api/platform/auth/refresh", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "No token provided" });
+      }
+
+      const token = authHeader.split(" ")[1];
+
+      // Use the refreshToken method from platformAdminAuthService
+      // Note: The service's refreshToken method expects a refresh token, not an access token
+      // So we need to verify the current token and generate a new one
+      const decoded = await platformAdminAuthService.verifyToken(token);
+
+      if (!decoded) {
+        return res.status(401).json({ message: "Invalid token" });
+      }
+
+      // Generate new token with the same payload
+      const jwt = await import("jsonwebtoken");
+      const newToken = jwt.sign(
+        {
+          adminId: decoded.adminId,
+          email: decoded.email,
+          name: decoded.name,
+          role: decoded.role,
+          type: "platform_admin",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "8h" }
+      );
+
+      console.log("🔄 Token refreshed for admin:", decoded.email);
+      res.json({ token: newToken });
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      res.status(500).json({ message: "Token refresh failed" });
+    }
+  });
+
+  // =============================================================================
+  // STATS AND DASHBOARD ENDPOINTS
+  // =============================================================================
+
+  // Stats endpoint for admin dashboard
+  app.get("/api/stats", platformAdminMiddleware, async (req, res) => {
+    try {
+      const tenants = await storage.getAllTenants();
+      const stats = {
+        totalTenants: tenants.length,
+        activeTenants: tenants.filter(t => t.status === "active").length,
+        pendingTenants: tenants.filter(t => t.status === "pending").length,
+        emailsSent: tenants.length, // Simplified - could track actual email count
+      };
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // Recent tenants endpoint
+  app.get("/api/tenants/recent", platformAdminMiddleware, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 5;
+      const tenants = await storage.getAllTenants();
+      const recentTenants = tenants
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+      res.json(recentTenants);
+    } catch (error) {
+      console.error("Error fetching recent tenants:", error);
+      res.status(500).json({ message: "Failed to fetch recent tenants" });
+    }
+  });
+
+  // =============================================================================
+  // TENANT MANAGEMENT ENDPOINTS
+  // =============================================================================
 
   // Tenant Management Routes (Platform Admin Only)
 
@@ -165,6 +435,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.error("Error creating tenant:", error);
       res.status(500).json({ message: "Failed to create tenant" });
+    }
+  });
+
+  // Public Tenant Registration (no auth required)
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { name, orgId, adminEmail, adminName, adminPassword, enabledModules } = req.body;
+
+      // Validate required fields
+      if (!name || !orgId || !adminEmail || !adminName || !adminPassword) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Validate orgId format
+      if (!/^[a-z0-9-]+$/.test(orgId)) {
+        return res
+          .status(400)
+          .json({
+            message: "Organization ID can only contain lowercase letters, numbers, and hyphens",
+          });
+      }
+
+      // Check if orgId is already taken
+      const existingTenant = await storage.getTenantByOrgId(orgId);
+      if (existingTenant) {
+        return res.status(400).json({ message: "Organization ID already exists" });
+      }
+
+      // Create tenant data
+      const tenantData = {
+        name,
+        orgId,
+        adminEmail,
+        enabledModules: enabledModules || ["auth", "rbac"],
+        status: "active" as const,
+      };
+
+      // Create tenant
+      const tenant = await storage.createTenant(tenantData);
+
+      // Create admin user for the tenant
+      console.log(`🔧 Creating tenant user for: ${adminEmail}`);
+      const hashedPassword = await authService.hashPassword(adminPassword);
+      console.log(`🔐 Password hashed for tenant user: ${adminEmail}`);
+
+      const tenantUser = await storage.createTenantUser({
+        tenantId: tenant.id,
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        firstName: adminName.split(" ")[0],
+        lastName: adminName.split(" ").slice(1).join(" ") || "",
+        status: "active" as const,
+      });
+
+      console.log(`✅ Tenant user created successfully:`, {
+        id: tenantUser.id,
+        email: tenantUser.email,
+        tenantId: tenantUser.tenantId,
+        status: tenantUser.status,
+      });
+
+      // Send onboarding email
+      const emailSent = await emailService.sendTenantOnboardingEmail({
+        id: tenant.id,
+        name: tenant.name,
+        orgId: tenant.orgId,
+        adminEmail: tenant.adminEmail,
+        authApiKey: tenant.authApiKey,
+        rbacApiKey: tenant.rbacApiKey,
+      });
+
+      if (!emailSent) {
+        console.warn(`Failed to send onboarding email to ${tenant.adminEmail}`);
+      }
+
+      console.log(`Tenant registered successfully: ${tenant.name} (${tenant.orgId})`);
+
+      res.status(201).json({
+        message: "Organization created successfully",
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          orgId: tenant.orgId,
+          status: tenant.status,
+        },
+      });
+    } catch (error) {
+      console.error("Error registering tenant:", error);
+      res.status(500).json({ message: "Failed to create organization. Please try again." });
+    }
+  });
+
+  // Update tenant status
+  app.patch("/api/tenants/:id/status", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Update tenant status (assuming storage has this method)
+      await storage.updateTenantStatus(id, status);
+
+      res.json({ message: "Tenant status updated successfully" });
+    } catch (error) {
+      console.error("Error updating tenant status:", error);
+      res.status(500).json({ message: "Failed to update tenant status" });
+    }
+  });
+
+  // Resend onboarding email
+  app.post("/api/tenants/:id/resend-email", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Generate temporary password for resend
+      const tempPassword = Math.random().toString(36).slice(-8);
+
+      // Send onboarding email
+      await emailService.sendOnboardingEmail(
+        tenant.adminEmail,
+        tenant.name,
+        tenant.orgId,
+        tempPassword,
+        tenant.authApiKey,
+        tenant.rbacApiKey
+      );
+
+      res.json({ message: "Onboarding email resent successfully" });
+    } catch (error) {
+      console.error("Error resending email:", error);
+      res.status(500).json({ message: "Failed to resend email" });
     }
   });
 
@@ -301,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         console.error("Azure AD OAuth error:", error);
         return res.redirect(
-          `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/error?error=${encodeURIComponent(error as string)}`
+          `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/error?error=${encodeURIComponent(error as string)}`
         );
       }
 
@@ -407,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Logged successful Azure AD login");
 
       // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/success?token=${appToken}&tenant=${tenant.orgId}`;
+      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/success?token=${appToken}&tenant=${tenant.orgId}`;
 
       console.log(`Redirecting to success page: ${redirectUrl}`);
 
@@ -439,7 +849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/error?error=${encodeURIComponent("Authentication failed")}`;
+      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/error?error=${encodeURIComponent("Authentication failed")}`;
       res.redirect(errorUrl);
     }
   });
@@ -536,6 +946,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Tenant user logout
+  app.post("/api/v2/auth/logout", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "No token provided" });
+      }
+
+      const token = authHeader.split(" ")[1];
+
+      // Delete session from database
+      await storage.deleteSession(token);
+
+      console.log("👋 Tenant user logout requested");
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Logout failed" });
     }
   });
 
