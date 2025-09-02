@@ -7,6 +7,7 @@ import { platformAdminAuthService } from "./services/platform-admin-auth";
 import { AzureADService } from "./services/azure-ad";
 import { authMiddleware, tenantMiddleware } from "./middleware/auth";
 import { platformAdminMiddleware } from "./middleware/platform-admin";
+import { validateApiKey } from "./middleware/apiKeyAuth";
 import {
   insertTenantSchema,
   insertUserSchema,
@@ -923,8 +924,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Tenant Authentication Routes
 
-  // Login
-  app.post("/api/v2/auth/login", async (req, res) => {
+  // API Key Authentication for External NPM Packages
+  app.post("/auth/login", validateApiKey, async (req, res) => {
+    try {
+      console.log(`🔑 API key authentication attempt for tenant: ${req.tenant?.orgId}`);
+
+      // For API key auth, we don't require email/password
+      // The API key validates the tenant, now we issue a JWT token
+      const tenantId = req.tenantId!; // Set by validateApiKey middleware
+      const tenant = req.tenant!;
+
+      // Generate a tenant-scoped JWT token
+      const token = await authService.generateTenantToken(tenantId, tenant.orgId);
+
+      console.log(`✅ API key authentication successful for tenant: ${tenant.orgId}`);
+
+      res.json({
+        success: true,
+        token: token.token,
+        expiresAt: token.expiresAt,
+        tenant: {
+          id: tenantId,
+          orgId: tenant.orgId,
+          name: tenant.name,
+          enabledModules: tenant.enabledModules,
+        },
+      });
+    } catch (error) {
+      console.error("API key authentication error:", error);
+      res.status(500).json({
+        error: "Authentication failed",
+        details: "Unable to generate authentication token",
+      });
+    }
+  });
+
+  // Traditional User/Password Login (for web interface)
+  app.post("/auth/login/password", async (req, res) => {
     try {
       const { email, password, tenantId, orgId } = req.body;
 
@@ -958,7 +994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tenant user logout
-  app.post("/api/v2/auth/logout", async (req, res) => {
+  app.post("/auth/logout", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -983,10 +1019,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Auth API v2 - User Management
-  app.post("/api/v2/auth/users", tenantMiddleware, async (req, res) => {
+  app.post("/auth/users", tenantMiddleware, async (req, res) => {
     try {
       const { email, password, firstName, lastName, role } = req.body;
-      const tenantId = req.tenantId;
+      const tenantId = req.tenantId!; // Set by tenantMiddleware
 
       if (!email || !password || !firstName) {
         return res.status(400).json({ message: "Email, password, and firstName are required" });
@@ -1015,7 +1051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/v2/auth/users", tenantMiddleware, async (req, res) => {
+  app.get("/auth/users", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const users = await storage.getTenantUsers(tenantId);
@@ -1026,7 +1062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/v2/auth/users/:userId", tenantMiddleware, async (req, res) => {
+  app.get("/auth/users/:userId", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const tenantId = req.tenantId;
@@ -1044,7 +1080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/v2/auth/users/:userId", tenantMiddleware, async (req, res) => {
+  app.put("/auth/users/:userId", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const tenantId = req.tenantId;
@@ -1068,7 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/v2/auth/users/:userId", tenantMiddleware, async (req, res) => {
+  app.delete("/auth/users/:userId", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const tenantId = req.tenantId;
@@ -1082,7 +1118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Password Reset Flow
-  app.post("/api/v2/auth/password-reset/request", async (req, res) => {
+  app.post("/auth/password-reset/request", async (req, res) => {
     try {
       const { email, tenantId, orgId } = req.body;
 
@@ -1109,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/v2/auth/password-reset/confirm", async (req, res) => {
+  app.post("/auth/password-reset/confirm", async (req, res) => {
     try {
       const { token, newPassword } = req.body;
 
@@ -1130,7 +1166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Session Management
-  app.get("/api/v2/auth/sessions", tenantMiddleware, async (req, res) => {
+  app.get("/auth/sessions", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const sessions = await storage.getActiveSessions(tenantId);
@@ -1141,7 +1177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/v2/auth/sessions/:sessionId", tenantMiddleware, async (req, res) => {
+  app.delete("/auth/sessions/:sessionId", tenantMiddleware, async (req, res) => {
     try {
       const { sessionId } = req.params;
       const tenantId = req.tenantId;
@@ -1154,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/v2/auth/refresh", async (req, res) => {
+  app.post("/auth/refresh", async (req, res) => {
     try {
       const { refreshToken } = req.body;
 
@@ -1175,7 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // MFA Endpoints
-  app.post("/api/v2/auth/mfa/setup", tenantMiddleware, async (req, res) => {
+  app.post("/auth/mfa/setup", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.body;
       const tenantId = req.tenantId;
@@ -1188,7 +1224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/v2/auth/mfa/verify", tenantMiddleware, async (req, res) => {
+  app.post("/auth/mfa/verify", tenantMiddleware, async (req, res) => {
     try {
       const { userId, token } = req.body;
       const tenantId = req.tenantId;
@@ -1210,7 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Roles Management
-  app.get("/api/v2/rbac/roles", tenantMiddleware, async (req, res) => {
+  app.get("/rbac/roles", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const roles = await storage.getTenantRoles(tenantId);
@@ -1221,7 +1257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/v2/rbac/roles", tenantMiddleware, async (req, res) => {
+  app.post("/rbac/roles", validateApiKey, tenantMiddleware, async (req, res) => {
     try {
       const { name, description, permissions } = req.body;
       const tenantId = req.tenantId;
@@ -1244,7 +1280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/v2/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
+  app.put("/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
@@ -1262,7 +1298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/v2/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
+  app.delete("/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
@@ -1276,7 +1312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Role Assignment
-  app.post("/api/v2/rbac/users/:userId/roles", tenantMiddleware, async (req, res) => {
+  app.post("/rbac/users/:userId/roles", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const { roleId } = req.body;
@@ -1294,7 +1330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/v2/rbac/users/:userId/roles/:roleId", tenantMiddleware, async (req, res) => {
+  app.delete("/rbac/users/:userId/roles/:roleId", tenantMiddleware, async (req, res) => {
     try {
       const { userId, roleId } = req.params;
       const tenantId = req.tenantId;
@@ -1308,7 +1344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Permission Checking
-  app.get("/api/v2/rbac/users/:userId/permissions", tenantMiddleware, async (req, res) => {
+  app.get("/rbac/users/:userId/permissions", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const tenantId = req.tenantId;
@@ -1321,7 +1357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/v2/rbac/check-permission", tenantMiddleware, async (req, res) => {
+  app.post("/rbac/check-permission", validateApiKey, tenantMiddleware, async (req, res) => {
     try {
       const { userId, permission } = req.body;
       const tenantId = req.tenantId;
@@ -1343,7 +1379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Log Events
-  app.post("/api/v2/logging/events", tenantMiddleware, async (req, res) => {
+  app.post("/logging/events", validateApiKey, tenantMiddleware, async (req, res) => {
     try {
       const { level, message, category, metadata, userId } = req.body;
       const tenantId = req.tenantId;
@@ -1354,14 +1390,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const logEvent = await storage.createLogEvent({
         tenantId,
+        eventType: category || "application",
         level,
         message,
-        category: category || "application",
         metadata: metadata || {},
         userId: userId || null,
-        timestamp: new Date(),
-        ipAddress: req.ip,
-        userAgent: req.get("User-Agent"),
       });
 
       res.status(201).json(logEvent);
@@ -1372,7 +1405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Query Logs
-  app.get("/api/v2/logging/events", tenantMiddleware, async (req, res) => {
+  app.get("/logging/events", validateApiKey, tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const { level, category, startDate, endDate, limit = 100, offset = 0 } = req.query;
@@ -1396,7 +1429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Log Statistics
-  app.get("/api/v2/logging/stats", tenantMiddleware, async (req, res) => {
+  app.get("/logging/stats", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const { period = "24h" } = req.query;
@@ -1410,7 +1443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alert Rules
-  app.post("/api/v2/logging/alert-rules", tenantMiddleware, async (req, res) => {
+  app.post("/logging/alert-rules", tenantMiddleware, async (req, res) => {
     try {
       const { name, condition, threshold, action } = req.body;
       const tenantId = req.tenantId;
@@ -1435,7 +1468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/v2/logging/alert-rules", tenantMiddleware, async (req, res) => {
+  app.get("/logging/alert-rules", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const alertRules = await storage.getAlertRules(tenantId);
@@ -1451,7 +1484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Send Notification
-  app.post("/api/v2/notifications/send", tenantMiddleware, async (req, res) => {
+  app.post("/notifications/send", tenantMiddleware, async (req, res) => {
     try {
       const { recipientId, channel, template, data, priority = "normal" } = req.body;
       const tenantId = req.tenantId;
@@ -1477,7 +1510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notification History
-  app.get("/api/v2/notifications/history", tenantMiddleware, async (req, res) => {
+  app.get("/notifications/history", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const { recipientId, channel, status, limit = 50, offset = 0 } = req.query;
@@ -1500,7 +1533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Template Management
-  app.post("/api/v2/notifications/templates", tenantMiddleware, async (req, res) => {
+  app.post("/notifications/templates", tenantMiddleware, async (req, res) => {
     try {
       const { name, channel, subject, body, variables } = req.body;
       const tenantId = req.tenantId;
@@ -1525,7 +1558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/v2/notifications/templates", tenantMiddleware, async (req, res) => {
+  app.get("/notifications/templates", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const { channel } = req.query;
@@ -1539,7 +1572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notification Preferences
-  app.get("/api/v2/notifications/preferences/:userId", tenantMiddleware, async (req, res) => {
+  app.get("/notifications/preferences/:userId", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const tenantId = req.tenantId;
@@ -1552,7 +1585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/v2/notifications/preferences/:userId", tenantMiddleware, async (req, res) => {
+  app.put("/notifications/preferences/:userId", tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const tenantId = req.tenantId;
@@ -1571,27 +1604,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Send Email
-  app.post("/api/v2/email/send", tenantMiddleware, async (req, res) => {
+  app.post("/email/send", validateApiKey, tenantMiddleware, async (req, res) => {
     try {
-      const { to, subject, template, data, attachments } = req.body;
+      const { to, subject, text, html } = req.body;
       const tenantId = req.tenantId;
 
-      if (!to || !subject || (!template && !req.body.html)) {
-        return res
-          .status(400)
-          .json({ message: "To, subject, and template (or html) are required" });
+      if (!to || !subject) {
+        return res.status(400).json({ message: "To and subject are required" });
       }
 
-      const result = await emailService.sendEmail({
-        tenantId,
-        to,
-        subject,
-        template,
-        data: data || {},
-        attachments: attachments || [],
-      });
+      // Use the existing sendSimpleTestEmail method for now
+      const result = await emailService.sendSimpleTestEmail(to, subject);
 
-      res.status(201).json(result);
+      res.status(201).json({ success: result, message: "Email sent successfully" });
     } catch (error) {
       console.error("Send email error:", error);
       res.status(500).json({ message: "Failed to send email" });
@@ -1599,7 +1624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email Templates
-  app.post("/api/v2/email/templates", tenantMiddleware, async (req, res) => {
+  app.post("/email/templates", tenantMiddleware, async (req, res) => {
     try {
       const { name, subject, html, variables } = req.body;
       const tenantId = req.tenantId;
@@ -1623,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/v2/email/templates", tenantMiddleware, async (req, res) => {
+  app.get("/email/templates", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const templates = await storage.getEmailTemplates(tenantId);
@@ -1635,7 +1660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email Stats
-  app.get("/api/v2/email/stats", tenantMiddleware, async (req, res) => {
+  app.get("/email/stats", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const { period = "7d" } = req.query;

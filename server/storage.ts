@@ -62,6 +62,7 @@ export interface IStorage {
   createTenant(tenant: InsertTenant): Promise<Tenant>;
   getTenant(id: string): Promise<Tenant | undefined>;
   getTenantByOrgId(orgId: string): Promise<Tenant | undefined>;
+  getTenantByAuthApiKey(apiKey: string): Promise<Tenant | undefined>;
   getAllTenants(): Promise<Tenant[]>;
   updateTenantStatus(id: string, status: string): Promise<void>;
 
@@ -317,6 +318,9 @@ export interface IStorage {
     opened: number;
     clicked: number;
   }>;
+
+  // RBAC Permission Checking
+  checkUserPermission(userId: string, permission: string, tenantId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -401,6 +405,11 @@ export class DatabaseStorage implements IStorage {
 
   async getTenantByOrgId(orgId: string): Promise<Tenant | undefined> {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.orgId, orgId));
+    return tenant;
+  }
+
+  async getTenantByAuthApiKey(apiKey: string): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.authApiKey, apiKey));
     return tenant;
   }
 

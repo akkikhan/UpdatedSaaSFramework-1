@@ -121,6 +121,37 @@ export class AuthService {
     return newToken;
   }
 
+  /**
+   * Generate a tenant-scoped JWT token for API key authentication
+   * Used by external NPM packages after API key validation
+   */
+  async generateTenantToken(
+    tenantId: string,
+    orgId: string
+  ): Promise<{
+    token: string;
+    expiresAt: Date;
+  }> {
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + this.jwtExpiryMinutes);
+
+    const payload = {
+      tenantId,
+      orgId,
+      type: "api_key_auth", // Distinguish from user auth
+      permissions: [], // Tenant-level permissions
+    };
+
+    const token = jwt.sign(payload, this.jwtSecret, {
+      expiresIn: `${this.jwtExpiryMinutes}m`,
+    });
+
+    return {
+      token,
+      expiresAt,
+    };
+  }
+
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
     const bcrypt = await import("bcryptjs");
     return bcrypt.compare(password, hash);

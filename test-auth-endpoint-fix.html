@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick API Test - Auth Endpoint</title>
+</head>
+<body>
+    <h2>Testing Fixed Auth Endpoint</h2>
+    <div id="result"></div>
+    
+    <script>
+        // Test the /auth/login endpoint that should now work
+        fetch('http://localhost:5000/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: 'test@example.com',
+                password: 'testpassword'
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (response.status === 400 || response.status === 401) {
+                document.getElementById('result').innerHTML = 
+                    '<h3 style="color: green;">✅ SUCCESS!</h3>' +
+                    '<p>Endpoint is working! Got expected ' + response.status + ' response (bad credentials, but endpoint exists)</p>';
+            } else if (response.status === 404) {
+                document.getElementById('result').innerHTML = 
+                    '<h3 style="color: red;">❌ FAIL!</h3>' +
+                    '<p>404 - Endpoint still not found</p>';
+            } else {
+                document.getElementById('result').innerHTML = 
+                    '<h3 style="color: orange;">⚠️ UNEXPECTED</h3>' +
+                    '<p>Got status: ' + response.status + '</p>';
+            }
+            return response.text();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('result').innerHTML = 
+                '<h3 style="color: red;">❌ ERROR!</h3>' +
+                '<p>Network error: ' + error.message + '</p>';
+        });
+    </script>
+</body>
+</html>

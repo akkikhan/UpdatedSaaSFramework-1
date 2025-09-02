@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { authService } from '../services/auth';
+import { Request, Response, NextFunction } from "express";
+import { authService } from "../services/auth";
 
 declare global {
   namespace Express {
@@ -10,22 +10,24 @@ declare global {
         email: string;
         permissions: string[];
       };
+      tenantId?: string;
+      tenant?: any;
     }
   }
 }
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authorization token required' });
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authorization token required" });
   }
 
   const token = authHeader.substring(7);
   const payload = await authService.verifyToken(token);
-  
+
   if (!payload) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 
   req.user = payload;
@@ -33,16 +35,25 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 };
 
 export const tenantMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const tenantId = req.headers['x-tenant-id'] as string;
-  
+  // For API key authentication, tenantId is already set by validateApiKey middleware
+  if (req.tenantId) {
+    return next();
+  }
+
+  // For JWT authentication, get tenant from header
+  const tenantId = req.headers["x-tenant-id"] as string;
+
   if (!tenantId) {
-    return res.status(400).json({ message: 'Tenant ID required' });
+    return res.status(400).json({ message: "Tenant ID required" });
   }
 
   // Validate tenant ID matches authenticated user's tenant
   if (req.user && req.user.tenantId !== tenantId) {
-    return res.status(403).json({ message: 'Access denied to tenant' });
+    return res.status(403).json({ message: "Access denied to tenant" });
   }
+
+  // Set tenantId on request for downstream use
+  req.tenantId = tenantId;
 
   next();
 };
