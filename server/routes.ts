@@ -345,7 +345,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 5;
       const tenants = await storage.getAllTenants();
       const recentTenants = tenants
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt || new Date()).getTime() -
+            new Date(a.createdAt || new Date()).getTime()
+        )
         .slice(0, limit);
       res.json(recentTenants);
     } catch (error) {
@@ -450,11 +454,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate orgId format
       if (!/^[a-z0-9-]+$/.test(orgId)) {
-        return res
-          .status(400)
-          .json({
-            message: "Organization ID can only contain lowercase letters, numbers, and hyphens",
-          });
+        return res.status(400).json({
+          message: "Organization ID can only contain lowercase letters, numbers, and hyphens",
+        });
       }
 
       // Check if orgId is already taken
@@ -562,14 +564,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tempPassword = Math.random().toString(36).slice(-8);
 
       // Send onboarding email
-      await emailService.sendOnboardingEmail(
-        tenant.adminEmail,
-        tenant.name,
-        tenant.orgId,
-        tempPassword,
-        tenant.authApiKey,
-        tenant.rbacApiKey
-      );
+      await emailService.sendTenantOnboardingEmail({
+        id: tenant.id,
+        name: tenant.name,
+        orgId: tenant.orgId,
+        adminEmail: tenant.adminEmail,
+        authApiKey: tenant.authApiKey,
+        rbacApiKey: tenant.rbacApiKey,
+      });
 
       res.json({ message: "Onboarding email resent successfully" });
     } catch (error) {

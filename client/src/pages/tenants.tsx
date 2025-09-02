@@ -349,12 +349,14 @@ export default function TenantsPage() {
                 />
 
                 <div>
-                  <FormLabel>Organization ID</FormLabel>
+                  <FormLabel htmlFor="org-id-input">Organization ID</FormLabel>
                   <Input
+                    id="org-id-input"
                     value={selectedTenant.orgId}
                     disabled
                     className="bg-slate-100"
                     data-testid="input-edit-org-id"
+                    aria-label="Organization ID"
                   />
                 </div>
 
@@ -444,6 +446,7 @@ export default function TenantsPage() {
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2"
                   data-testid="input-search-tenants"
+                  aria-label="Search tenants"
                 />
                 <Search className="absolute left-3 top-3 text-slate-400" size={16} />
               </div>

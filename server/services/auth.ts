@@ -36,7 +36,7 @@ export class AuthService {
     }
 
     // Verify password
-    const isValidPassword = await this.verifyPassword(password, user.passwordHash);
+    const isValidPassword = await this.verifyPassword(password, user.passwordHash || "");
     if (!isValidPassword) {
       console.log(`❌ Auth failed - invalid password for: ${email}`);
       return null;
@@ -64,7 +64,7 @@ export class AuthService {
     // TODO: Implement tenant-specific session table if needed
 
     // Update last login
-    await storage.updateTenantUserLastLogin(user.id);
+    await storage.updateUserLastLogin(user.id);
 
     const { passwordHash, ...userWithoutPassword } = user;
 

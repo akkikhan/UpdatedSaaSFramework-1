@@ -1,18 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,14 +17,14 @@ import {
   Zap,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
 } from "lucide-react";
 import { Link, useParams } from "wouter";
 import type { Tenant } from "@/../../shared/schema";
 
 export default function TenantPortalPage() {
   const { tenantId } = useParams();
-  
+
   const { data: tenant, isLoading } = useQuery<Tenant>({
     queryKey: ["/api/tenants", tenantId],
     enabled: !!tenantId,
@@ -48,7 +37,10 @@ export default function TenantPortalPage() {
       description: "User authentication and SSO providers",
       icon: Shield,
       color: "bg-blue-500",
-      status: Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("auth") ? "enabled" : "disabled",
+      status:
+        Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("auth")
+          ? "enabled"
+          : "disabled",
     },
     {
       id: "rbac",
@@ -56,7 +48,10 @@ export default function TenantPortalPage() {
       description: "Roles and permissions management",
       icon: Users,
       color: "bg-green-500",
-      status: Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") ? "enabled" : "disabled",
+      status:
+        Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac")
+          ? "enabled"
+          : "disabled",
     },
     {
       id: "logging",
@@ -64,7 +59,10 @@ export default function TenantPortalPage() {
       description: "Comprehensive audit trail and security monitoring",
       icon: FileText,
       color: "bg-slate-500",
-      status: Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("logging") ? "enabled" : "disabled",
+      status:
+        Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("logging")
+          ? "enabled"
+          : "disabled",
     },
     {
       id: "notifications",
@@ -72,7 +70,10 @@ export default function TenantPortalPage() {
       description: "Multi-channel messaging and alerts system",
       icon: Bell,
       color: "bg-yellow-500",
-      status: Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("notifications") ? "enabled" : "disabled",
+      status:
+        Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("notifications")
+          ? "enabled"
+          : "disabled",
     },
     {
       id: "ai-copilot",
@@ -80,7 +81,10 @@ export default function TenantPortalPage() {
       description: "Intelligent automation and user assistance",
       icon: Bot,
       color: "bg-indigo-500",
-      status: Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("ai-copilot") ? "enabled" : "disabled",
+      status:
+        Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("ai-copilot")
+          ? "enabled"
+          : "disabled",
     },
   ];
 
@@ -139,7 +143,9 @@ export default function TenantPortalPage() {
 
       <div className="max-w-7xl mx-auto p-6">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className={`grid w-full ${Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") ? "grid-cols-5" : "grid-cols-4"}`}>
+          <TabsList
+            className={`grid w-full ${Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") ? "grid-cols-5" : "grid-cols-4"}`}
+          >
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="auth">Authentication</TabsTrigger>
@@ -160,9 +166,7 @@ export default function TenantPortalPage() {
                   <div className="text-3xl font-bold text-blue-600">
                     {Array.isArray(tenant.enabledModules) ? tenant.enabledModules.length : 0}
                   </div>
-                  <p className="text-sm text-slate-600 mt-2">
-                    Modules currently enabled
-                  </p>
+                  <p className="text-sm text-slate-600 mt-2">Modules currently enabled</p>
                 </CardContent>
               </Card>
 
@@ -177,13 +181,14 @@ export default function TenantPortalPage() {
                       <span className="font-medium">Auth:</span>
                       <span className="font-mono text-xs">{tenant.authApiKey}</span>
                     </div>
-                    {Array.isArray(tenant?.enabledModules) && tenant.enabledModules.includes("rbac") && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Key className="h-4 w-4 text-green-500" />
-                        <span className="font-medium">RBAC:</span>
-                        <span className="font-mono text-xs">{tenant.rbacApiKey}</span>
-                      </div>
-                    )}
+                    {Array.isArray(tenant?.enabledModules) &&
+                      tenant.enabledModules.includes("rbac") && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Key className="h-4 w-4 text-green-500" />
+                          <span className="font-medium">RBAC:</span>
+                          <span className="font-mono text-xs">{tenant.rbacApiKey}</span>
+                        </div>
+                      )}
                   </div>
                 </CardContent>
               </Card>
@@ -198,7 +203,8 @@ export default function TenantPortalPage() {
                     <span className="text-sm font-medium">All systems operational</span>
                   </div>
                   <p className="text-xs text-slate-600 mt-2">
-                    Last updated: {tenant.updatedAt ? new Date(tenant.updatedAt).toLocaleString() : 'Never'}
+                    Last updated:{" "}
+                    {tenant.updatedAt ? new Date(tenant.updatedAt).toLocaleString() : "Never"}
                   </p>
                 </CardContent>
               </Card>
@@ -245,10 +251,10 @@ export default function TenantPortalPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
-                  {moduleInfo.map((module) => {
+                  {moduleInfo.map(module => {
                     const Icon = module.icon;
                     const isEnabled = module.status === "enabled";
-                    
+
                     return (
                       <div
                         key={module.id}
@@ -292,34 +298,58 @@ export default function TenantPortalPage() {
               <CardContent>
                 <div className="space-y-4">
                   {/* Show current auth providers */}
-                  {Array.isArray((tenant as any)?.moduleConfigs?.auth?.providers) && (tenant as any).moduleConfigs.auth.providers.length > 0 ? (
-                    (tenant as any).moduleConfigs.auth.providers.map((provider: any, index: number) => (
-                      <div key={index} className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {provider.type === 'azure-ad' && <Shield className="h-5 w-5 text-blue-500" />}
-                            {provider.type === 'auth0' && <Zap className="h-5 w-5 text-orange-500" />}
-                            {provider.type === 'saml' && <Globe className="h-5 w-5 text-purple-500" />}
-                            <h3 className="font-semibold">{provider.name || provider.type.toUpperCase()}</h3>
+                  {Array.isArray((tenant as any)?.moduleConfigs?.auth?.providers) &&
+                  (tenant as any).moduleConfigs.auth.providers.length > 0 ? (
+                    (tenant as any).moduleConfigs.auth.providers.map(
+                      (provider: any, index: number) => (
+                        <div key={index} className="p-4 border rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {provider.type === "azure-ad" && (
+                                <Shield className="h-5 w-5 text-blue-500" />
+                              )}
+                              {provider.type === "auth0" && (
+                                <Zap className="h-5 w-5 text-orange-500" />
+                              )}
+                              {provider.type === "saml" && (
+                                <Globe className="h-5 w-5 text-purple-500" />
+                              )}
+                              <h3 className="font-semibold">
+                                {provider.name || provider.type.toUpperCase()}
+                              </h3>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {provider.priority === 1 && <Badge>Primary</Badge>}
+                              {provider.priority === 2 && (
+                                <Badge variant="secondary">Secondary</Badge>
+                              )}
+                              {provider.enabled && (
+                                <Badge variant="outline" className="text-green-600">
+                                  Active
+                                </Badge>
+                              )}
+                            </div>
                           </div>
+                          <p className="text-sm text-slate-600 mb-3">
+                            {provider.type === "azure-ad" &&
+                              "Microsoft Azure Active Directory integration"}
+                            {provider.type === "auth0" && "Auth0 universal identity platform"}
+                            {provider.type === "saml" && "SAML 2.0 enterprise single sign-on"}
+                          </p>
                           <div className="flex items-center gap-2">
-                            {provider.priority === 1 && <Badge>Primary</Badge>}
-                            {provider.priority === 2 && <Badge variant="secondary">Secondary</Badge>}
-                            {provider.enabled && <Badge variant="outline" className="text-green-600">Active</Badge>}
+                            <Button size="sm">Configure</Button>
+                            <Button size="sm" variant="outline">
+                              Test Connection
+                            </Button>
+                            {!provider.enabled && (
+                              <Button size="sm" variant="outline">
+                                Enable
+                              </Button>
+                            )}
                           </div>
                         </div>
-                        <p className="text-sm text-slate-600 mb-3">
-                          {provider.type === 'azure-ad' && 'Microsoft Azure Active Directory integration'}
-                          {provider.type === 'auth0' && 'Auth0 universal identity platform'}
-                          {provider.type === 'saml' && 'SAML 2.0 enterprise single sign-on'}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm">Configure</Button>
-                          <Button size="sm" variant="outline">Test Connection</Button>
-                          {!provider.enabled && <Button size="sm" variant="outline">Enable</Button>}
-                        </div>
-                      </div>
-                    ))
+                      )
+                    )
                   ) : (
                     <div className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
@@ -332,15 +362,23 @@ export default function TenantPortalPage() {
                       <Button size="sm">Configure</Button>
                     </div>
                   )}
-                  
+
                   <div className="p-4 border rounded-lg border-dashed">
                     <div className="text-center py-4">
                       <Globe className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-                      <p className="text-sm text-slate-600 mb-2">Add another authentication provider</p>
+                      <p className="text-sm text-slate-600 mb-2">
+                        Add another authentication provider
+                      </p>
                       <div className="flex justify-center gap-2">
-                        <Button variant="outline" size="sm">+ Azure AD</Button>
-                        <Button variant="outline" size="sm">+ Auth0</Button>
-                        <Button variant="outline" size="sm">+ SAML</Button>
+                        <Button variant="outline" size="sm">
+                          + Azure AD
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          + Auth0
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          + SAML
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -362,84 +400,89 @@ export default function TenantPortalPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-slate-700">Permission Template</label>
-                        <div className="mt-1 p-3 bg-slate-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium text-blue-700">Standard</span>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-slate-700">
+                            Permission Template
+                          </label>
+                          <div className="mt-1 p-3 bg-slate-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-blue-500" />
+                              <span className="font-medium text-blue-700">Standard</span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Basic permission set with core user management and role assignment
+                              capabilities
+                            </p>
                           </div>
-                          <p className="text-xs text-slate-600 mt-1">
-                            Basic permission set with core user management and role assignment capabilities
-                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-700">
+                            Business Type
+                          </label>
+                          <div className="mt-1 p-3 bg-slate-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-green-500" />
+                              <span className="font-medium text-green-700">General</span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Standard business operations with Admin, Manager, and User roles
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-700">Business Type</label>
-                        <div className="mt-1 p-3 bg-slate-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-green-500" />
-                            <span className="font-medium text-green-700">General</span>
-                          </div>
-                          <p className="text-xs text-slate-600 mt-1">
-                            Standard business operations with Admin, Manager, and User roles
-                          </p>
+
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-medium">Quick Actions</p>
+                          <p className="text-xs text-slate-600">Manage roles and permissions</p>
                         </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium">Quick Actions</p>
-                        <p className="text-xs text-slate-600">Manage roles and permissions</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Link href={`/tenants/${tenantId}/rbac`}>
-                          <Button size="sm">
-                            <Users className="h-4 w-4 mr-2" />
-                            Manage RBAC
+                        <div className="flex gap-2">
+                          <Link href={`/tenants/${tenantId}/rbac`}>
+                            <Button size="sm">
+                              <Users className="h-4 w-4 mr-2" />
+                              Manage RBAC
+                            </Button>
+                          </Link>
+                          <Button size="sm" variant="outline">
+                            <Settings className="h-4 w-4 mr-2" />
+                            Configure
                           </Button>
-                        </Link>
-                        <Button size="sm" variant="outline">
-                          <Settings className="h-4 w-4 mr-2" />
-                          Configure
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {/* Quick Stats */}
-              <div>
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">RBAC Status</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">Roles</span>
-                      <span className="font-semibold">3</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">Permissions</span>
-                      <span className="font-semibold">12</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">Active Users</span>
-                      <span className="font-semibold">0</span>
-                    </div>
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-green-600">RBAC Active</span>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Quick Stats */}
+                <div>
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg">RBAC Status</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Roles</span>
+                        <span className="font-semibold">3</span>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Permissions</span>
+                        <span className="font-semibold">12</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Active Users</span>
+                        <span className="font-semibold">0</span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="text-green-600">RBAC Active</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            </div>
             ) : (
               <Card>
                 <CardHeader>
@@ -454,14 +497,18 @@ export default function TenantPortalPage() {
                 <CardContent className="space-y-4">
                   <div className="text-center py-8">
                     <Users className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-                    <h3 className="text-lg font-semibold text-slate-800 mb-2">RBAC Module Required</h3>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                      RBAC Module Required
+                    </h3>
                     <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                      To manage roles and permissions for this tenant, the RBAC module needs to be enabled. 
-                      Contact your platform administrator to enable this feature.
+                      To manage roles and permissions for this tenant, the RBAC module needs to be
+                      enabled. Contact your platform administrator to enable this feature.
                     </p>
                     <div className="space-y-4">
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h4 className="text-sm font-semibold text-blue-800 mb-2">RBAC Module Features:</h4>
+                        <h4 className="text-sm font-semibold text-blue-800 mb-2">
+                          RBAC Module Features:
+                        </h4>
                         <ul className="text-sm text-blue-700 space-y-1">
                           <li>• Role creation and management</li>
                           <li>• Granular permission control</li>
@@ -484,15 +531,16 @@ export default function TenantPortalPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Tenant Settings</CardTitle>
-                <CardDescription>
-                  General configuration and preferences
-                </CardDescription>
+                <CardDescription>General configuration and preferences</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Organization Name</label>
+                    <label htmlFor="org-name-input" className="text-sm font-medium">
+                      Organization Name
+                    </label>
                     <input
+                      id="org-name-input"
                       type="text"
                       value={tenant.name}
                       disabled
@@ -500,8 +548,11 @@ export default function TenantPortalPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Admin Email</label>
+                    <label htmlFor="admin-email-input" className="text-sm font-medium">
+                      Admin Email
+                    </label>
                     <input
+                      id="admin-email-input"
                       type="email"
                       value={tenant.adminEmail}
                       disabled
