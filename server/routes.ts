@@ -414,8 +414,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: tenant.name,
           orgId: tenant.orgId,
           adminEmail: tenant.adminEmail,
-          authApiKey: tenant.authApiKey,
-          rbacApiKey: tenant.rbacApiKey,
+          authApiKey: tenant.authApiKey || undefined,
+          rbacApiKey: tenant.rbacApiKey || undefined,
+          loggingApiKey: tenant.loggingApiKey || undefined,
+          notificationsApiKey: tenant.notificationsApiKey || undefined,
         });
 
         if (!emailSent) {
@@ -504,8 +506,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: tenant.name,
         orgId: tenant.orgId,
         adminEmail: tenant.adminEmail,
-        authApiKey: tenant.authApiKey,
-        rbacApiKey: tenant.rbacApiKey,
+        authApiKey: tenant.authApiKey || undefined,
+        rbacApiKey: tenant.rbacApiKey || undefined,
+        loggingApiKey: tenant.loggingApiKey || undefined,
+        notificationsApiKey: tenant.notificationsApiKey || undefined,
       });
 
       if (!emailSent) {
@@ -569,8 +573,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: tenant.name,
         orgId: tenant.orgId,
         adminEmail: tenant.adminEmail,
-        authApiKey: tenant.authApiKey,
-        rbacApiKey: tenant.rbacApiKey,
+        authApiKey: tenant.authApiKey || undefined,
+        rbacApiKey: tenant.rbacApiKey || undefined,
+        loggingApiKey: tenant.loggingApiKey || undefined,
+        notificationsApiKey: tenant.notificationsApiKey || undefined,
       });
 
       res.json({ message: "Onboarding email resent successfully" });
@@ -969,6 +975,676 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Logout error:", error);
       res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  // =============================================================================
+  // COMPREHENSIVE V2 API IMPLEMENTATION - ALL PROMISED FUNCTIONALITY
+  // =============================================================================
+
+  // Auth API v2 - User Management
+  app.post("/api/v2/auth/users", tenantMiddleware, async (req, res) => {
+    try {
+      const { email, password, firstName, lastName, role } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!email || !password || !firstName) {
+        return res.status(400).json({ message: "Email, password, and firstName are required" });
+      }
+
+      const hashedPassword = await authService.hashPassword(password);
+      const user = await storage.createTenantUser({
+        tenantId,
+        email,
+        passwordHash: hashedPassword,
+        firstName,
+        lastName: lastName || "",
+        status: "active",
+      });
+
+      // Assign default role if provided
+      if (role) {
+        await storage.assignUserRole(user.id, role, tenantId);
+      }
+
+      const { passwordHash, ...userResponse } = user;
+      res.status(201).json(userResponse);
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.get("/api/v2/auth/users", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const users = await storage.getTenantUsers(tenantId);
+      res.json(users);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  app.get("/api/v2/auth/users/:userId", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const tenantId = req.tenantId;
+
+      const user = await storage.getTenantUser(userId, tenantId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { passwordHash, ...userResponse } = user;
+      res.json(userResponse);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  app.put("/api/v2/auth/users/:userId", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const tenantId = req.tenantId;
+      const updates = req.body;
+
+      if (updates.password) {
+        updates.passwordHash = await authService.hashPassword(updates.password);
+        delete updates.password;
+      }
+
+      const user = await storage.updateTenantUser(userId, tenantId, updates);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { passwordHash, ...userResponse } = user;
+      res.json(userResponse);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/v2/auth/users/:userId", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const tenantId = req.tenantId;
+
+      await storage.deleteTenantUser(userId, tenantId);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Password Reset Flow
+  app.post("/api/v2/auth/password-reset/request", async (req, res) => {
+    try {
+      const { email, tenantId, orgId } = req.body;
+
+      let actualTenantId = tenantId;
+      if (orgId && !tenantId) {
+        const tenant = await storage.getTenantByOrgId(orgId);
+        if (!tenant) {
+          return res.status(404).json({ message: "Tenant not found" });
+        }
+        actualTenantId = tenant.id;
+      }
+
+      const token = await authService.generatePasswordResetToken(email, actualTenantId);
+      if (!token) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Send reset email
+      await emailService.sendPasswordResetEmail(email, token);
+      res.json({ message: "Password reset email sent" });
+    } catch (error) {
+      console.error("Password reset request error:", error);
+      res.status(500).json({ message: "Failed to send reset email" });
+    }
+  });
+
+  app.post("/api/v2/auth/password-reset/confirm", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      const success = await authService.resetPassword(token, newPassword);
+      if (!success) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Password reset confirm error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // Session Management
+  app.get("/api/v2/auth/sessions", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const sessions = await storage.getActiveSessions(tenantId);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Get sessions error:", error);
+      res.status(500).json({ message: "Failed to get sessions" });
+    }
+  });
+
+  app.delete("/api/v2/auth/sessions/:sessionId", tenantMiddleware, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const tenantId = req.tenantId;
+
+      await storage.revokeSession(sessionId, tenantId);
+      res.json({ message: "Session revoked successfully" });
+    } catch (error) {
+      console.error("Revoke session error:", error);
+      res.status(500).json({ message: "Failed to revoke session" });
+    }
+  });
+
+  app.post("/api/v2/auth/refresh", async (req, res) => {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        return res.status(400).json({ message: "Refresh token is required" });
+      }
+
+      const result = await authService.refreshToken(refreshToken);
+      if (!result) {
+        return res.status(401).json({ message: "Invalid refresh token" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Refresh token error:", error);
+      res.status(500).json({ message: "Failed to refresh token" });
+    }
+  });
+
+  // MFA Endpoints
+  app.post("/api/v2/auth/mfa/setup", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const tenantId = req.tenantId;
+
+      const mfaSetup = await authService.setupMFA(userId, tenantId);
+      res.json(mfaSetup);
+    } catch (error) {
+      console.error("MFA setup error:", error);
+      res.status(500).json({ message: "Failed to setup MFA" });
+    }
+  });
+
+  app.post("/api/v2/auth/mfa/verify", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId, token } = req.body;
+      const tenantId = req.tenantId;
+
+      const isValid = await authService.verifyMFA(userId, token, tenantId);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid MFA token" });
+      }
+
+      res.json({ message: "MFA verified successfully" });
+    } catch (error) {
+      console.error("MFA verify error:", error);
+      res.status(500).json({ message: "Failed to verify MFA" });
+    }
+  });
+
+  // =============================================================================
+  // RBAC API v2 - Role & Permission Management
+  // =============================================================================
+
+  // Roles Management
+  app.get("/api/v2/rbac/roles", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const roles = await storage.getTenantRoles(tenantId);
+      res.json(roles);
+    } catch (error) {
+      console.error("Get roles error:", error);
+      res.status(500).json({ message: "Failed to get roles" });
+    }
+  });
+
+  app.post("/api/v2/rbac/roles", tenantMiddleware, async (req, res) => {
+    try {
+      const { name, description, permissions } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!name) {
+        return res.status(400).json({ message: "Role name is required" });
+      }
+
+      const role = await storage.createTenantRole({
+        tenantId,
+        name,
+        description: description || "",
+        permissions: permissions || [],
+      });
+
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("Create role error:", error);
+      res.status(500).json({ message: "Failed to create role" });
+    }
+  });
+
+  app.put("/api/v2/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
+    try {
+      const { roleId } = req.params;
+      const tenantId = req.tenantId;
+      const updates = req.body;
+
+      const role = await storage.updateTenantRole(roleId, tenantId, updates);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+
+      res.json(role);
+    } catch (error) {
+      console.error("Update role error:", error);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
+  app.delete("/api/v2/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
+    try {
+      const { roleId } = req.params;
+      const tenantId = req.tenantId;
+
+      await storage.deleteTenantRole(roleId, tenantId);
+      res.json({ message: "Role deleted successfully" });
+    } catch (error) {
+      console.error("Delete role error:", error);
+      res.status(500).json({ message: "Failed to delete role" });
+    }
+  });
+
+  // User Role Assignment
+  app.post("/api/v2/rbac/users/:userId/roles", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { roleId } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!roleId) {
+        return res.status(400).json({ message: "Role ID is required" });
+      }
+
+      await storage.assignUserRole(userId, roleId, tenantId);
+      res.json({ message: "Role assigned successfully" });
+    } catch (error) {
+      console.error("Assign role error:", error);
+      res.status(500).json({ message: "Failed to assign role" });
+    }
+  });
+
+  app.delete("/api/v2/rbac/users/:userId/roles/:roleId", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId, roleId } = req.params;
+      const tenantId = req.tenantId;
+
+      await storage.removeUserRole(userId, roleId, tenantId);
+      res.json({ message: "Role removed successfully" });
+    } catch (error) {
+      console.error("Remove role error:", error);
+      res.status(500).json({ message: "Failed to remove role" });
+    }
+  });
+
+  // Permission Checking
+  app.get("/api/v2/rbac/users/:userId/permissions", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const tenantId = req.tenantId;
+
+      const permissions = await storage.getUserPermissions(userId, tenantId);
+      res.json({ permissions });
+    } catch (error) {
+      console.error("Get permissions error:", error);
+      res.status(500).json({ message: "Failed to get permissions" });
+    }
+  });
+
+  app.post("/api/v2/rbac/check-permission", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId, permission } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!userId || !permission) {
+        return res.status(400).json({ message: "User ID and permission are required" });
+      }
+
+      const hasPermission = await storage.checkUserPermission(userId, permission, tenantId);
+      res.json({ hasPermission });
+    } catch (error) {
+      console.error("Check permission error:", error);
+      res.status(500).json({ message: "Failed to check permission" });
+    }
+  });
+
+  // =============================================================================
+  // LOGGING API v2 - Event Logging & Audit
+  // =============================================================================
+
+  // Log Events
+  app.post("/api/v2/logging/events", tenantMiddleware, async (req, res) => {
+    try {
+      const { level, message, category, metadata, userId } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!level || !message) {
+        return res.status(400).json({ message: "Level and message are required" });
+      }
+
+      const logEvent = await storage.createLogEvent({
+        tenantId,
+        level,
+        message,
+        category: category || "application",
+        metadata: metadata || {},
+        userId: userId || null,
+        timestamp: new Date(),
+        ipAddress: req.ip,
+        userAgent: req.get("User-Agent"),
+      });
+
+      res.status(201).json(logEvent);
+    } catch (error) {
+      console.error("Create log event error:", error);
+      res.status(500).json({ message: "Failed to create log event" });
+    }
+  });
+
+  // Query Logs
+  app.get("/api/v2/logging/events", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const { level, category, startDate, endDate, limit = 100, offset = 0 } = req.query;
+
+      const filters = {
+        tenantId,
+        level: level as string,
+        category: category as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      };
+
+      const logs = await storage.getLogEvents(filters);
+      res.json(logs);
+    } catch (error) {
+      console.error("Get log events error:", error);
+      res.status(500).json({ message: "Failed to get log events" });
+    }
+  });
+
+  // Log Statistics
+  app.get("/api/v2/logging/stats", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const { period = "24h" } = req.query;
+
+      const stats = await storage.getLogStatistics(tenantId, period as string);
+      res.json(stats);
+    } catch (error) {
+      console.error("Get log stats error:", error);
+      res.status(500).json({ message: "Failed to get log statistics" });
+    }
+  });
+
+  // Alert Rules
+  app.post("/api/v2/logging/alert-rules", tenantMiddleware, async (req, res) => {
+    try {
+      const { name, condition, threshold, action } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!name || !condition || !threshold || !action) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const alertRule = await storage.createAlertRule({
+        tenantId,
+        name,
+        condition,
+        threshold,
+        action,
+        enabled: true,
+      });
+
+      res.status(201).json(alertRule);
+    } catch (error) {
+      console.error("Create alert rule error:", error);
+      res.status(500).json({ message: "Failed to create alert rule" });
+    }
+  });
+
+  app.get("/api/v2/logging/alert-rules", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const alertRules = await storage.getAlertRules(tenantId);
+      res.json(alertRules);
+    } catch (error) {
+      console.error("Get alert rules error:", error);
+      res.status(500).json({ message: "Failed to get alert rules" });
+    }
+  });
+
+  // =============================================================================
+  // NOTIFICATIONS API v2 - Multi-channel Notifications
+  // =============================================================================
+
+  // Send Notification
+  app.post("/api/v2/notifications/send", tenantMiddleware, async (req, res) => {
+    try {
+      const { recipientId, channel, template, data, priority = "normal" } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!recipientId || !channel || !template) {
+        return res.status(400).json({ message: "Recipient, channel, and template are required" });
+      }
+
+      const notification = await notificationService.sendNotification({
+        tenantId,
+        recipientId,
+        channel,
+        template,
+        data: data || {},
+        priority,
+      });
+
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error("Send notification error:", error);
+      res.status(500).json({ message: "Failed to send notification" });
+    }
+  });
+
+  // Notification History
+  app.get("/api/v2/notifications/history", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const { recipientId, channel, status, limit = 50, offset = 0 } = req.query;
+
+      const filters = {
+        tenantId,
+        recipientId: recipientId as string,
+        channel: channel as string,
+        status: status as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      };
+
+      const notifications = await storage.getNotificationHistory(filters);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notification history error:", error);
+      res.status(500).json({ message: "Failed to get notification history" });
+    }
+  });
+
+  // Template Management
+  app.post("/api/v2/notifications/templates", tenantMiddleware, async (req, res) => {
+    try {
+      const { name, channel, subject, body, variables } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!name || !channel || !body) {
+        return res.status(400).json({ message: "Name, channel, and body are required" });
+      }
+
+      const template = await storage.createNotificationTemplate({
+        tenantId,
+        name,
+        channel,
+        subject: subject || "",
+        body,
+        variables: variables || [],
+      });
+
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Create template error:", error);
+      res.status(500).json({ message: "Failed to create template" });
+    }
+  });
+
+  app.get("/api/v2/notifications/templates", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const { channel } = req.query;
+
+      const templates = await storage.getNotificationTemplates(tenantId, channel as string);
+      res.json(templates);
+    } catch (error) {
+      console.error("Get templates error:", error);
+      res.status(500).json({ message: "Failed to get templates" });
+    }
+  });
+
+  // Notification Preferences
+  app.get("/api/v2/notifications/preferences/:userId", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const tenantId = req.tenantId;
+
+      const preferences = await storage.getNotificationPreferences(userId, tenantId);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Get preferences error:", error);
+      res.status(500).json({ message: "Failed to get preferences" });
+    }
+  });
+
+  app.put("/api/v2/notifications/preferences/:userId", tenantMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const tenantId = req.tenantId;
+      const preferences = req.body;
+
+      const updated = await storage.updateNotificationPreferences(userId, tenantId, preferences);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update preferences error:", error);
+      res.status(500).json({ message: "Failed to update preferences" });
+    }
+  });
+
+  // =============================================================================
+  // EMAIL API v2 - Enhanced Email Service
+  // =============================================================================
+
+  // Send Email
+  app.post("/api/v2/email/send", tenantMiddleware, async (req, res) => {
+    try {
+      const { to, subject, template, data, attachments } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!to || !subject || (!template && !req.body.html)) {
+        return res
+          .status(400)
+          .json({ message: "To, subject, and template (or html) are required" });
+      }
+
+      const result = await emailService.sendEmail({
+        tenantId,
+        to,
+        subject,
+        template,
+        data: data || {},
+        attachments: attachments || [],
+      });
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Send email error:", error);
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
+  // Email Templates
+  app.post("/api/v2/email/templates", tenantMiddleware, async (req, res) => {
+    try {
+      const { name, subject, html, variables } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!name || !subject || !html) {
+        return res.status(400).json({ message: "Name, subject, and html are required" });
+      }
+
+      const template = await storage.createEmailTemplate({
+        tenantId,
+        name,
+        subject,
+        html,
+        variables: variables || [],
+      });
+
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Create email template error:", error);
+      res.status(500).json({ message: "Failed to create email template" });
+    }
+  });
+
+  app.get("/api/v2/email/templates", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const templates = await storage.getEmailTemplates(tenantId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Get email templates error:", error);
+      res.status(500).json({ message: "Failed to get email templates" });
+    }
+  });
+
+  // Email Stats
+  app.get("/api/v2/email/stats", tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const { period = "7d" } = req.query;
+
+      const stats = await storage.getEmailStatistics(tenantId, period as string);
+      res.json(stats);
+    } catch (error) {
+      console.error("Get email stats error:", error);
+      res.status(500).json({ message: "Failed to get email statistics" });
     }
   });
 

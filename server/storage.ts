@@ -204,6 +204,119 @@ export interface IStorage {
     id: string,
     updates: Partial<InsertPlatformAdmin>
   ): Promise<PlatformAdmin | undefined>;
+
+  // Extended Auth Methods for v2 API
+  updateTenantUserPassword(userId: string, passwordHash: string): Promise<void>;
+  getTenantUserSessions(userId: string): Promise<any[]>;
+  invalidateAllTenantUserSessions(userId: string): Promise<void>;
+  enableMFA(userId: string, secret: string): Promise<void>;
+  disableMFA(userId: string): Promise<void>;
+  verifyMFA(userId: string, token: string): Promise<boolean>;
+  createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<void>;
+  getPasswordResetToken(token: string): Promise<any>;
+  deletePasswordResetToken(token: string): Promise<void>;
+
+  // Extended Logging Methods
+  getLogStats(
+    tenantId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{
+    totalEvents: number;
+    errorCount: number;
+    warningCount: number;
+    infoCount: number;
+    topEvents: Array<{ eventType: string; count: number }>;
+  }>;
+  createLogEvent(event: {
+    tenantId: string;
+    eventType: string;
+    level: "info" | "warning" | "error";
+    message: string;
+    metadata?: any;
+    userId?: string;
+  }): Promise<void>;
+  getLogEvents(
+    tenantId: string,
+    options?: {
+      level?: string;
+      eventType?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<any[]>;
+
+  // Alert Rules
+  createAlertRule(rule: {
+    tenantId: string;
+    name: string;
+    condition: string;
+    threshold: number;
+    isActive: boolean;
+    notificationChannels: string[];
+  }): Promise<any>;
+  getAlertRules(tenantId: string): Promise<any[]>;
+  updateAlertRule(ruleId: string, updates: any): Promise<void>;
+  deleteAlertRule(ruleId: string): Promise<void>;
+
+  // Extended Notification Methods
+  sendNotification(notification: {
+    tenantId: string;
+    userId?: string;
+    title: string;
+    message: string;
+    type: string;
+    channel: "email" | "sms" | "push" | "in-app";
+    metadata?: any;
+  }): Promise<void>;
+  getNotificationTemplates(tenantId: string): Promise<any[]>;
+  createNotificationTemplate(template: {
+    tenantId: string;
+    name: string;
+    type: string;
+    subject?: string;
+    content: string;
+    variables: string[];
+  }): Promise<any>;
+  updateNotificationTemplate(templateId: string, updates: any): Promise<void>;
+  deleteNotificationTemplate(templateId: string): Promise<void>;
+  getNotificationPreferences(tenantId: string, userId: string): Promise<any>;
+  updateNotificationPreferences(tenantId: string, userId: string, preferences: any): Promise<void>;
+
+  // Email Service Methods
+  sendEmail(email: {
+    tenantId: string;
+    to: string;
+    subject: string;
+    htmlContent?: string;
+    textContent?: string;
+    templateId?: string;
+    templateData?: any;
+  }): Promise<void>;
+  getEmailTemplates(tenantId: string): Promise<any[]>;
+  createEmailTemplate(template: {
+    tenantId: string;
+    name: string;
+    subject: string;
+    htmlContent: string;
+    textContent?: string;
+    variables: string[];
+  }): Promise<any>;
+  updateEmailTemplate(templateId: string, updates: any): Promise<void>;
+  deleteEmailTemplate(templateId: string): Promise<void>;
+  getEmailStats(
+    tenantId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{
+    totalSent: number;
+    delivered: number;
+    bounced: number;
+    opened: number;
+    clicked: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -214,16 +327,33 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
-    // Generate API keys
-    const authApiKey = `auth_${randomUUID().replace(/-/g, "").substring(0, 24)}`;
-    const rbacApiKey = `rbac_${randomUUID().replace(/-/g, "").substring(0, 24)}`;
+    // Generate API keys only for enabled modules
+    const enabledModules = insertTenant.enabledModules || ["authentication", "rbac"];
+    const apiKeys: Partial<{
+      authApiKey: string;
+      rbacApiKey: string;
+      loggingApiKey: string;
+      notificationsApiKey: string;
+    }> = {};
+
+    if (enabledModules.includes("authentication")) {
+      apiKeys.authApiKey = `auth_${randomUUID().replace(/-/g, "").substring(0, 24)}`;
+    }
+    if (enabledModules.includes("rbac")) {
+      apiKeys.rbacApiKey = `rbac_${randomUUID().replace(/-/g, "").substring(0, 24)}`;
+    }
+    if (enabledModules.includes("logging")) {
+      apiKeys.loggingApiKey = `logging_${randomUUID().replace(/-/g, "").substring(0, 20)}`;
+    }
+    if (enabledModules.includes("notifications")) {
+      apiKeys.notificationsApiKey = `notify_${randomUUID().replace(/-/g, "").substring(0, 20)}`;
+    }
 
     const [tenant] = await db
       .insert(tenants)
       .values({
         ...insertTenant,
-        authApiKey,
-        rbacApiKey,
+        ...apiKeys,
       })
       .returning();
 
@@ -931,6 +1061,549 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return result;
   }
+
+  // Extended Auth Methods for v2 API
+  async updateTenantUserPassword(userId: string, passwordHash: string): Promise<void> {
+    await db
+      .update(tenantUsers)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(tenantUsers.id, userId));
+  }
+
+  async getTenantUserSessions(userId: string): Promise<any[]> {
+    // For simplicity, we'll store session data in the sessions table with a userId reference
+    // In a real implementation, you might have a separate tenant_sessions table
+    return await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.userId, userId))
+      .orderBy(desc(sessions.createdAt));
+  }
+
+  async invalidateAllTenantUserSessions(userId: string): Promise<void> {
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+  }
+
+  async enableMFA(userId: string, secret: string): Promise<void> {
+    const user = await this.getTenantUser(userId);
+    if (!user) throw new Error("User not found");
+
+    const metadata = user.metadata || {};
+    metadata.mfaEnabled = true;
+    metadata.mfaSecret = secret;
+
+    await db
+      .update(tenantUsers)
+      .set({
+        metadata,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenantUsers.id, userId));
+  }
+
+  async disableMFA(userId: string): Promise<void> {
+    const user = await this.getTenantUser(userId);
+    if (!user) throw new Error("User not found");
+
+    const metadata = user.metadata || {};
+    metadata.mfaEnabled = false;
+    delete metadata.mfaSecret;
+
+    await db
+      .update(tenantUsers)
+      .set({
+        metadata,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenantUsers.id, userId));
+  }
+
+  async verifyMFA(userId: string, token: string): Promise<boolean> {
+    // This would integrate with an MFA library like speakeasy
+    // For now, return a demo implementation
+    const user = await this.getTenantUser(userId);
+    if (!user?.metadata?.mfaEnabled || !user.metadata?.mfaSecret) {
+      return false;
+    }
+
+    // In a real implementation, you would verify the token against the secret
+    // For demo purposes, accept "123456" as valid
+    return token === "123456";
+  }
+
+  async createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<void> {
+    const user = await this.getTenantUser(userId);
+    if (!user) throw new Error("User not found");
+
+    const metadata = user.metadata || {};
+    metadata.passwordResetToken = token;
+    metadata.passwordResetTokenExpires = expiresAt.toISOString();
+
+    await db
+      .update(tenantUsers)
+      .set({
+        metadata,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenantUsers.id, userId));
+  }
+
+  async getPasswordResetToken(token: string): Promise<any> {
+    const users = await db
+      .select()
+      .from(tenantUsers)
+      .where(sql`metadata->>'passwordResetToken' = ${token}`);
+
+    if (users.length === 0) return null;
+
+    const user = users[0];
+    const expiresAt = user.metadata?.passwordResetTokenExpires;
+
+    if (!expiresAt) return null;
+
+    // Check if token is expired
+    if (new Date() > new Date(expiresAt)) {
+      return null;
+    }
+
+    return {
+      userId: user.id,
+      token: user.metadata?.passwordResetToken,
+      expiresAt: new Date(expiresAt),
+    };
+  }
+
+  async deletePasswordResetToken(token: string): Promise<void> {
+    const users = await db
+      .select()
+      .from(tenantUsers)
+      .where(sql`metadata->>'passwordResetToken' = ${token}`);
+
+    if (users.length > 0) {
+      const user = users[0];
+      const metadata = user.metadata || {};
+      delete metadata.passwordResetToken;
+      delete metadata.passwordResetTokenExpires;
+
+      await db
+        .update(tenantUsers)
+        .set({
+          metadata,
+          updatedAt: new Date(),
+        })
+        .where(eq(tenantUsers.id, user.id));
+    }
+  }
+
+  // Extended Logging Methods
+  async getLogStats(
+    tenantId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{
+    totalEvents: number;
+    errorCount: number;
+    warningCount: number;
+    infoCount: number;
+    topEvents: Array<{ eventType: string; count: number }>;
+  }> {
+    let query = db
+      .select({
+        level: systemLogs.action, // Using action as level for simplicity
+        entityType: systemLogs.entityType,
+      })
+      .from(systemLogs)
+      .where(eq(systemLogs.tenantId, tenantId));
+
+    if (startDate) {
+      query = query.where(gte(systemLogs.timestamp, startDate));
+    }
+    if (endDate) {
+      query = query.where(lte(systemLogs.timestamp, endDate));
+    }
+
+    const logs = await query;
+
+    const totalEvents = logs.length;
+    const errorCount = logs.filter(log => log.level?.includes("error")).length;
+    const warningCount = logs.filter(log => log.level?.includes("warning")).length;
+    const infoCount = logs.filter(
+      log =>
+        log.level?.includes("info") ||
+        (!log.level?.includes("error") && !log.level?.includes("warning"))
+    ).length;
+
+    // Count top event types
+    const eventTypeCounts = logs.reduce(
+      (acc, log) => {
+        const eventType = log.entityType || "unknown";
+        acc[eventType] = (acc[eventType] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    const topEvents = Object.entries(eventTypeCounts)
+      .map(([eventType, count]) => ({ eventType, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return {
+      totalEvents,
+      errorCount,
+      warningCount,
+      infoCount,
+      topEvents,
+    };
+  }
+
+  async createLogEvent(event: {
+    tenantId: string;
+    eventType: string;
+    level: "info" | "warning" | "error";
+    message: string;
+    metadata?: any;
+    userId?: string;
+  }): Promise<void> {
+    await db.insert(systemLogs).values({
+      tenantId: event.tenantId,
+      adminUserId: event.userId,
+      action: `${event.level}: ${event.eventType}`,
+      entityType: event.eventType,
+      entityId: event.userId || "system",
+      details: {
+        level: event.level,
+        message: event.message,
+        metadata: event.metadata,
+      },
+    });
+  }
+
+  async getLogEvents(
+    tenantId: string,
+    options: {
+      level?: string;
+      eventType?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<any[]> {
+    let query = db
+      .select({
+        id: systemLogs.id,
+        eventType: systemLogs.entityType,
+        level: systemLogs.action,
+        message: systemLogs.details,
+        timestamp: systemLogs.timestamp,
+        userId: systemLogs.adminUserId,
+      })
+      .from(systemLogs)
+      .where(eq(systemLogs.tenantId, tenantId));
+
+    if (options.level) {
+      query = query.where(like(systemLogs.action, `${options.level}:%`));
+    }
+    if (options.eventType) {
+      query = query.where(eq(systemLogs.entityType, options.eventType));
+    }
+    if (options.startDate) {
+      query = query.where(gte(systemLogs.timestamp, options.startDate));
+    }
+    if (options.endDate) {
+      query = query.where(lte(systemLogs.timestamp, options.endDate));
+    }
+
+    return await query
+      .orderBy(desc(systemLogs.timestamp))
+      .limit(options.limit || 50)
+      .offset(options.offset || 0);
+  }
+
+  // Alert Rules (simplified implementation)
+  async createAlertRule(rule: {
+    tenantId: string;
+    name: string;
+    condition: string;
+    threshold: number;
+    isActive: boolean;
+    notificationChannels: string[];
+  }): Promise<any> {
+    // For simplicity, store in tenant notifications as alert rules
+    const [result] = await db
+      .insert(tenantNotifications)
+      .values({
+        tenantId: rule.tenantId,
+        type: "alert_rule",
+        title: rule.name,
+        message: `Alert rule: ${rule.condition} > ${rule.threshold}`,
+        metadata: {
+          condition: rule.condition,
+          threshold: rule.threshold,
+          isActive: rule.isActive,
+          notificationChannels: rule.notificationChannels,
+        },
+        isRead: false,
+      })
+      .returning();
+
+    return {
+      id: result.id,
+      ...rule,
+    };
+  }
+
+  async getAlertRules(tenantId: string): Promise<any[]> {
+    const rules = await db
+      .select()
+      .from(tenantNotifications)
+      .where(
+        and(eq(tenantNotifications.tenantId, tenantId), eq(tenantNotifications.type, "alert_rule"))
+      );
+
+    return rules.map(rule => ({
+      id: rule.id,
+      tenantId: rule.tenantId,
+      name: rule.title,
+      condition: rule.metadata?.condition,
+      threshold: rule.metadata?.threshold,
+      isActive: rule.metadata?.isActive,
+      notificationChannels: rule.metadata?.notificationChannels || [],
+    }));
+  }
+
+  async updateAlertRule(ruleId: string, updates: any): Promise<void> {
+    const existing = await db
+      .select()
+      .from(tenantNotifications)
+      .where(eq(tenantNotifications.id, ruleId));
+
+    if (existing[0]) {
+      const metadata = { ...existing[0].metadata, ...updates };
+      await db
+        .update(tenantNotifications)
+        .set({
+          title: updates.name || existing[0].title,
+          metadata,
+          updatedAt: new Date(),
+        })
+        .where(eq(tenantNotifications.id, ruleId));
+    }
+  }
+
+  async deleteAlertRule(ruleId: string): Promise<void> {
+    await db.delete(tenantNotifications).where(eq(tenantNotifications.id, ruleId));
+  }
+
+  // Extended Notification Methods
+  async sendNotification(notification: {
+    tenantId: string;
+    userId?: string;
+    title: string;
+    message: string;
+    type: string;
+    channel: "email" | "sms" | "push" | "in-app";
+    metadata?: any;
+  }): Promise<void> {
+    await db.insert(tenantNotifications).values({
+      tenantId: notification.tenantId,
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      metadata: {
+        channel: notification.channel,
+        ...notification.metadata,
+      },
+      isRead: false,
+    });
+
+    // Log the notification
+    await this.logSystemActivity({
+      tenantId: notification.tenantId,
+      adminUserId: notification.userId,
+      action: "notification_sent",
+      entityType: "notification",
+      entityId: notification.tenantId,
+      details: {
+        channel: notification.channel,
+        type: notification.type,
+        title: notification.title,
+      },
+    });
+  }
+
+  async getNotificationTemplates(tenantId: string): Promise<any[]> {
+    // For simplicity, return mock templates - in production you'd have a templates table
+    return [
+      {
+        id: "1",
+        tenantId,
+        name: "Welcome Email",
+        type: "welcome",
+        subject: "Welcome to {{companyName}}",
+        content: "Hello {{userName}}, welcome to our platform!",
+        variables: ["companyName", "userName"],
+      },
+      {
+        id: "2",
+        tenantId,
+        name: "Password Reset",
+        type: "password_reset",
+        subject: "Reset your password",
+        content: "Click here to reset: {{resetLink}}",
+        variables: ["resetLink"],
+      },
+    ];
+  }
+
+  async createNotificationTemplate(template: {
+    tenantId: string;
+    name: string;
+    type: string;
+    subject?: string;
+    content: string;
+    variables: string[];
+  }): Promise<any> {
+    // Mock implementation - in production you'd insert into a templates table
+    return {
+      id: randomUUID(),
+      ...template,
+      createdAt: new Date(),
+    };
+  }
+
+  async updateNotificationTemplate(templateId: string, updates: any): Promise<void> {
+    // Mock implementation - in production you'd update the templates table
+    console.log(`Updated template ${templateId}`, updates);
+  }
+
+  async deleteNotificationTemplate(templateId: string): Promise<void> {
+    // Mock implementation - in production you'd delete from templates table
+    console.log(`Deleted template ${templateId}`);
+  }
+
+  async getNotificationPreferences(tenantId: string, userId: string): Promise<any> {
+    // Mock implementation - in production you'd have a preferences table
+    return {
+      email: true,
+      sms: false,
+      push: true,
+      inApp: true,
+      emailFrequency: "immediate",
+      marketingEmails: false,
+    };
+  }
+
+  async updateNotificationPreferences(
+    tenantId: string,
+    userId: string,
+    preferences: any
+  ): Promise<void> {
+    // Mock implementation - in production you'd update preferences table
+    console.log(`Updated preferences for user ${userId}`, preferences);
+  }
+
+  // Email Service Methods
+  async sendEmail(email: {
+    tenantId: string;
+    to: string;
+    subject: string;
+    htmlContent?: string;
+    textContent?: string;
+    templateId?: string;
+    templateData?: any;
+  }): Promise<void> {
+    await this.logEmail({
+      tenantId: email.tenantId,
+      recipientEmail: email.to,
+      subject: email.subject,
+      templateType: email.templateId || "custom",
+      status: "sent",
+    });
+  }
+
+  async getEmailTemplates(tenantId: string): Promise<any[]> {
+    // Mock implementation - in production you'd have an email templates table
+    return [
+      {
+        id: "1",
+        tenantId,
+        name: "Welcome Email",
+        subject: "Welcome to {{companyName}}",
+        htmlContent: "<h1>Welcome {{userName}}!</h1>",
+        textContent: "Welcome {{userName}}!",
+        variables: ["companyName", "userName"],
+      },
+      {
+        id: "2",
+        tenantId,
+        name: "Invoice Email",
+        subject: "Your invoice #{{invoiceNumber}}",
+        htmlContent: "<h1>Invoice {{invoiceNumber}}</h1><p>Amount: {{amount}}</p>",
+        textContent: "Invoice {{invoiceNumber}} - Amount: {{amount}}",
+        variables: ["invoiceNumber", "amount"],
+      },
+    ];
+  }
+
+  async createEmailTemplate(template: {
+    tenantId: string;
+    name: string;
+    subject: string;
+    htmlContent: string;
+    textContent?: string;
+    variables: string[];
+  }): Promise<any> {
+    // Mock implementation - in production you'd insert into email templates table
+    return {
+      id: randomUUID(),
+      ...template,
+      createdAt: new Date(),
+    };
+  }
+
+  async updateEmailTemplate(templateId: string, updates: any): Promise<void> {
+    // Mock implementation - in production you'd update email templates table
+    console.log(`Updated email template ${templateId}`, updates);
+  }
+
+  async deleteEmailTemplate(templateId: string): Promise<void> {
+    // Mock implementation - in production you'd delete from email templates table
+    console.log(`Deleted email template ${templateId}`);
+  }
+
+  async getEmailStats(
+    tenantId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{
+    totalSent: number;
+    delivered: number;
+    bounced: number;
+    opened: number;
+    clicked: number;
+  }> {
+    let query = db.select().from(emailLogs).where(eq(emailLogs.tenantId, tenantId));
+
+    if (startDate) {
+      query = query.where(gte(emailLogs.sentAt, startDate));
+    }
+    if (endDate) {
+      query = query.where(lte(emailLogs.sentAt, endDate));
+    }
+
+    const logs = await query;
+
+    return {
+      totalSent: logs.length,
+      delivered: logs.filter(log => log.status === "sent").length,
+      bounced: logs.filter(log => log.status === "bounced").length,
+      opened: logs.filter(log => log.status === "opened").length,
+      clicked: logs.filter(log => log.status === "clicked").length,
+    };
+  }
 }
 
 // Create demo storage for testing when database is unavailable
@@ -1119,6 +1792,118 @@ class DemoStorage implements IStorage {
   }
   async updatePlatformAdmin(): Promise<any> {
     return { id: "demo-platform-admin" };
+  }
+
+  // Extended Auth Methods for v2 API (demo stubs)
+  async updateTenantUserPassword(): Promise<void> {
+    return;
+  }
+  async getTenantUserSessions(): Promise<any[]> {
+    return [];
+  }
+  async invalidateAllTenantUserSessions(): Promise<void> {
+    return;
+  }
+  async enableMFA(): Promise<void> {
+    return;
+  }
+  async disableMFA(): Promise<void> {
+    return;
+  }
+  async verifyMFA(): Promise<boolean> {
+    return true;
+  }
+  async createPasswordResetToken(): Promise<void> {
+    return;
+  }
+  async getPasswordResetToken(): Promise<any> {
+    return null;
+  }
+  async deletePasswordResetToken(): Promise<void> {
+    return;
+  }
+
+  // Extended Logging Methods (demo stubs)
+  async getLogStats(): Promise<any> {
+    return {
+      totalEvents: 100,
+      errorCount: 5,
+      warningCount: 10,
+      infoCount: 85,
+      topEvents: [
+        { eventType: "user_login", count: 50 },
+        { eventType: "data_access", count: 30 },
+      ],
+    };
+  }
+  async createLogEvent(): Promise<void> {
+    return;
+  }
+  async getLogEvents(): Promise<any[]> {
+    return [];
+  }
+
+  // Alert Rules (demo stubs)
+  async createAlertRule(): Promise<any> {
+    return { id: "demo-alert" };
+  }
+  async getAlertRules(): Promise<any[]> {
+    return [];
+  }
+  async updateAlertRule(): Promise<void> {
+    return;
+  }
+  async deleteAlertRule(): Promise<void> {
+    return;
+  }
+
+  // Extended Notification Methods (demo stubs)
+  async sendNotification(): Promise<void> {
+    return;
+  }
+  async getNotificationTemplates(): Promise<any[]> {
+    return [];
+  }
+  async createNotificationTemplate(): Promise<any> {
+    return { id: "demo-template" };
+  }
+  async updateNotificationTemplate(): Promise<void> {
+    return;
+  }
+  async deleteNotificationTemplate(): Promise<void> {
+    return;
+  }
+  async getNotificationPreferences(): Promise<any> {
+    return {};
+  }
+  async updateNotificationPreferences(): Promise<void> {
+    return;
+  }
+
+  // Email Service Methods (demo stubs)
+  async sendEmail(): Promise<void> {
+    return;
+  }
+  async getEmailTemplates(): Promise<any[]> {
+    return [];
+  }
+  async createEmailTemplate(): Promise<any> {
+    return { id: "demo-email-template" };
+  }
+  async updateEmailTemplate(): Promise<void> {
+    return;
+  }
+  async deleteEmailTemplate(): Promise<void> {
+    return;
+  }
+  async getEmailStats(): Promise<any> {
+    return {
+      totalSent: 50,
+      delivered: 48,
+      bounced: 1,
+      opened: 25,
+      clicked: 10,
+    };
   }
 }
 

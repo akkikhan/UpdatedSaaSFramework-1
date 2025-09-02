@@ -35,11 +35,14 @@ export const tenants = pgTable("tenants", {
   name: varchar("name", { length: 255 }).notNull(),
   adminEmail: varchar("admin_email", { length: 255 }).notNull(),
   status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, active, suspended
-  authApiKey: varchar("auth_api_key", { length: 100 }).notNull(),
-  rbacApiKey: varchar("rbac_api_key", { length: 100 }).notNull(),
+  // API Keys for each module (nullable - only generated for enabled modules)
+  authApiKey: varchar("auth_api_key", { length: 100 }),
+  rbacApiKey: varchar("rbac_api_key", { length: 100 }),
+  loggingApiKey: varchar("logging_api_key", { length: 100 }),
+  notificationsApiKey: varchar("notifications_api_key", { length: 100 }),
   // Module configurations
-  enabledModules: jsonb("enabled_modules").default(sql`'["auth", "rbac"]'`), // ["auth", "rbac", "azure-ad", "auth0", "saml"]
-  moduleConfigs: jsonb("module_configs").default(sql`'{}'`), // Store configs for each module
+  enabledModules: jsonb("enabled_modules").default(sql`'["authentication", "rbac"]'`), // ["authentication", "rbac", "logging", "notifications"]
+  moduleConfigs: jsonb("module_configs").default(sql`'{}'`), // Store configs for each module (provider settings, etc.)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

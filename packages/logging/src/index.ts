@@ -334,7 +334,7 @@ export class SaaSLogging {
         throw new Error(`Search failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as LogSearchResult;
     } catch (error) {
       console.error("Log search failed:", error);
       throw error;
@@ -359,7 +359,7 @@ export class SaaSLogging {
         throw new Error(`Stats failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as LogStats;
     } catch (error) {
       console.error("Log stats failed:", error);
       throw error;
@@ -384,7 +384,7 @@ export class SaaSLogging {
         throw new Error(`Alert creation failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as Alert;
     } catch (error) {
       console.error("Alert creation failed:", error);
       throw error;
@@ -407,7 +407,7 @@ export class SaaSLogging {
         throw new Error(`Failed to get alerts: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as Alert[];
     } catch (error) {
       console.error("Get alerts failed:", error);
       return [];
