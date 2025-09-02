@@ -517,8 +517,8 @@ export default function OnboardingWizard() {
                           </div>
                           <div className="ml-3">
                             <p className="text-sm text-blue-700">
-                              A secure temporary password will be generated and sent to the admin
-                              email address. The admin will be required to change it on first login.
+                              A secure temporary password will be generated and sent to the admin email address.
+                              The admin will be required to change it on first login.
                             </p>
                           </div>
                         </div>
