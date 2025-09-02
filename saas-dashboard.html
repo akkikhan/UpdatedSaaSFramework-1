@@ -285,7 +285,7 @@
             orgId: "",
             name: "",
             adminEmail: "",
-            modules: ["auth", "rbac"],
+            enabledModules: ["auth", "rbac"],
           },
           notification: {
             show: false,
@@ -390,7 +390,12 @@
                 `Tenant ${this.newTenant.name} has been created successfully`
               );
               this.showCreateTenant = false;
-              this.newTenant = { orgId: "", name: "", adminEmail: "", modules: ["auth", "rbac"] };
+              this.newTenant = {
+                orgId: "",
+                name: "",
+                adminEmail: "",
+                enabledModules: ["auth", "rbac"],
+              };
               await this.loadTenants();
             } catch (error) {
               this.showNotification("error", "Error", "Failed to create tenant");

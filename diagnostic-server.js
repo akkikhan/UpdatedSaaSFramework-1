@@ -8,10 +8,6 @@ app.get("/test", (req, res) => {
   res.json({ message: "Server is working!", timestamp: new Date().toISOString() });
 });
 
-app.get("/admin/login", (req, res) => {
-  res.send("<h1>Admin Login Test</h1><p>This is a simple test page</p>");
-});
-
 const port = 3000;
 
 console.log("Starting diagnostic server...");

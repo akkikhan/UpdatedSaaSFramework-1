@@ -460,11 +460,12 @@ export class EmailService {
             
             <a href="${portalUrl}" class="button">Access Your Tenant Portal</a>
             
-            <div class="info-card">
-                <h3>🔐 API Keys for Integration</h3>
-                <p><strong>Auth API Key:</strong> ${tenant.authApiKey}</p>
-                <p><strong>RBAC API Key:</strong> ${tenant.rbacApiKey}</p>
-            </div>
+      <div class="info-card">
+        <h3>🔐 API Keys for Integration</h3>
+        <p><strong>Tenant ID:</strong> ${tenant.orgId}</p>
+        <p><strong>Auth API Key:</strong> ${tenant.authApiKey}</p>
+        <p><strong>RBAC API Key:</strong> ${tenant.rbacApiKey}</p>
+      </div>
             
             <div class="steps">
                 <h3>🚀 Next Steps</h3>

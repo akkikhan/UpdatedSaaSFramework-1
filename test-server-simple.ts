@@ -17,12 +17,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Serve Azure AD login page
-app.get("/admin/login", (req, res) => {
-  const loginPagePath = path.resolve(__dirname, "../client/azure-ad-login.html");
-  res.sendFile(loginPagePath);
-});
-
 // Basic platform admin login test
 app.post("/api/platform/auth/login", (req, res) => {
   const { email, password } = req.body;

@@ -78,7 +78,7 @@ async function testServer() {
       body: JSON.stringify({
         name: "Test Corporation",
         adminEmail: "admin@testcorp.com",
-        modules: ["auth", "rbac", "azure-ad", "auth0"],
+        enabledModules: ["auth", "rbac", "azure-ad", "auth0"],
       }),
     });
 

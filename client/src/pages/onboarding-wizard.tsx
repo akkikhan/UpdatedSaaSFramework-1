@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,94 +17,129 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Building2, 
-  Mail, 
-  Settings, 
-  Key, 
-  CheckCircle, 
-  Users, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Mail,
+  Settings,
+  Key,
+  CheckCircle,
+  Users,
   Shield,
   Globe,
   Zap,
   FileText,
   Bell,
-  Bot
+  Bot,
+  Activity,
+  Lock,
+  Cloud,
+  Database,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateTenant } from "@/hooks/use-tenants";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
+  // Basic Information
   name: z.string().min(2, "Organization name must be at least 2 characters"),
-  orgId: z.string().min(2, "Organization ID must be at least 2 characters")
-    .regex(/^[a-z0-9-]+$/, "Organization ID can only contain lowercase letters, numbers, and hyphens"),
+  orgId: z
+    .string()
+    .min(2, "Organization ID must be at least 2 characters")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Organization ID can only contain lowercase letters, numbers, and hyphens"
+    ),
   adminEmail: z.string().email("Please enter a valid email address"),
+  adminName: z.string().min(2, "Admin name must be at least 2 characters"),
+  adminPassword: z.string().min(8, "Password must be at least 8 characters"),
+  companyWebsite: z.string().url().optional().or(z.literal("")),
+
+  // Modules
+  enabledModules: z.array(z.string()).default([]),
+
+  // Module Configurations
+  moduleConfigs: z
+    .object({
+      authentication: z
+        .object({
+          providers: z.array(z.enum(["auth0", "azure-ad", "local", "saml"])).default([]),
+          auth0: z
+            .object({
+              domain: z.string().optional(),
+              clientId: z.string().optional(),
+              clientSecret: z.string().optional(),
+              audience: z.string().optional(),
+            })
+            .optional(),
+          azureAd: z
+            .object({
+              tenantId: z.string().optional(),
+              clientId: z.string().optional(),
+              clientSecret: z.string().optional(),
+              redirectUri: z.string().optional(),
+            })
+            .optional(),
+          local: z
+            .object({
+              secretKey: z.string().optional(),
+              expirationTime: z.string().optional(),
+              algorithm: z.string().optional(),
+            })
+            .optional(),
+          saml: z
+            .object({
+              entryPoint: z.string().optional(),
+              issuer: z.string().optional(),
+              cert: z.string().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+      rbac: z
+        .object({
+          defaultRoles: z.array(z.string()).optional(),
+          customPermissions: z.array(z.string()).optional(),
+          inheritanceEnabled: z.boolean().optional(),
+        })
+        .optional(),
+      logging: z
+        .object({
+          levels: z.array(z.enum(["error", "warn", "info", "debug", "trace"])).optional(),
+          destinations: z.array(z.string()).optional(),
+          retentionDays: z.number().optional(),
+        })
+        .optional(),
+      notifications: z
+        .object({
+          channels: z.array(z.enum(["email", "sms", "push", "webhook"])).optional(),
+          emailProvider: z.string().optional(),
+          webhookUrl: z.string().optional(),
+        })
+        .optional(),
+      aiCopilot: z
+        .object({
+          provider: z.enum(["openai", "azure-openai", "anthropic", "google"]).optional(),
+          apiKey: z.string().optional(),
+          model: z.string().optional(),
+          features: z.array(z.string()).optional(),
+        })
+        .optional(),
+    })
+    .default({}),
+
   sendEmail: z.boolean().default(true),
-  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml", "logging", "notifications", "ai-copilot"])).default(["auth"]),
-  moduleConfigs: z.object({
-    "rbac": z.object({
-      permissionTemplate: z.string().optional(),
-      businessType: z.string().optional(),
-      customPermissions: z.array(z.string()).optional(),
-      defaultRoles: z.array(z.string()).optional(),
-    }).optional(),
-    "azure-ad": z.object({
-      tenantId: z.string().optional(),
-      clientId: z.string().optional(),
-      clientSecret: z.string().optional(),
-      domain: z.string().optional(),
-      redirectUri: z.string().optional(),
-      groupClaims: z.boolean().optional(),
-      multiTenant: z.boolean().optional(),
-    }).optional(),
-    "auth0": z.object({
-      domain: z.string().optional(),
-      clientId: z.string().optional(),
-      clientSecret: z.string().optional(),
-      audience: z.string().optional(),
-      callbackUrl: z.string().optional(),
-      logoutUrl: z.string().optional(),
-    }).optional(),
-    "saml": z.object({
-      entryPoint: z.string().optional(),
-      issuer: z.string().optional(),
-      cert: z.string().optional(),
-      identifierFormat: z.string().optional(),
-      callbackUrl: z.string().optional(),
-    }).optional(),
-    "logging": z.object({
-      levels: z.array(z.string()).optional(),
-      destinations: z.array(z.string()).optional(),
-      retention: z.object({
-        error: z.string().optional(),
-        security: z.string().optional(),
-        audit: z.string().optional(),
-      }).optional(),
-    }).optional(),
-    "notifications": z.object({
-      channels: z.array(z.string()).optional(),
-      emailProvider: z.string().optional(),
-      smsProvider: z.string().optional(),
-      templates: z.object({
-        welcome: z.boolean().optional(),
-        security_alert: z.boolean().optional(),
-      }).optional(),
-    }).optional(),
-    "ai-copilot": z.object({
-      provider: z.string().optional(),
-      model: z.string().optional(),
-      capabilities: z.object({
-        chatSupport: z.boolean().optional(),
-        codeAssistance: z.boolean().optional(),
-      }).optional(),
-    }).optional(),
-  }).default({}),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -113,110 +148,72 @@ const STEPS = [
   {
     id: "basic",
     title: "Basic Information",
-    description: "Organization details and admin contact",
+    description: "Enter organization details and admin contact",
     icon: Building2,
   },
   {
     id: "modules",
-    title: "Authentication Modules",
-    description: "Choose your authentication providers",
+    title: "Select Modules",
+    description: "Choose the modules you want to enable",
     icon: Shield,
   },
   {
     id: "configuration",
-    title: "Module Configuration",
-    description: "Configure selected authentication modules",
+    title: "Configure Modules",
+    description: "Configure the selected modules",
     icon: Settings,
   },
   {
     id: "review",
     title: "Review & Create",
-    description: "Review your settings and create the tenant",
+    description: "Review your configuration and create the tenant",
     icon: CheckCircle,
   },
 ];
 
-const MODULE_INFO = [
+const MODULES = [
   {
-    id: "auth",
-    label: "Basic Authentication",
-    description: "Email/password authentication with secure password policies",
-    icon: Key,
+    id: "authentication",
+    name: "Authentication Module",
+    description: "Multiple authentication providers including Auth0, Azure AD, JWT, and SAML",
+    icon: Lock,
     color: "bg-blue-500",
-    recommended: true,
-    required: true,
+    providers: ["Auth0", "Azure AD", "JWT", "SAML"],
   },
   {
     id: "rbac",
-    label: "Role-Based Access Control",
-    description: "Advanced permission management with custom roles and policies",
+    name: "RBAC (Role-Based Access Control)",
+    description: "Advanced permission management with roles and policies",
     icon: Users,
     color: "bg-green-500",
-    recommended: true,
-    required: false,
-  },
-  {
-    id: "azure-ad",
-    label: "Azure Active Directory",
-    description: "Microsoft Azure AD integration for enterprise SSO",
-    icon: Globe,
-    color: "bg-blue-600",
-    recommended: false,
-    required: false,
-  },
-  {
-    id: "auth0",
-    label: "Auth0",
-    description: "Auth0 identity platform with social login options",
-    icon: Zap,
-    color: "bg-orange-500",
-    recommended: false,
-    required: false,
-  },
-  {
-    id: "saml",
-    label: "SAML",
-    description: "SAML 2.0 integration for enterprise identity providers",
-    icon: Shield,
-    color: "bg-purple-500",
-    recommended: false,
-    required: false,
   },
   {
     id: "logging",
-    label: "Logging & Monitoring",
-    description: "Comprehensive audit trail and security monitoring",
-    icon: FileText,
-    color: "bg-slate-500",
-    recommended: true,
-    required: false,
-    priority: "high",
+    name: "Logging and Monitoring",
+    description: "Comprehensive audit trails and system monitoring",
+    icon: Activity,
+    color: "bg-orange-500",
   },
   {
     id: "notifications",
-    label: "Notifications",
-    description: "Multi-channel messaging and alerts system",
+    name: "Notifications",
+    description: "Multi-channel notification system (Email, SMS, Push, Webhooks)",
     icon: Bell,
-    color: "bg-yellow-500",
-    recommended: true,
-    required: false,
-    priority: "medium",
+    color: "bg-purple-500",
   },
   {
-    id: "ai-copilot",
-    label: "AI Copilot",
-    description: "Intelligent automation and user assistance",
+    id: "aiCopilot",
+    name: "AI Copilot",
+    description: "AI-powered assistance and automation features",
     icon: Bot,
     color: "bg-indigo-500",
-    recommended: false,
-    required: false,
-    priority: "low",
   },
 ];
 
 export default function OnboardingWizard() {
-  const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const createTenant = useCreateTenant();
 
   const form = useForm<FormData>({
@@ -225,156 +222,224 @@ export default function OnboardingWizard() {
       name: "",
       orgId: "",
       adminEmail: "",
+      adminName: "",
+      adminPassword: "",
+      companyWebsite: "",
+      enabledModules: [],
+      moduleConfigs: {
+        authentication: { providers: [] },
+        rbac: {},
+        logging: { levels: [] },
+        notifications: { channels: [] },
+        aiCopilot: {},
+      },
       sendEmail: true,
-      enabledModules: ["auth"],
-      moduleConfigs: {},
     },
   });
 
   const watchedModules = form.watch("enabledModules");
+  const watchedAuthProviders = form.watch("moduleConfigs.authentication.providers");
 
-  const handleNameChange = (name: string) => {
-    const orgId = name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    
-    form.setValue("orgId", orgId);
-  };
+  const handleNext = async () => {
+    let fieldsToValidate: (keyof FormData)[] = [];
 
-  const onSubmit = async (data: FormData) => {
-    try {
-      console.log("Submitting tenant data:", data);
-      const newTenant = await createTenant.mutateAsync(data);
-      console.log("Tenant created successfully:", newTenant);
-      
-      // Store tenant data in sessionStorage for the success page
-      sessionStorage.setItem('newTenantData', JSON.stringify(newTenant));
-      console.log("Tenant data stored in sessionStorage");
-      
-      // Redirect to success page instead of tenants list
-      console.log("Redirecting to success page");
-      setLocation("/tenants/success");
-    } catch (error) {
-      console.error("Error creating tenant:", error);
+    if (currentStep === 0) {
+      fieldsToValidate = ["name", "orgId", "adminEmail", "adminName", "adminPassword"];
+    }
+
+    const isValid = await form.trigger(fieldsToValidate as any);
+
+    if (isValid) {
+      if (currentStep < STEPS.length - 1) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
-  const nextStep = () => {
-    if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
+  const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const canProceed = () => {
-    switch (currentStep) {
-      case 0: // Basic info
-        return form.getValues("name") && form.getValues("orgId") && form.getValues("adminEmail");
-      case 1: // Modules
-        return watchedModules.length > 0;
-      case 2: // Configuration
-        return true; // Optional configurations
-      default:
-        return true;
+  const onSubmit = async (data: FormData) => {
+    try {
+      // Transform module names from frontend format to backend format
+      const moduleNameMap: Record<string, string> = {
+        authentication: "auth",
+        rbac: "rbac",
+        logging: "logging",
+        notifications: "notifications",
+        aiCopilot: "ai-copilot",
+      };
+
+      const transformedModules = data.enabledModules.map(module => moduleNameMap[module] || module);
+
+      // Transform moduleConfigs object keys to match backend expectations
+      const transformedModuleConfigs: any = {};
+      Object.entries(data.moduleConfigs).forEach(([key, value]) => {
+        const transformedKey = moduleNameMap[key] || key;
+
+        // Special handling for authentication module
+        if (transformedKey === "auth" && value && typeof value === "object") {
+          const authConfig = value as any;
+          const transformedAuth = { ...authConfig };
+
+          // Transform providers from simple strings to complex objects
+          if (authConfig.providers && Array.isArray(authConfig.providers)) {
+            transformedAuth.providers = authConfig.providers.map(
+              (providerType: string, index: number) => {
+                // Get provider-specific config
+                let config = {};
+                const providerKey = providerType.replace("-", "").replace("_", ""); // "azure-ad" -> "azuread"
+
+                // Map provider keys to form field names
+                const configKeyMap: Record<string, string> = {
+                  "azure-ad": "azureAd",
+                  auth0: "auth0",
+                  local: "local",
+                  saml: "saml",
+                };
+
+                const formConfigKey = configKeyMap[providerType];
+                if (formConfigKey && authConfig[formConfigKey]) {
+                  config = authConfig[formConfigKey];
+                }
+
+                // Create provider object structure expected by backend
+                return {
+                  type: providerType,
+                  name: providerType
+                    .split("-")
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(" "), // "azure-ad" -> "Azure Ad"
+                  priority: index + 1,
+                  config: config,
+                  userMapping: {
+                    emailField: "email",
+                    nameField: "name",
+                  },
+                  enabled: true,
+                };
+              }
+            );
+
+            // Remove the individual provider config objects since they're now in providers array
+            delete transformedAuth.auth0;
+            delete transformedAuth.azureAd;
+            delete transformedAuth.local;
+            delete transformedAuth.saml;
+          }
+
+          transformedModuleConfigs[transformedKey] = transformedAuth;
+        } else {
+          transformedModuleConfigs[transformedKey] = value;
+        }
+      });
+
+      // Transform the data to match the API format
+      const transformedData = {
+        name: data.name,
+        orgId: data.orgId,
+        adminEmail: data.adminEmail,
+        adminName: data.adminName,
+        adminPassword: data.adminPassword,
+        sendEmail: data.sendEmail,
+        enabledModules: transformedModules,
+        moduleConfigs: transformedModuleConfigs,
+        metadata: {
+          adminName: data.adminName,
+          companyWebsite: data.companyWebsite,
+        },
+      };
+
+      await createTenant.mutateAsync(transformedData as any);
+
+      toast({
+        title: "Tenant created successfully!",
+        description: `Onboarding email has been sent to ${data.adminEmail}`,
+      });
+
+      // Redirect to success page
+      setLocation("/tenants/success");
+    } catch (error) {
+      toast({
+        title: "Failed to create tenant",
+        description: "Please try again or contact support",
+        variant: "destructive",
+      });
     }
   };
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-4xl mx-auto pb-20">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/tenants")}
-            className="flex items-center gap-2"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Tenants
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Tenant Onboarding</h1>
-            <p className="text-slate-600">Follow the guided setup to create your new tenant</p>
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900">Tenant Onboarding</h1>
+        <p className="text-slate-600 mt-2">Set up a new tenant with guided configuration</p>
+      </div>
 
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-sm font-medium text-slate-700">
-              Step {currentStep + 1} of {STEPS.length}
-            </div>
-            <div className="text-sm text-slate-500">
-              {Math.round(progress)}% Complete
-            </div>
-          </div>
-          <Progress value={progress} className="mb-4" />
-          
-          {/* Step Indicators */}
-          <div className="flex items-center justify-between">
-            {STEPS.map((step, index) => {
-              const StepIcon = step.icon;
-              const isActive = index === currentStep;
-              const isCompleted = index < currentStep;
-              
-              return (
-                <div key={step.id} className="flex flex-col items-center">
-                  <div className={`
-                    w-12 h-12 rounded-full flex items-center justify-center mb-2
-                    ${isCompleted ? 'bg-green-500 text-white' : 
-                      isActive ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-400'}
-                  `}>
-                    {isCompleted ? <CheckCircle className="h-6 w-6" /> : <StepIcon className="h-6 w-6" />}
-                  </div>
-                  <div className="text-center">
-                    <div className={`text-sm font-medium ${isActive ? 'text-blue-600' : 'text-slate-600'}`}>
-                      {step.title}
-                    </div>
-                    <div className="text-xs text-slate-500 max-w-24">
-                      {step.description}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Form Content */}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.3 }}
+      {/* Progress */}
+      <div className="mb-8">
+        <Progress value={progress} className="h-2" />
+        <div className="flex justify-between mt-4">
+          {STEPS.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <div
+                key={step.id}
+                className={`flex flex-col items-center ${
+                  index <= currentStep ? "text-blue-600" : "text-slate-400"
+                }`}
               >
-                {/* Step 0: Basic Information */}
-                {currentStep === 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Building2 className="h-5 w-5 text-blue-500" />
-                        Organization Details
-                      </CardTitle>
-                      <CardDescription>
-                        Enter your organization information and admin contact details
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                    index < currentStep
+                      ? "bg-blue-600 text-white"
+                      : index === currentStep
+                        ? "bg-blue-100 text-blue-600 border-2 border-blue-600"
+                        : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  {index < currentStep ? (
+                    <CheckCircle className="w-5 h-5" />
+                  ) : (
+                    <Icon className="w-5 h-5" />
+                  )}
+                </div>
+                <span className="text-xs font-medium">{step.title}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Form */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {React.createElement(STEPS[currentStep].icon, { className: "w-5 h-5" })}
+                    {STEPS[currentStep].title}
+                  </CardTitle>
+                  <CardDescription>{STEPS[currentStep].description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Step 1: Basic Information */}
+                  {currentStep === 0 && (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="name"
@@ -383,18 +448,12 @@ export default function OnboardingWizard() {
                               <FormLabel>Organization Name *</FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="Acme Corporation"
                                   {...field}
-                                  onChange={(e) => {
-                                    field.onChange(e);
-                                    handleNameChange(e.target.value);
-                                  }}
-                                  data-testid="input-org-name"
+                                  placeholder="Acme Corporation"
+                                  className="w-full"
                                 />
                               </FormControl>
-                              <FormDescription>
-                                The display name for your organization
-                              </FormDescription>
+                              <FormDescription>The display name for this tenant</FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -407,15 +466,48 @@ export default function OnboardingWizard() {
                             <FormItem>
                               <FormLabel>Organization ID *</FormLabel>
                               <FormControl>
-                                <Input
-                                  placeholder="acme-corp"
-                                  {...field}
-                                  data-testid="input-org-id"
-                                />
+                                <Input {...field} placeholder="acme-corp" className="w-full" />
                               </FormControl>
                               <FormDescription>
-                                Unique identifier (URL slug) - auto-generated from name
+                                Unique identifier (lowercase, hyphens only)
                               </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="adminName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Admin Name *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="John Doe" className="w-full" />
+                              </FormControl>
+                              <FormDescription>Primary administrator's full name</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="adminEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Admin Email *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="email"
+                                  placeholder="admin@acme.com"
+                                  className="w-full"
+                                />
+                              </FormControl>
+                              <FormDescription>Email for onboarding instructions</FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -424,21 +516,39 @@ export default function OnboardingWizard() {
 
                       <FormField
                         control={form.control}
-                        name="adminEmail"
+                        name="adminPassword"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Administrator Email *</FormLabel>
+                            <FormLabel>Admin Password *</FormLabel>
                             <FormControl>
                               <Input
-                                type="email"
-                                placeholder="admin@acme.com"
                                 {...field}
-                                data-testid="input-admin-email"
+                                type="password"
+                                placeholder="Enter secure password"
+                                className="w-full"
                               />
                             </FormControl>
-                            <FormDescription>
-                              Primary contact and initial admin user - will receive API keys and setup instructions
-                            </FormDescription>
+                            <FormDescription>Password for the admin user account</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="companyWebsite"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company Website (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="url"
+                                placeholder="https://acme.com"
+                                className="w-full"
+                              />
+                            </FormControl>
+                            <FormDescription>Your organization's website URL</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -448,89 +558,102 @@ export default function OnboardingWizard() {
                         control={form.control}
                         name="sendEmail"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-slate-50">
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                data-testid="checkbox-send-email"
-                              />
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel>Send Welcome Email</FormLabel>
+                              <FormLabel>Send onboarding email</FormLabel>
                               <FormDescription>
-                                Automatically send onboarding instructions and API keys to the admin
+                                Send setup instructions and API keys to the admin email
                               </FormDescription>
                             </div>
                           </FormItem>
                         )}
                       />
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
+                  )}
 
-                {/* Step 1: Module Selection */}
-                {currentStep === 1 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-green-500" />
-                        Authentication Modules
-                      </CardTitle>
-                      <CardDescription>
-                        Select the authentication methods you want to enable for your tenant
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+                  {/* Step 2: Module Selection */}
+                  {currentStep === 1 && (
+                    <div className="space-y-4">
+                      <div className="mb-4">
+                        <p className="text-sm text-slate-600">
+                          Select the modules you want to enable for this tenant. You can always add
+                          or remove modules later.
+                        </p>
+                      </div>
+
                       <FormField
                         control={form.control}
                         name="enabledModules"
-                        render={() => (
+                        render={({ field }) => (
                           <FormItem>
-                            <div className="grid grid-cols-1 gap-4">
-                              {MODULE_INFO.map((module) => {
-                                const ModuleIcon = module.icon;
+                            <div className="space-y-4">
+                              {MODULES.map(module => {
+                                const Icon = module.icon;
+                                const isSelected = field.value?.includes(module.id) || false;
+
+                                const handleToggle = () => {
+                                  const currentValue = field.value || [];
+                                  const newValue = isSelected
+                                    ? currentValue.filter(v => v !== module.id)
+                                    : [...currentValue, module.id];
+                                  field.onChange(newValue);
+                                };
+
                                 return (
-                                  <FormField
+                                  <div
                                     key={module.id}
-                                    control={form.control}
-                                    name="enabledModules"
-                                    render={({ field }) => (
-                                      <FormItem className="flex flex-row items-start space-x-4 space-y-0 rounded-lg border-2 border-slate-200 hover:border-slate-300 transition-colors p-4">
-                                        <FormControl>
-                                          <Checkbox
-                                            checked={field.value?.includes(module.id as any)}
-                                            onCheckedChange={(checked) => {
-                                              return checked
-                                                ? field.onChange([...field.value, module.id])
-                                                : field.onChange(field.value?.filter((value: string) => value !== module.id))
-                                            }}
-                                            disabled={module.required}
-                                            data-testid={`checkbox-module-${module.id}`}
-                                          />
-                                        </FormControl>
-                                        <div className={`w-12 h-12 rounded-lg ${module.color} flex items-center justify-center flex-shrink-0`}>
-                                          <ModuleIcon className="h-6 w-6 text-white" />
-                                        </div>
-                                        <div className="flex-1 space-y-2">
-                                          <div className="flex items-center gap-2">
-                                            <FormLabel className="text-base font-semibold cursor-pointer">
-                                              {module.label}
-                                            </FormLabel>
-                                            {module.recommended && (
-                                              <Badge variant="secondary" className="text-xs">Recommended</Badge>
-                                            )}
-                                            {module.required && (
-                                              <Badge variant="destructive" className="text-xs">Required</Badge>
+                                    className={`relative rounded-lg border-2 p-4 transition-all cursor-pointer hover:shadow-md ${
+                                      isSelected
+                                        ? "border-blue-500 bg-blue-50"
+                                        : "border-slate-200 hover:border-slate-300"
+                                    }`}
+                                    onClick={handleToggle}
+                                  >
+                                    <div className="flex items-start space-x-4">
+                                      <div
+                                        className={`w-12 h-12 rounded-lg ${module.color} flex items-center justify-center text-white`}
+                                      >
+                                        <Icon className="w-6 h-6" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <h4 className="font-semibold text-slate-900">
+                                            {module.name}
+                                          </h4>
+                                          <div
+                                            className={`w-4 h-4 border rounded ${
+                                              isSelected
+                                                ? "bg-blue-500 border-blue-500"
+                                                : "border-gray-300"
+                                            } flex items-center justify-center`}
+                                          >
+                                            {isSelected && (
+                                              <div className="w-2 h-2 bg-white rounded-sm"></div>
                                             )}
                                           </div>
-                                          <FormDescription className="text-sm text-slate-600">
-                                            {module.description}
-                                          </FormDescription>
                                         </div>
-                                      </FormItem>
-                                    )}
-                                  />
+                                        <p className="text-sm text-slate-600 mt-1">
+                                          {module.description}
+                                        </p>
+                                        {module.providers && (
+                                          <div className="flex flex-wrap gap-2 mt-2">
+                                            {module.providers.map(provider => (
+                                              <Badge
+                                                key={provider}
+                                                variant="secondary"
+                                                className="text-xs"
+                                              >
+                                                {provider}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </div>
@@ -538,714 +661,476 @@ export default function OnboardingWizard() {
                           </FormItem>
                         )}
                       />
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
+                  )}
 
-                {/* Step 2: Module Configuration */}
-                {currentStep === 2 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Settings className="h-5 w-5 text-purple-500" />
-                        Module Configuration
-                      </CardTitle>
-                      <CardDescription>
-                        Configure your selected authentication and authorization modules
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-8">
-                        {/* RBAC Configuration - Always show if RBAC is enabled */}
-                        {watchedModules.includes("rbac") && (
-                          <div className="space-y-4 border rounded-lg p-4 bg-green-50">
-                            <h4 className="text-lg font-semibold flex items-center gap-2">
-                              <Shield className="h-5 w-5 text-green-500" />
-                              RBAC Configuration
-                            </h4>
+                  {/* Step 3: Module Configuration */}
+                  {currentStep === 2 && (
+                    <div className="space-y-6">
+                      {watchedModules.length === 0 ? (
+                        <div className="text-center py-8 text-slate-500">
+                          <Settings className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                          <p>No modules selected. Go back to select modules to configure.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {/* Authentication Module Configuration */}
+                          {watchedModules.includes("authentication") && (
                             <div className="space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <Label className="text-sm font-medium">Permission Template</Label>
-                                  <Select defaultValue="standard" onValueChange={(value) => {
-                                    const currentConfigs = form.getValues("moduleConfigs") || {};
-                                    form.setValue("moduleConfigs", {
-                                      ...currentConfigs,
-                                      rbac: { 
-                                        permissionTemplate: value,
-                                        businessType: form.getValues("moduleConfigs.rbac.businessType") || "general",
-                                        customPermissions: form.getValues("moduleConfigs.rbac.customPermissions") || []
-                                      }
-                                    });
-                                  }}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select permission template" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="minimal">Minimal (Basic CRUD)</SelectItem>
-                                      <SelectItem value="standard">Standard (User Management + CRUD)</SelectItem>
-                                      <SelectItem value="enterprise">Enterprise (Full Admin Access)</SelectItem>
-                                      <SelectItem value="custom">Custom (Configure Later)</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <p className="text-xs text-slate-600 mt-1">Choose a permission template that matches your organization's needs</p>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium">Business Type</Label>
-                                  <Select defaultValue="general" onValueChange={(value) => {
-                                    const currentConfigs = form.getValues("moduleConfigs") || {};
-                                    const currentRbac = currentConfigs.rbac || {};
-                                    form.setValue("moduleConfigs", {
-                                      ...currentConfigs,
-                                      rbac: { 
-                                        ...currentRbac,
-                                        businessType: value
-                                      }
-                                    });
-                                  }}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select business type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="general">General Business</SelectItem>
-                                      <SelectItem value="saas">SaaS Platform</SelectItem>
-                                      <SelectItem value="ecommerce">E-commerce</SelectItem>
-                                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                                      <SelectItem value="finance">Financial Services</SelectItem>
-                                      <SelectItem value="education">Education</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <p className="text-xs text-slate-600 mt-1">Pre-configured permissions for your industry</p>
-                                </div>
-                              </div>
-                              <div className="space-y-3">
-                                <Label className="text-sm font-medium">Default Role Hierarchy</Label>
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="default" className="text-xs">Super Admin</Badge>
-                                      <span className="text-sm text-slate-600">Full system access, tenant management</span>
-                                    </div>
-                                    <span className="text-xs text-slate-400">Required</span>
-                                  </div>
-                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="secondary" className="text-xs">Admin</Badge>
-                                      <span className="text-sm text-slate-600">User management, all permissions</span>
-                                    </div>
-                                    <span className="text-xs text-slate-400">Recommended</span>
-                                  </div>
-                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs">Manager</Badge>
-                                      <span className="text-sm text-slate-600">Team management, limited admin</span>
-                                    </div>
-                                    <span className="text-xs text-slate-400">Optional</span>
-                                  </div>
-                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs">User</Badge>
-                                      <span className="text-sm text-slate-600">Standard user permissions</span>
-                                    </div>
-                                    <span className="text-xs text-slate-400">Default</span>
-                                  </div>
-                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs">Viewer</Badge>
-                                      <span className="text-sm text-slate-600">Read-only access</span>
-                                    </div>
-                                    <span className="text-xs text-slate-400">Limited</span>
-                                  </div>
-                                </div>
-                                <p className="text-xs text-slate-600 mt-1">Role hierarchy will be created based on your permission template</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                          {watchedModules.includes("azure-ad") && (
-                            <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
-                              <h4 className="text-lg font-semibold flex items-center gap-2">
-                                <Globe className="h-5 w-5 text-blue-500" />
-                                Azure Active Directory Configuration
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.azure-ad.tenantId"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Azure Tenant ID *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Your Azure AD Directory (tenant) ID</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.azure-ad.clientId"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Application (Client) ID *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Your Azure AD Application ID</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.azure-ad.clientSecret"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Client Secret *</FormLabel>
-                                        <FormControl>
-                                          <Input type="password" placeholder="Your Azure AD Client Secret" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Azure AD application secret value</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.azure-ad.domain"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Domain (Optional)</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="your-domain.com" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Your organization domain</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <FormField
-                                  control={form.control}
-                                  name="moduleConfigs.azure-ad.redirectUri"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Redirect URI</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="https://your-app.com/auth/azure/callback" {...field} />
-                                      </FormControl>
-                                      <FormDescription>OAuth redirect URI configured in Azure AD</FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                  <p className="text-sm font-medium text-blue-800">Additional Settings (Optional)</p>
-                                  <div className="mt-2 space-y-2">
-                                    <label className="flex items-center space-x-2">
-                                      <input type="checkbox" className="rounded" defaultChecked />
-                                      <span className="text-sm text-blue-700">Enable group claims</span>
-                                    </label>
-                                    <label className="flex items-center space-x-2">
-                                      <input type="checkbox" className="rounded" defaultChecked />
-                                      <span className="text-sm text-blue-700">Multi-tenant support</span>
-                                    </label>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Lock className="w-5 h-5" />
+                                Authentication Configuration
+                              </h3>
 
-                          {watchedModules.includes("auth0") && (
-                            <div className="space-y-4 border rounded-lg p-4 bg-orange-50">
-                              <h4 className="text-lg font-semibold flex items-center gap-2">
-                                <Zap className="h-5 w-5 text-orange-500" />
-                                Auth0 Configuration
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.auth0.domain"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Auth0 Domain *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="your-domain.auth0.com" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Your Auth0 tenant domain</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.auth0.clientId"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Client ID *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="Your Auth0 Client ID" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Your Auth0 application client ID</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.auth0.clientSecret"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Client Secret *</FormLabel>
-                                        <FormControl>
-                                          <Input type="password" placeholder="Your Auth0 Client Secret" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Auth0 application secret</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.auth0.audience"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Audience (API Identifier)</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="https://your-api.auth0.com" {...field} />
-                                        </FormControl>
-                                        <FormDescription>API identifier for JWT tokens</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.auth0.callbackUrl"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Callback URL</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="https://your-app.com/callback" {...field} />
-                                        </FormControl>
-                                        <FormDescription>OAuth callback URL</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.auth0.logoutUrl"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Logout URL</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="https://your-app.com/logout" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Post-logout redirect URL</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.authentication.providers"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Select Authentication Providers</FormLabel>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      {["auth0", "azure-ad", "local", "saml"].map(provider => {
+                                        const currentProviders = field.value || [];
+                                        const isSelected = currentProviders.includes(
+                                          provider as any
+                                        );
 
-                          {watchedModules.includes("saml") && (
-                            <div className="space-y-4 border rounded-lg p-4 bg-purple-50">
-                              <h4 className="text-lg font-semibold flex items-center gap-2">
-                                <Shield className="h-5 w-5 text-purple-500" />
-                                SAML Configuration
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.saml.entryPoint"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>SSO Entry Point URL *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="https://your-idp.com/sso" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Your identity provider's SSO URL</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.saml.issuer"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Issuer *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="your-saml-issuer" {...field} />
-                                        </FormControl>
-                                        <FormDescription>SAML issuer identifier</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <FormField
-                                  control={form.control}
-                                  name="moduleConfigs.saml.cert"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>X.509 Certificate *</FormLabel>
-                                      <FormControl>
-                                        <Textarea 
-                                          placeholder="-----BEGIN CERTIFICATE-----&#10;MIICertificate...&#10;-----END CERTIFICATE-----" 
-                                          rows={4}
-                                          {...field} 
-                                        />
-                                      </FormControl>
-                                      <FormDescription>Identity provider's public certificate (PEM format)</FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.saml.identifierFormat"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Identifier Format</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value || "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"}>
+                                        const handleToggle = () => {
+                                          const newValue = isSelected
+                                            ? currentProviders.filter(v => v !== provider)
+                                            : [...currentProviders, provider];
+                                          field.onChange(newValue);
+                                        };
+
+                                        return (
+                                          <div
+                                            key={provider}
+                                            className={`border rounded-lg p-3 cursor-pointer hover:border-blue-300 transition-colors ${
+                                              isSelected
+                                                ? "border-blue-500 bg-blue-50"
+                                                : "border-slate-200"
+                                            }`}
+                                            onClick={handleToggle}
+                                          >
+                                            <div className="flex items-center justify-between">
+                                              <span className="font-medium capitalize">
+                                                {provider.replace("-", " ").toUpperCase()}
+                                              </span>
+                                              <div
+                                                className={`w-4 h-4 border rounded ${
+                                                  isSelected
+                                                    ? "bg-blue-500 border-blue-500"
+                                                    : "border-gray-300"
+                                                } flex items-center justify-center`}
+                                              >
+                                                {isSelected && (
+                                                  <div className="w-2 h-2 bg-white rounded-sm"></div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              {/* Auth0 Configuration */}
+                              {watchedAuthProviders?.includes("auth0") && (
+                                <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                                  <h4 className="font-medium">Auth0 Configuration</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.authentication.auth0.domain"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Domain</FormLabel>
                                           <FormControl>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select identifier format" />
-                                            </SelectTrigger>
+                                            <Input {...field} placeholder="your-tenant.auth0.com" />
                                           </FormControl>
-                                          <SelectContent>
-                                            <SelectItem value="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">Email Address</SelectItem>
-                                            <SelectItem value="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified">Unspecified</SelectItem>
-                                            <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">Persistent</SelectItem>
-                                            <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:transient">Transient</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                        <FormDescription>NameID format for SAML assertions</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="moduleConfigs.saml.callbackUrl"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Callback URL</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="https://your-app.com/saml/acs" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Assertion Consumer Service URL</FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.authentication.auth0.clientId"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Client ID</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} placeholder="Your Auth0 Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
+                              )}
+
+                              {/* Azure AD Configuration */}
+                              {watchedAuthProviders?.includes("azure-ad") && (
+                                <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                                  <h4 className="font-medium">Azure AD Configuration</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.authentication.azureAd.tenantId"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Tenant ID</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} placeholder="Your Azure Tenant ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.authentication.azureAd.clientId"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Client ID</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} placeholder="Your Azure Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
 
-                          {/* Logging Module Configuration */}
+                          {/* RBAC Configuration */}
+                          {watchedModules.includes("rbac") && (
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Users className="w-5 h-5" />
+                                RBAC Configuration
+                              </h3>
+
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.rbac.defaultRoles"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Default Roles</FormLabel>
+                                    <FormControl>
+                                      <Textarea
+                                        placeholder="Enter default roles (one per line)&#10;admin&#10;user&#10;viewer"
+                                        onChange={e => {
+                                          const roles = e.target.value
+                                            .split("\n")
+                                            .filter(r => r.trim());
+                                          field.onChange(roles);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Define default roles for this tenant
+                                    </FormDescription>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          )}
+
+                          {/* Logging Configuration */}
                           {watchedModules.includes("logging") && (
-                            <div className="space-y-4 border rounded-lg p-4 bg-slate-50">
-                              <h4 className="text-lg font-semibold flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-slate-500" />
-                                Logging & Monitoring Configuration
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label className="text-sm font-medium">Log Levels</Label>
-                                    <div className="space-y-2 mt-2">
-                                      {["error", "warn", "info", "debug", "trace"].map((level) => (
-                                        <label key={level} className="flex items-center space-x-2">
-                                          <input type="checkbox" className="rounded" defaultChecked={level === "error" || level === "warn"} />
-                                          <span className="text-sm capitalize">{level}</span>
-                                        </label>
-                                      ))}
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Activity className="w-5 h-5" />
+                                Logging Configuration
+                              </h3>
+
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.logging.levels"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Log Levels</FormLabel>
+                                    <div className="grid grid-cols-3 gap-4">
+                                      {["error", "warn", "info", "debug", "trace"].map(level => {
+                                        const currentLevels = field.value || [];
+                                        const isSelected = currentLevels.includes(level as any);
+
+                                        const handleToggle = () => {
+                                          const newValue = isSelected
+                                            ? currentLevels.filter(v => v !== level)
+                                            : [...currentLevels, level];
+                                          field.onChange(newValue);
+                                        };
+
+                                        return (
+                                          <div
+                                            key={level}
+                                            className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded"
+                                            onClick={handleToggle}
+                                          >
+                                            <div
+                                              className={`w-4 h-4 border rounded ${
+                                                isSelected
+                                                  ? "bg-blue-500 border-blue-500"
+                                                  : "border-gray-300"
+                                              } flex items-center justify-center`}
+                                            >
+                                              {isSelected && (
+                                                <div className="w-2 h-2 bg-white rounded-sm"></div>
+                                              )}
+                                            </div>
+                                            <Label className="capitalize cursor-pointer">
+                                              {level}
+                                            </Label>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  </div>
-                                  <div>
-                                    <Label className="text-sm font-medium">Destinations</Label>
-                                    <div className="space-y-2 mt-2">
-                                      {["database", "elasticsearch", "cloudwatch", "datadog"].map((dest) => (
-                                        <label key={dest} className="flex items-center space-x-2">
-                                          <input type="checkbox" className="rounded" defaultChecked={dest === "database"} />
-                                          <span className="text-sm capitalize">{dest}</span>
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                  <p className="text-sm font-medium text-slate-700">Retention Settings</p>
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 text-xs text-slate-600">
-                                    <div>Security logs: 7 years</div>
-                                    <div>Error logs: 1 year</div>
-                                    <div>Performance logs: 90 days</div>
-                                  </div>
-                                </div>
-                              </div>
+                                    <FormDescription>
+                                      Select which log levels to capture
+                                    </FormDescription>
+                                  </FormItem>
+                                )}
+                              />
                             </div>
                           )}
 
-                          {/* Notifications Module Configuration */}
+                          {/* Notifications Configuration */}
                           {watchedModules.includes("notifications") && (
-                            <div className="space-y-4 border rounded-lg p-4 bg-yellow-50">
-                              <h4 className="text-lg font-semibold flex items-center gap-2">
-                                <Bell className="h-5 w-5 text-yellow-500" />
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Bell className="w-5 h-5" />
                                 Notifications Configuration
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label className="text-sm font-medium">Notification Channels</Label>
-                                    <div className="space-y-2 mt-2">
-                                      {["email", "sms", "push", "webhook", "slack"].map((channel) => (
-                                        <label key={channel} className="flex items-center space-x-2">
-                                          <input type="checkbox" className="rounded" defaultChecked={channel === "email"} />
-                                          <span className="text-sm capitalize">{channel}</span>
-                                        </label>
-                                      ))}
+                              </h3>
+
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.notifications.channels"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Notification Channels</FormLabel>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      {["email", "sms", "push", "webhook"].map(channel => {
+                                        const currentChannels = field.value || [];
+                                        const isSelected = currentChannels.includes(channel as any);
+
+                                        const handleToggle = () => {
+                                          const newValue = isSelected
+                                            ? currentChannels.filter(v => v !== channel)
+                                            : [...currentChannels, channel];
+                                          field.onChange(newValue);
+                                        };
+
+                                        return (
+                                          <div
+                                            key={channel}
+                                            className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded"
+                                            onClick={handleToggle}
+                                          >
+                                            <div
+                                              className={`w-4 h-4 border rounded ${
+                                                isSelected
+                                                  ? "bg-blue-500 border-blue-500"
+                                                  : "border-gray-300"
+                                              } flex items-center justify-center`}
+                                            >
+                                              {isSelected && (
+                                                <div className="w-2 h-2 bg-white rounded-sm"></div>
+                                              )}
+                                            </div>
+                                            <Label className="capitalize cursor-pointer">
+                                              {channel}
+                                            </Label>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  </div>
-                                  <div>
-                                    <Label className="text-sm font-medium">Email Provider</Label>
-                                    <Select defaultValue="sendgrid">
-                                      <SelectTrigger className="mt-2">
-                                        <SelectValue placeholder="Select provider" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="sendgrid">SendGrid</SelectItem>
-                                        <SelectItem value="mailgun">Mailgun</SelectItem>
-                                        <SelectItem value="ses">Amazon SES</SelectItem>
-                                        <SelectItem value="smtp">Custom SMTP</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                </div>
-                                <div className="bg-yellow-100 p-3 rounded-lg">
-                                  <p className="text-sm font-medium text-yellow-800">Default Templates</p>
-                                  <div className="space-y-1 mt-2 text-xs text-yellow-700">
-                                    <div>✓ Welcome email</div>
-                                    <div>✓ Security alerts</div>
-                                    <div>✓ Payment notifications</div>
-                                    <div>✓ Trial ending reminders</div>
-                                  </div>
-                                </div>
-                              </div>
+                                  </FormItem>
+                                )}
+                              />
                             </div>
                           )}
 
-                          {/* AI Copilot Module Configuration */}
-                          {watchedModules.includes("ai-copilot") && (
-                            <div className="space-y-4 border rounded-lg p-4 bg-indigo-50">
-                              <h4 className="text-lg font-semibold flex items-center gap-2">
-                                <Bot className="h-5 w-5 text-indigo-500" />
+                          {/* AI Copilot Configuration */}
+                          {watchedModules.includes("aiCopilot") && (
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Bot className="w-5 h-5" />
                                 AI Copilot Configuration
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label className="text-sm font-medium">AI Provider</Label>
-                                    <Select defaultValue="openai" onValueChange={(value) => {
-                                      const currentConfigs = form.getValues("moduleConfigs") || {};
-                                      form.setValue("moduleConfigs", {
-                                        ...currentConfigs,
-                                        "ai-copilot": { provider: value }
-                                      });
-                                    }}>
-                                      <SelectTrigger className="mt-2">
-                                        <SelectValue placeholder="Select AI provider" />
-                                      </SelectTrigger>
+                              </h3>
+
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.aiCopilot.provider"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>AI Provider</FormLabel>
+                                    <Select
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select AI provider" />
+                                        </SelectTrigger>
+                                      </FormControl>
                                       <SelectContent>
                                         <SelectItem value="openai">OpenAI</SelectItem>
-                                        <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
                                         <SelectItem value="azure-openai">Azure OpenAI</SelectItem>
-                                        <SelectItem value="aws-bedrock">AWS Bedrock</SelectItem>
+                                        <SelectItem value="anthropic">Anthropic</SelectItem>
+                                        <SelectItem value="google">Google AI</SelectItem>
                                       </SelectContent>
                                     </Select>
-                                  </div>
-                                  <div>
-                                    <Label className="text-sm font-medium">Model</Label>
-                                    <Select defaultValue="gpt-4o">
-                                      <SelectTrigger className="mt-2">
-                                        <SelectValue placeholder="Select model" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                                        <SelectItem value="gpt-4">GPT-4</SelectItem>
-                                        <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
-                                        <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium">AI Capabilities</Label>
-                                  <div className="grid grid-cols-2 gap-2 mt-2">
-                                    {[
-                                      { id: "chatSupport", label: "Chat Support" },
-                                      { id: "codeAssistance", label: "Code Assistance" },
-                                      { id: "documentAnalysis", label: "Document Analysis" },
-                                      { id: "workflowAutomation", label: "Workflow Automation" }
-                                    ].map((capability) => (
-                                      <label key={capability.id} className="flex items-center space-x-2">
-                                        <input type="checkbox" className="rounded" defaultChecked />
-                                        <span className="text-sm">{capability.label}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="bg-indigo-100 p-3 rounded-lg border border-indigo-200">
-                                  <p className="text-sm font-medium text-indigo-800">Safety Settings</p>
-                                  <div className="space-y-2 mt-2">
-                                    <label className="flex items-center space-x-2">
-                                      <input type="checkbox" className="rounded" defaultChecked />
-                                      <span className="text-sm text-indigo-700">Content filtering</span>
-                                    </label>
-                                    <label className="flex items-center space-x-2">
-                                      <input type="checkbox" className="rounded" defaultChecked />
-                                      <span className="text-sm text-indigo-700">PII detection</span>
-                                    </label>
-                                    <label className="flex items-center space-x-2">
-                                      <input type="checkbox" className="rounded" defaultChecked />
-                                      <span className="text-sm text-indigo-700">Rate limiting</span>
-                                    </label>
-                                  </div>
-                                </div>
-                              </div>
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.aiCopilot.model"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Model</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} placeholder="e.g., gpt-4, claude-3" />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
                             </div>
                           )}
                         </div>
-                    </CardContent>
-                  </Card>
-                )}
+                      )}
+                    </div>
+                  )}
 
-                {/* Step 3: Review */}
-                {currentStep === 3 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        Review & Create Tenant
-                      </CardTitle>
-                      <CardDescription>
-                        Review your configuration and create your new tenant
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Organization Info */}
-                        <div className="space-y-4">
-                          <h4 className="font-semibold text-slate-800">Organization Details</h4>
-                          <div className="space-y-2">
-                            <div>
-                              <span className="text-sm text-slate-500">Name:</span>
-                              <p className="font-medium">{form.watch("name")}</p>
-                            </div>
-                            <div>
-                              <span className="text-sm text-slate-500">ID:</span>
-                              <p className="font-medium text-blue-600">{form.watch("orgId")}</p>
-                            </div>
-                            <div>
-                              <span className="text-sm text-slate-500">Admin Email:</span>
-                              <p className="font-medium">{form.watch("adminEmail")}</p>
+                  {/* Step 4: Review */}
+                  {currentStep === 3 && (
+                    <div className="space-y-6">
+                      <div className="bg-slate-50 rounded-lg p-6 space-y-4">
+                        <h3 className="font-semibold text-lg">Summary</h3>
+
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-sm text-slate-600">Organization:</span>
+                            <p className="font-medium">{form.getValues("name")}</p>
+                          </div>
+
+                          <div>
+                            <span className="text-sm text-slate-600">Organization ID:</span>
+                            <p className="font-mono text-sm">{form.getValues("orgId")}</p>
+                          </div>
+
+                          <div>
+                            <span className="text-sm text-slate-600">Admin:</span>
+                            <p className="font-medium">
+                              {form.getValues("adminName")} ({form.getValues("adminEmail")})
+                            </p>
+                          </div>
+
+                          <div>
+                            <span className="text-sm text-slate-600">Selected Modules:</span>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {watchedModules.map(moduleId => {
+                                const module = MODULES.find(m => m.id === moduleId);
+                                return (
+                                  <Badge key={moduleId} variant="secondary">
+                                    {module?.name}
+                                  </Badge>
+                                );
+                              })}
                             </div>
                           </div>
-                        </div>
 
-                        {/* Enabled Modules */}
-                        <div className="space-y-4">
-                          <h4 className="font-semibold text-slate-800">Authentication Modules</h4>
-                          <div className="space-y-2">
-                            {watchedModules.map((moduleId) => {
-                              const module = MODULE_INFO.find(m => m.id === moduleId);
-                              if (!module) return null;
-                              const ModuleIcon = module.icon;
-                              
-                              return (
-                                <div key={moduleId} className="flex items-center gap-2">
-                                  <div className={`w-6 h-6 rounded ${module.color} flex items-center justify-center`}>
-                                    <ModuleIcon className="h-4 w-4 text-white" />
-                                  </div>
-                                  <span className="font-medium">{module.label}</span>
+                          {watchedModules.includes("authentication") &&
+                            watchedAuthProviders?.length > 0 && (
+                              <div>
+                                <span className="text-sm text-slate-600">
+                                  Authentication Providers:
+                                </span>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {watchedAuthProviders.map(provider => (
+                                    <Badge key={provider} variant="outline">
+                                      {provider.replace("-", " ").toUpperCase()}
+                                    </Badge>
+                                  ))}
                                 </div>
-                              );
-                            })}
-                          </div>
+                              </div>
+                            )}
                         </div>
                       </div>
 
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h5 className="font-medium text-blue-800 mb-2">What happens next?</h5>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                          <li>• Tenant will be created with unique API keys</li>
-                          <li>• Admin user account will be set up with temporary password</li>
-                          {form.watch("sendEmail") && <li>• Welcome email will be sent with setup instructions</li>}
-                          <li>• You can configure additional settings from the tenant dashboard</li>
+                        <p className="text-sm text-blue-800">
+                          <strong>What happens next:</strong> After clicking "Onboard Tenant", an
+                          email will be sent to {form.getValues("adminEmail")} with:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-blue-700 mt-2 space-y-1">
+                          <li>Integration guides for selected modules</li>
+                          <li>API keys and credentials</li>
+                          <li>Tenant portal access link</li>
+                          <li>Tenant ID and configuration details</li>
                         </ul>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8 mb-8">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={prevStep}
-                disabled={currentStep === 0}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Previous
+          {/* Navigation Buttons */}
+          <div className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBack}
+              disabled={currentStep === 0}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+
+            {currentStep < STEPS.length - 1 ? (
+              <Button type="button" onClick={handleNext} className="flex items-center gap-2">
+                Next
+                <ArrowRight className="w-4 h-4" />
               </Button>
-              
-              {currentStep < STEPS.length - 1 ? (
+            ) : (
+              <div className="flex items-center gap-3">
+                {/* Extra affordance to go back to Modules and tweak selections ("Back & Mix") */}
                 <Button
                   type="button"
-                  onClick={nextStep}
-                  disabled={!canProceed()}
+                  variant="outline"
+                  onClick={() => setCurrentStep(1)}
                   className="flex items-center gap-2"
                 >
-                  Next
-                  <ArrowRight className="h-4 w-4" />
+                  Back & Mix
                 </Button>
-              ) : (
+
                 <Button
                   type="submit"
-                  disabled={createTenant.isPending || !canProceed()}
+                  disabled={createTenant.isPending}
                   className="flex items-center gap-2"
-                  data-testid="button-create-tenant"
                 >
-                  {createTenant.isPending ? "Creating..." : "Create Tenant"}
-                  <CheckCircle className="h-4 w-4" />
+                  {createTenant.isPending ? (
+                    <>Creating...</>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Onboard Tenant
+                    </>
+                  )}
                 </Button>
-              )}
-            </div>
-          </form>
-        </Form>
-      </div>
+              </div>
+            )}
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }

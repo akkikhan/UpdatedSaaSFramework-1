@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { Plus, Eye, Mail, Edit, Pause, Trash, Search, CheckCircle, ArrowLeft, Copy } from "lucide-react";
+import {
+  Plus,
+  Eye,
+  Mail,
+  Edit,
+  Pause,
+  Trash,
+  Search,
+  CheckCircle,
+  ArrowLeft,
+  Copy,
+} from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +24,21 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,10 +59,10 @@ type EditFormData = z.infer<typeof editFormSchema>;
 export default function TenantsPage() {
   const [, setLocation] = useLocation();
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'view' | 'edit'>('list');
+  const [viewMode, setViewMode] = useState<"list" | "view" | "edit">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
-  
+
   const { data: tenants, isLoading } = useTenants();
   const updateTenantStatus = useUpdateTenantStatus();
   const resendEmail = useResendOnboardingEmail();
@@ -54,7 +78,7 @@ export default function TenantsPage() {
 
   const onSubmit = async (data: EditFormData) => {
     if (!selectedTenant) return;
-    
+
     try {
       if (data.status !== selectedTenant.status) {
         await updateTenantStatus.mutateAsync({ id: selectedTenant.id, status: data.status });
@@ -65,11 +89,13 @@ export default function TenantsPage() {
     }
   };
 
-  const filteredTenants = tenants?.filter(tenant =>
-    tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tenant.adminEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tenant.orgId.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredTenants =
+    tenants?.filter(
+      tenant =>
+        tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tenant.adminEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tenant.orgId.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
   const handleStatusChange = async (id: string, status: string) => {
     await updateTenantStatus.mutateAsync({ id, status });
@@ -81,22 +107,22 @@ export default function TenantsPage() {
 
   const handleViewTenant = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setViewMode('view');
+    setViewMode("view");
   };
 
   const handleEditTenant = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setViewMode('edit');
+    setViewMode("edit");
     form.reset({
       name: tenant.name,
       adminEmail: tenant.adminEmail,
-      status: tenant.status as 'pending' | 'active' | 'suspended'
+      status: tenant.status as "pending" | "active" | "suspended",
     });
   };
 
   const handleBackToList = () => {
     setSelectedTenant(null);
-    setViewMode('list');
+    setViewMode("list");
   };
 
   const copyToClipboard = async (text: string, label: string) => {
@@ -116,14 +142,18 @@ export default function TenantsPage() {
   };
 
   const handleDeleteTenant = async (tenant: Tenant) => {
-    if (confirm(`Are you sure you want to delete tenant "${tenant.name}"? This action cannot be undone.`)) {
+    if (
+      confirm(
+        `Are you sure you want to delete tenant "${tenant.name}"? This action cannot be undone.`
+      )
+    ) {
       // Implement delete functionality
-      console.log('Delete tenant:', tenant.id);
+      console.log("Delete tenant:", tenant.id);
     }
   };
 
   // Show inline view/edit forms instead of list
-  if (viewMode === 'view' && selectedTenant) {
+  if (viewMode === "view" && selectedTenant) {
     return (
       <div className="space-y-6">
         {/* Header */}
@@ -164,13 +194,23 @@ export default function TenantsPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700">Status</label>
-                <Badge variant={selectedTenant.status === 'active' ? 'default' : selectedTenant.status === 'pending' ? 'secondary' : 'destructive'}>
+                <Badge
+                  variant={
+                    selectedTenant.status === "active"
+                      ? "default"
+                      : selectedTenant.status === "pending"
+                        ? "secondary"
+                        : "destructive"
+                  }
+                >
                   {selectedTenant.status.charAt(0).toUpperCase() + selectedTenant.status.slice(1)}
                 </Badge>
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700">Created</label>
-                <p className="text-slate-900">{format(new Date(selectedTenant.createdAt), 'PPpp')}</p>
+                <p className="text-slate-900">
+                  {format(new Date(selectedTenant.createdAt), "PPpp")}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -188,12 +228,14 @@ export default function TenantsPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(selectedTenant.authApiKey, 'Auth API Key')}
+                    onClick={() => copyToClipboard(selectedTenant.authApiKey, "Auth API Key")}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">{selectedTenant.authApiKey}</p>
+                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">
+                  {selectedTenant.authApiKey}
+                </p>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -201,12 +243,14 @@ export default function TenantsPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(selectedTenant.rbacApiKey, 'RBAC API Key')}
+                    onClick={() => copyToClipboard(selectedTenant.rbacApiKey, "RBAC API Key")}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">{selectedTenant.rbacApiKey}</p>
+                <p className="text-slate-900 font-mono text-sm bg-slate-50 p-2 rounded">
+                  {selectedTenant.rbacApiKey}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -218,8 +262,10 @@ export default function TenantsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {(selectedTenant.enabledModules as string[] || ['auth', 'rbac']).map((module) => (
-                  <Badge key={module} variant="outline">{module}</Badge>
+                {((selectedTenant.enabledModules as string[]) || ["auth", "rbac"]).map(module => (
+                  <Badge key={module} variant="outline">
+                    {module}
+                  </Badge>
                 ))}
               </div>
             </CardContent>
@@ -255,7 +301,7 @@ export default function TenantsPage() {
     );
   }
 
-  if (viewMode === 'edit' && selectedTenant) {
+  if (viewMode === "edit" && selectedTenant) {
     return (
       <div className="space-y-6">
         {/* Header */}
@@ -395,7 +441,7 @@ export default function TenantsPage() {
                   type="text"
                   placeholder="Search tenants..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2"
                   data-testid="input-search-tenants"
                 />
@@ -404,19 +450,10 @@ export default function TenantsPage() {
               <Button
                 onClick={() => setLocation("/tenants/wizard")}
                 className="btn-primary flex items-center space-x-2"
-                data-testid="button-guided-setup"
-              >
-                <Plus size={16} />
-                <span>Guided Setup</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setLocation("/tenants/add")}
-                className="flex items-center space-x-2"
                 data-testid="button-add-tenant"
               >
                 <Plus size={16} />
-                <span>Quick Add</span>
+                <span>Add Tenant</span>
               </Button>
             </div>
           </div>
@@ -443,8 +480,12 @@ export default function TenantsPage() {
               </TableHeader>
               <TableBody>
                 {filteredTenants.length > 0 ? (
-                  filteredTenants.map((tenant) => (
-                    <TableRow key={tenant.id} className="table-row" data-testid={`tenant-row-${tenant.orgId}`}>
+                  filteredTenants.map(tenant => (
+                    <TableRow
+                      key={tenant.id}
+                      className="table-row"
+                      data-testid={`tenant-row-${tenant.orgId}`}
+                    >
                       <TableCell className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -462,11 +503,11 @@ export default function TenantsPage() {
                       <TableCell className="px-6 py-4">
                         <span
                           className={`status-badge ${
-                            tenant.status === 'active'
-                              ? 'status-active'
-                              : tenant.status === 'pending'
-                              ? 'status-pending'
-                              : 'status-suspended'
+                            tenant.status === "active"
+                              ? "status-active"
+                              : tenant.status === "pending"
+                                ? "status-pending"
+                                : "status-suspended"
                           }`}
                           data-testid={`status-${tenant.orgId}`}
                         >
@@ -474,12 +515,16 @@ export default function TenantsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-sm text-slate-500">
-                        {format(new Date(tenant.createdAt), 'MMM d, yyyy')}
+                        {format(new Date(tenant.createdAt), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="px-6 py-4">
                         <div className="space-y-1">
-                          <div className="text-xs text-slate-500">Auth: {tenant.authApiKey.substring(0, 12)}...</div>
-                          <div className="text-xs text-slate-500">RBAC: {tenant.rbacApiKey.substring(0, 12)}...</div>
+                          <div className="text-xs text-slate-500">
+                            Auth: {tenant.authApiKey.substring(0, 12)}...
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            RBAC: {tenant.rbacApiKey.substring(0, 12)}...
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
@@ -515,19 +560,19 @@ export default function TenantsPage() {
                           >
                             <Edit size={16} />
                           </Button>
-                          {tenant.status === 'active' ? (
+                          {tenant.status === "active" ? (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-red-400 hover:text-red-600"
                               title="Suspend"
-                              onClick={() => handleStatusChange(tenant.id, 'suspended')}
+                              onClick={() => handleStatusChange(tenant.id, "suspended")}
                               disabled={updateTenantStatus.isPending}
                               data-testid={`button-suspend-${tenant.orgId}`}
                             >
                               <Pause size={16} />
                             </Button>
-                          ) : tenant.status === 'pending' ? (
+                          ) : tenant.status === "pending" ? (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -544,7 +589,7 @@ export default function TenantsPage() {
                               size="sm"
                               className="text-green-400 hover:text-green-600"
                               title="Activate"
-                              onClick={() => handleStatusChange(tenant.id, 'active')}
+                              onClick={() => handleStatusChange(tenant.id, "active")}
                               disabled={updateTenantStatus.isPending}
                               data-testid={`button-activate-${tenant.orgId}`}
                             >
@@ -558,7 +603,9 @@ export default function TenantsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                      {searchQuery ? "No tenants found matching your search." : "No tenants found. Create your first tenant to get started."}
+                      {searchQuery
+                        ? "No tenants found matching your search."
+                        : "No tenants found. Create your first tenant to get started."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -578,7 +625,6 @@ export default function TenantsPage() {
           </div>
         )}
       </div>
-
     </div>
   );
 }

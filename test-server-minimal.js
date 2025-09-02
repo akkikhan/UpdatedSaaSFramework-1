@@ -13,42 +13,6 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), port: PORT });
 });
 
-app.get("/admin/login", (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Admin Login Test</title>
-      <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-        .container { max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; text-align: center; margin-bottom: 30px; }
-        .status { background: #d4edda; color: #155724; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
-        .info { background: #e7f3ff; color: #0056b3; padding: 10px; border-radius: 4px; font-size: 14px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>🎉 Server Working!</h1>
-        <div class="status">
-          ✅ Admin login page accessible<br>
-          ✅ Express server running on port ${PORT}<br>
-          ✅ Static file serving enabled<br>
-          ✅ JSON middleware working<br>
-        </div>
-        <div class="info">
-          <strong>Test Results:</strong><br>
-          • Port binding: SUCCESS<br>
-          • Route handling: SUCCESS<br>
-          • HTTP responses: SUCCESS<br>
-          • Timestamp: ${new Date().toISOString()}
-        </div>
-      </div>
-    </body>
-    </html>
-  `);
-});
-
 app.get("/api/test", (req, res) => {
   res.json({
     message: "API working",

@@ -5,9 +5,69 @@ import { dirname, join } from "path";
 import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
 
 // Load environment variables
 dotenv.config();
+
+// Configure SMTP transporter using environment variables (if available)
+const smtpHost = process.env.SMTP_HOST || null;
+const smtpPort = parseInt(process.env.SMTP_PORT || "587");
+const fromEmail = process.env.FROM_EMAIL || process.env.SMTP_USERNAME || "no-reply@example.com";
+const fromName = process.env.FROM_NAME || "SaaS Framework Platform";
+const smtpPassword = process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || "";
+
+let transporter = null;
+try {
+  transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: smtpPassword ? { user: fromEmail, pass: smtpPassword } : undefined,
+    tls: { rejectUnauthorized: false },
+  });
+  console.log(`\u2709 SMTP configured - host=${smtpHost} port=${smtpPort} from=${fromEmail}`);
+} catch (err) {
+  console.warn(
+    "\u26a0 Failed to configure SMTP transporter:",
+    err && err.message ? err.message : err
+  );
+}
+
+function generateOnboardingEmailTemplate(tenant) {
+  const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+  const portalUrl = `${baseUrl}/tenant/${tenant.orgId}/login`;
+  const docsUrl = `${baseUrl}/docs`;
+
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Welcome to SaaS Framework</title></head><body style="font-family: Arial, sans-serif; padding:20px; background:#f8fafc"><div style="max-width:600px;margin:0 auto;background:#fff;padding:24px;border-radius:8px"><h1>🚀 Welcome to SaaS Framework</h1><p>Your tenant "${tenant.name}" is ready!</p><div style="background:#f1f5f9;padding:12px;border-radius:6px;margin:12px 0"><p><strong>Portal URL:</strong> ${portalUrl}</p><p><strong>Admin Email:</strong> ${tenant.adminEmail}</p><p><strong>Tenant ID:</strong> ${tenant.orgId}</p></div><h3>API Keys</h3><pre style="background:#111;color:#e6eef8;padding:12px;border-radius:6px">Auth API Key: ${tenant.authApiKey}\nRBAC API Key: ${tenant.rbacApiKey}</pre><p>Documentation: <a href="${docsUrl}">${docsUrl}</a></p><p>Thanks,<br/>SaaS Framework Team</p></div></body></html>`;
+}
+
+async function sendTenantOnboardingEmail(tenant) {
+  if (!transporter) {
+    console.log(`✉️ SMTP not configured - skipping email to ${tenant.adminEmail}`);
+    return false;
+  }
+
+  const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+  const html = generateOnboardingEmailTemplate(tenant);
+
+  try {
+    await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: tenant.adminEmail,
+      subject,
+      html,
+    });
+    console.log(`✉️ Onboarding email sent to ${tenant.adminEmail}`);
+    return true;
+  } catch (error) {
+    console.error(
+      "Failed to send onboarding email:",
+      error && error.message ? error.message : error
+    );
+    return false;
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -182,17 +242,24 @@ app.get("/api/test", (req, res) => {
 app.post("/api/admin/tenants", (req, res) => {
   const { name, adminEmail, modules } = req.body;
 
-  res.json({
-    success: true,
-    tenant: {
-      id: "demo-tenant-" + Date.now(),
-      name,
-      adminEmail,
-      modules: modules || ["auth", "rbac"],
-      status: "active",
-      createdAt: new Date().toISOString(),
-    },
+  const tenant = {
+    id: "demo-tenant-" + Date.now(),
+    name,
+    adminEmail,
+    orgId: "demo-org-" + Date.now(),
+    authApiKey: "demo-auth-key-" + Date.now(),
+    rbacApiKey: "demo-rbac-key-" + Date.now(),
+    enabledModules: modules || ["auth", "rbac"],
+    status: "active",
+    createdAt: new Date().toISOString(),
+  };
+
+  // Fire-and-forget send onboarding email using SMTP config if available
+  sendTenantOnboardingEmail(tenant).catch(err => {
+    console.warn("Onboarding email task error:", err && err.message ? err.message : err);
   });
+
+  res.json({ success: true, tenant });
 });
 
 // Catch all - serve React app
