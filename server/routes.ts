@@ -167,6 +167,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { code, error, error_description, state } = req.query;
 
+      console.log("[PlatformAdmin][AzureAD] Callback hit");
+      console.log("[PlatformAdmin][AzureAD] Query:", JSON.stringify(req.query));
+
       if (error) {
         console.error("Azure AD callback error:", error, error_description);
         const errorMessage =
@@ -184,7 +187,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Exchange code for tokens and get user info (platform admin - no tenant provisioning)
-      const authResult = await azureADService.handlePlatformAdminCallback(code, state);
+      let authResult;
+      try {
+        authResult = await azureADService.handlePlatformAdminCallback(code, state);
+      } catch (innerError) {
+        console.error("[PlatformAdmin][AzureAD] handlePlatformAdminCallback failed:", innerError);
+        const detail = encodeURIComponent(
+          innerError instanceof Error ? innerError.message : String(innerError)
+        );
+        const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
+        return res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
+      }
 
       // Check if user email is authorized
       const userEmail = authResult.user.email?.toLowerCase();
@@ -196,38 +209,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create or update platform admin record for Azure AD user
-      let platformAdmin = await storage.getPlatformAdminByEmail(authResult.user.email);
+      let platformAdmin;
+      let retryCount = 0;
+      const maxRetries = 3;
 
-      if (!platformAdmin) {
-        // Create new platform admin
-        platformAdmin = await storage.createPlatformAdmin({
-          email: authResult.user.email,
-          name:
-            authResult.user.firstName && authResult.user.lastName
-              ? `${authResult.user.firstName} ${authResult.user.lastName}`
-              : authResult.user.email,
-          role: "super_admin",
-          passwordHash: "AZURE_AD_SSO", // Placeholder for SSO users - not a real password
-          isActive: true,
-        });
-      } else {
-        // Update last login
-        await storage.updatePlatformAdminLastLogin(platformAdmin.id);
+      while (retryCount < maxRetries) {
+        try {
+          platformAdmin = await storage.getPlatformAdminByEmail(authResult.user.email);
+          break; // Success, exit retry loop
+        } catch (dbError) {
+          retryCount++;
+          console.log(
+            `Database connection attempt ${retryCount}/${maxRetries} failed:`,
+            dbError.message
+          );
+
+          if (retryCount >= maxRetries) {
+            throw dbError; // Re-throw if max retries reached
+          }
+
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
       }
 
-      // Log Azure AD login
-      await storage.logSystemActivity({
-        action: "platform_admin_azure_login",
-        entityType: "platform_admin",
-        entityId: platformAdmin.id,
-        details: {
-          email: authResult.user.email,
-          provider: "azure_ad",
-          userId: authResult.user.id,
-        },
-        ipAddress: req.ip,
-        userAgent: req.get("User-Agent"),
-      });
+      if (!platformAdmin) {
+        // Create new platform admin with retry logic
+        retryCount = 0;
+        while (retryCount < maxRetries) {
+          try {
+            platformAdmin = await storage.createPlatformAdmin({
+              email: authResult.user.email,
+              name:
+                authResult.user.firstName && authResult.user.lastName
+                  ? `${authResult.user.firstName} ${authResult.user.lastName}`
+                  : authResult.user.email,
+              role: "super_admin",
+              passwordHash: "AZURE_AD_SSO", // Placeholder for SSO users - not a real password
+              isActive: true,
+            });
+            break; // Success, exit retry loop
+          } catch (dbError) {
+            retryCount++;
+            console.log(
+              `Database creation attempt ${retryCount}/${maxRetries} failed:`,
+              dbError.message
+            );
+
+            if (retryCount >= maxRetries) {
+              throw dbError; // Re-throw if max retries reached
+            }
+
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
+      } else {
+        // Update last login with retry logic
+        retryCount = 0;
+        while (retryCount < maxRetries) {
+          try {
+            await storage.updatePlatformAdminLastLogin(platformAdmin.id);
+            break; // Success, exit retry loop
+          } catch (dbError) {
+            retryCount++;
+            console.log(
+              `Database update attempt ${retryCount}/${maxRetries} failed:`,
+              dbError.message
+            );
+
+            if (retryCount >= maxRetries) {
+              console.warn("Failed to update last login, but continuing..."); // Non-critical operation
+            } else {
+              // Wait before retry
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            }
+          }
+        }
+      }
+
+      // Log Azure AD login with retry logic
+      retryCount = 0;
+      while (retryCount < maxRetries) {
+        try {
+          await storage.logSystemActivity({
+            action: "platform_admin_azure_login",
+            entityType: "platform_admin",
+            entityId: platformAdmin.id,
+            details: {
+              email: authResult.user.email,
+              provider: "azure_ad",
+              userId: authResult.user.id,
+            },
+            ipAddress: req.ip,
+            userAgent: req.get("User-Agent"),
+          });
+          break; // Success, exit retry loop
+        } catch (dbError) {
+          retryCount++;
+          console.log(
+            `System logging attempt ${retryCount}/${maxRetries} failed:`,
+            dbError.message
+          );
+
+          if (retryCount >= maxRetries) {
+            console.warn("Failed to log system activity, but continuing..."); // Non-critical operation
+            break;
+          }
+
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
 
       // Generate a platform admin token for this user
       const platformAdminToken = await platformAdminAuthService.generateToken(platformAdmin);
@@ -236,7 +329,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.redirect(`/?token=${platformAdminToken}&admin=true`);
     } catch (error) {
       console.error("Azure AD callback processing error:", error);
-      res.redirect("/admin/login?error=callback_processing_failed");
+      const detail = encodeURIComponent(error instanceof Error ? error.message : String(error));
+      const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
+      res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
     }
   });
 
@@ -660,7 +755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           clientSecret,
           callbackUrl:
             callbackUrl ||
-            `${process.env.BASE_URL || "http://localhost:3001"}/api/auth/azure/callback`,
+            `${process.env.BASE_URL || "http://localhost:5000"}/api/auth/azure/callback`,
         },
         userMapping: {
           emailField: "mail",

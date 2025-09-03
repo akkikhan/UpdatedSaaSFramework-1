@@ -49,7 +49,6 @@ export class AzureADService {
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         authority: `https://login.microsoftonline.com/${config.tenantId}`,
-        knownAuthorities: [`https://login.microsoftonline.com/${config.tenantId}`],
       },
       system: {
         loggerOptions: {
@@ -129,7 +128,8 @@ export class AzureADService {
       // Parse state to get code verifier
       let stateData;
       try {
-        stateData = JSON.parse(state);
+        const decodedState = decodeURIComponent(state);
+        stateData = JSON.parse(decodedState);
       } catch {
         throw new Error("Invalid state parameter");
       }
@@ -149,6 +149,10 @@ export class AzureADService {
         codeVerifier: stateData.codeVerifier,
       };
 
+      console.log(
+        "[PlatformAdmin][AzureAD] acquireTokenByCode with redirectUri:",
+        tokenRequest.redirectUri
+      );
       const response = await this.msalApp.acquireTokenByCode(tokenRequest);
 
       if (!response) {
