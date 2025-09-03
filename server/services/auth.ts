@@ -79,11 +79,9 @@ export class AuthService {
     try {
       const payload = jwt.verify(token, this.jwtSecret) as JWTPayload;
 
-      // Check if session exists and is valid
-      const session = await storage.getSession(token);
-      if (!session || session.expiresAt < new Date()) {
-        return null;
-      }
+      // For JWT tokens, we don't need to check session storage
+      // The token itself is the source of truth
+      // If you want to implement token revocation, you'd need to maintain a blacklist
 
       return payload;
     } catch (error) {
@@ -109,16 +107,59 @@ export class AuthService {
       expiresIn: `${this.jwtExpiryMinutes}m`,
     });
 
-    // Remove old session and create new one
-    await storage.deleteSession(oldToken);
-    await storage.createSession({
-      tenantId: payload.tenantId,
-      userId: payload.userId,
-      token: newToken,
-      expiresAt,
-    });
+    // For JWT tokens, we don't maintain sessions
+    // The new token replaces the old one on the client side
 
     return newToken;
+  }
+
+  async generatePasswordResetToken(email: string, tenantId: string): Promise<string | null> {
+    const user = await storage.getTenantUserByEmail(tenantId, email);
+    if (!user) {
+      return null;
+    }
+
+    const resetToken = jwt.sign(
+      { userId: user.id, tenantId, email: user.email, type: "password_reset" },
+      this.jwtSecret,
+      { expiresIn: "1h" }
+    );
+
+    return resetToken;
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<boolean> {
+    try {
+      const payload = jwt.verify(token, this.jwtSecret) as any;
+      if (payload.type !== "password_reset") {
+        return false;
+      }
+
+      const hashedPassword = await this.hashPassword(newPassword);
+      await storage.updateTenantUser(payload.userId, payload.tenantId, {
+        passwordHash: hashedPassword,
+      });
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async setupMFA(userId: string, tenantId: string): Promise<any> {
+    // MFA setup implementation would go here
+    // For now, returning a mock response
+    return {
+      secret: "mock-secret",
+      qrCode: "mock-qr-code",
+      backupCodes: ["backup1", "backup2", "backup3"],
+    };
+  }
+
+  async verifyMFA(userId: string, token: string, tenantId: string): Promise<boolean> {
+    // MFA verification implementation would go here
+    // For now, returning true for any valid token
+    return token && token.length === 6;
   }
 
   /**

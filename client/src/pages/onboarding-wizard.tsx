@@ -48,100 +48,19 @@ import {
   Database,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  TENANT_CREATION_SCHEMA,
+  MODULES_INFO,
+  MODULE_IDS,
+  createAuthProviderObject,
+  type TenantCreationData,
+  type ModuleId,
+} from "../../../shared/types";
 import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
 
-const formSchema = z.object({
-  // Basic Information
-  name: z.string().min(2, "Organization name must be at least 2 characters"),
-  orgId: z
-    .string()
-    .min(2, "Organization ID must be at least 2 characters")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Organization ID can only contain lowercase letters, numbers, and hyphens"
-    ),
-  adminEmail: z.string().email("Please enter a valid email address"),
-  adminName: z.string().min(2, "Admin name must be at least 2 characters"),
-  companyWebsite: z.string().url().optional().or(z.literal("")),
-
-  // Modules
-  enabledModules: z.array(z.string()).default([]),
-
-  // Module Configurations
-  moduleConfigs: z
-    .object({
-      authentication: z
-        .object({
-          providers: z.array(z.enum(["auth0", "azure-ad", "local", "saml"])).default([]),
-          auth0: z
-            .object({
-              domain: z.string().optional(),
-              clientId: z.string().optional(),
-              clientSecret: z.string().optional(),
-              audience: z.string().optional(),
-            })
-            .optional(),
-          azureAd: z
-            .object({
-              tenantId: z.string().optional(),
-              clientId: z.string().optional(),
-              clientSecret: z.string().optional(),
-              redirectUri: z.string().optional(),
-            })
-            .optional(),
-          local: z
-            .object({
-              secretKey: z.string().optional(),
-              expirationTime: z.string().optional(),
-              algorithm: z.string().optional(),
-            })
-            .optional(),
-          saml: z
-            .object({
-              entryPoint: z.string().optional(),
-              issuer: z.string().optional(),
-              cert: z.string().optional(),
-            })
-            .optional(),
-        })
-        .optional(),
-      rbac: z
-        .object({
-          defaultRoles: z.array(z.string()).optional(),
-          customPermissions: z.array(z.string()).optional(),
-          inheritanceEnabled: z.boolean().optional(),
-        })
-        .optional(),
-      logging: z
-        .object({
-          levels: z.array(z.enum(["error", "warn", "info", "debug", "trace"])).optional(),
-          destinations: z.array(z.string()).optional(),
-          retentionDays: z.number().optional(),
-        })
-        .optional(),
-      notifications: z
-        .object({
-          channels: z.array(z.enum(["email", "sms", "push", "webhook"])).optional(),
-          emailProvider: z.string().optional(),
-          webhookUrl: z.string().optional(),
-        })
-        .optional(),
-      aiCopilot: z
-        .object({
-          provider: z.enum(["openai", "azure-openai", "anthropic", "google"]).optional(),
-          apiKey: z.string().optional(),
-          model: z.string().optional(),
-          features: z.array(z.string()).optional(),
-        })
-        .optional(),
-    })
-    .default({}),
-
-  sendEmail: z.boolean().default(true),
-});
-
-type FormData = z.infer<typeof formSchema>;
+// Use shared schema for form validation - ensures frontend/backend compatibility
+type FormData = TenantCreationData;
 
 const STEPS = [
   {
@@ -170,44 +89,8 @@ const STEPS = [
   },
 ];
 
-const MODULES = [
-  {
-    id: "authentication",
-    name: "Authentication Module",
-    description: "Multiple authentication providers including Auth0, Azure AD, JWT, and SAML",
-    icon: Lock,
-    color: "bg-blue-500",
-    providers: ["Auth0", "Azure AD", "JWT", "SAML"],
-  },
-  {
-    id: "rbac",
-    name: "RBAC (Role-Based Access Control)",
-    description: "Advanced permission management with roles and policies",
-    icon: Users,
-    color: "bg-green-500",
-  },
-  {
-    id: "logging",
-    name: "Logging and Monitoring",
-    description: "Comprehensive audit trails and system monitoring",
-    icon: Activity,
-    color: "bg-orange-500",
-  },
-  {
-    id: "notifications",
-    name: "Notifications",
-    description: "Multi-channel notification system (Email, SMS, Push, Webhooks)",
-    icon: Bell,
-    color: "bg-purple-500",
-  },
-  {
-    id: "aiCopilot",
-    name: "AI Copilot",
-    description: "AI-powered assistance and automation features",
-    icon: Bot,
-    color: "bg-indigo-500",
-  },
-];
+// Use shared module definitions - ensures consistency with backend
+const MODULES = Object.values(MODULES_INFO);
 
 export default function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -216,22 +99,19 @@ export default function OnboardingWizard() {
   const createTenant = useCreateTenant();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(TENANT_CREATION_SCHEMA),
     defaultValues: {
       name: "",
       orgId: "",
       adminEmail: "",
       adminName: "",
-      companyWebsite: "",
-      enabledModules: [],
-      moduleConfigs: {
-        authentication: { providers: [] },
-        rbac: {},
-        logging: { levels: [] },
-        notifications: { channels: [] },
-        aiCopilot: {},
-      },
       sendEmail: true,
+      enabledModules: [],
+      moduleConfigs: {},
+      metadata: {
+        adminName: "",
+        companyWebsite: "",
+      },
     },
   });
 

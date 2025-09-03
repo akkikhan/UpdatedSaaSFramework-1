@@ -11,6 +11,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import {
+  TENANT_CREATION_SCHEMA,
+  MODULE_CONFIGS_SCHEMA,
+  MODULE_IDS,
+  type TenantCreationData,
+  type ModuleConfigs,
+} from "./types";
 
 // Platform Admins table - for platform-level administration
 export const platformAdmins = pgTable("platform_admins", {
@@ -349,154 +356,15 @@ export const defaultRoles = pgTable("default_roles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Insert schemas
+// Insert schemas - now using shared types for consistency
 export const insertPlatformAdminSchema = createInsertSchema(platformAdmins).omit({
   id: true,
   createdAt: true,
   lastLogin: true,
 });
 
-export const insertTenantSchema = createInsertSchema(tenants)
-  .omit({
-    id: true,
-    authApiKey: true,
-    rbacApiKey: true,
-    createdAt: true,
-    updatedAt: true,
-  })
-  .extend({
-    enabledModules: z
-      .array(
-        z.enum([
-          "auth",
-          "rbac",
-          "azure-ad",
-          "auth0",
-          "saml",
-          "logging",
-          "notifications",
-          "ai-copilot",
-        ])
-      )
-      .optional(),
-    moduleConfigs: z
-      .object({
-        auth: z
-          .object({
-            providers: z
-              .array(
-                z.object({
-                  type: z.enum(["azure-ad", "auth0", "saml", "local"]),
-                  name: z.string(), // "Employee SSO", "Customer Auth", etc.
-                  priority: z.number().default(1), // 1 = primary, 2 = secondary
-                  config: z
-                    .object({
-                      // Azure AD config
-                      tenantId: z.string().optional(),
-                      clientId: z.string().optional(),
-                      clientSecret: z.string().optional(),
-                      domain: z.string().optional(),
-                      // Auth0 config
-                      auth0Domain: z.string().optional(),
-                      audience: z.string().optional(),
-                      // SAML config
-                      entryPoint: z.string().optional(),
-                      issuer: z.string().optional(),
-                      cert: z.string().optional(),
-                      identifierFormat: z.string().optional(),
-                      // Common settings
-                      callbackUrl: z.string().optional(),
-                      logoutUrl: z.string().optional(),
-                    })
-                    .optional(),
-                  userMapping: z
-                    .object({
-                      emailField: z.string().default("email"),
-                      nameField: z.string().default("name"),
-                      roleField: z.string().optional(),
-                    })
-                    .optional(),
-                  enabled: z.boolean().default(true),
-                })
-              )
-              .optional(),
-            defaultProvider: z.string().optional(), // Which provider to use by default
-            allowFallback: z.boolean().default(true), // Allow fallback to other providers
-          })
-          .optional(),
-        rbac: z
-          .object({
-            permissionTemplate: z.enum(["standard", "enterprise", "custom"]).default("standard"),
-            businessType: z
-              .enum(["general", "healthcare", "finance", "education", "government"])
-              .default("general"),
-            customPermissions: z.array(z.string()).optional(),
-            defaultRoles: z.array(z.string()).optional(),
-          })
-          .optional(),
-        logging: z
-          .object({
-            levels: z.array(z.enum(["error", "warn", "info", "debug", "trace"])).optional(),
-            destinations: z
-              .array(z.enum(["database", "elasticsearch", "cloudwatch", "datadog"]))
-              .optional(),
-            retention: z
-              .object({
-                error: z.string().optional(),
-                security: z.string().optional(),
-                audit: z.string().optional(),
-                performance: z.string().optional(),
-              })
-              .optional(),
-            alerting: z
-              .object({
-                errorThreshold: z.number().optional(),
-                securityEvents: z.boolean().optional(),
-                performanceDegradation: z.boolean().optional(),
-              })
-              .optional(),
-          })
-          .optional(),
-        notifications: z
-          .object({
-            channels: z.array(z.enum(["email", "sms", "push", "webhook", "slack"])).optional(),
-            emailProvider: z.enum(["sendgrid", "mailgun", "ses", "smtp"]).optional(),
-            smsProvider: z.enum(["twilio", "vonage", "aws-sns"]).optional(),
-            pushProvider: z.enum(["firebase", "apn", "onesignal"]).optional(),
-            templates: z
-              .object({
-                welcome: z.boolean().optional(),
-                trial_ending: z.boolean().optional(),
-                payment_failed: z.boolean().optional(),
-                security_alert: z.boolean().optional(),
-              })
-              .optional(),
-          })
-          .optional(),
-        "ai-copilot": z
-          .object({
-            provider: z.enum(["openai", "anthropic", "azure-openai", "aws-bedrock"]).optional(),
-            model: z.string().optional(),
-            capabilities: z
-              .object({
-                chatSupport: z.boolean().optional(),
-                codeAssistance: z.boolean().optional(),
-                documentAnalysis: z.boolean().optional(),
-                workflowAutomation: z.boolean().optional(),
-              })
-              .optional(),
-            safety: z
-              .object({
-                contentFiltering: z.boolean().optional(),
-                piiDetection: z.boolean().optional(),
-                rateLimiting: z.boolean().optional(),
-              })
-              .optional(),
-          })
-          .optional(),
-      })
-      .optional(),
-  });
+// Use the shared tenant creation schema to ensure frontend/backend compatibility
+export const insertTenantSchema = TENANT_CREATION_SCHEMA;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -541,11 +409,11 @@ export const insertSecurityEventSchema = createInsertSchema(securityEvents).omit
   timestamp: true,
 });
 
-// Types
+// Types - now using shared types for consistency
 export type PlatformAdmin = typeof platformAdmins.$inferSelect;
 export type InsertPlatformAdmin = z.infer<typeof insertPlatformAdminSchema>;
 export type Tenant = typeof tenants.$inferSelect;
-export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type InsertTenant = TenantCreationData; // Use shared type
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Role = typeof roles.$inferSelect;

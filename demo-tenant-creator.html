@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Demo Tenant</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      .button {
+        background: #007cba;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo Tenant Creator</h1>
+    <p>This will create a demo tenant with orgId "demo" for testing.</p>
+
+    <div>
+      <h3>Tenant Details:</h3>
+      <ul>
+        <li><strong>Name:</strong> Demo Company</li>
+        <li><strong>Org ID:</strong> demo</li>
+        <li><strong>Admin Email:</strong> akki@primussoft.com</li>
+        <li><strong>Modules:</strong> user-management, rbac</li>
+      </ul>
+    </div>
+
+    <button class="button" onclick="createDemoTenant()">Create Demo Tenant</button>
+    <button class="button" onclick="checkExistingTenants()" style="background: #6c757d">
+      Check Existing Tenants
+    </button>
+
+    <div id="result"></div>
+
+    <script>
+      async function createDemoTenant() {
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "<p>🚀 Creating demo tenant...</p>";
+
+        try {
+          const response = await fetch("/api/tenants", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: "Demo Company",
+              orgId: "demo",
+              adminEmail: "akki@primussoft.com",
+              enabledModules: ["user-management", "rbac"],
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✅ Demo tenant created successfully!</h3>
+                            <p><strong>Tenant ID:</strong> ${data.id}</p>
+                            <p><strong>Login URL:</strong> <a href="/tenant/demo/login" target="_blank">http://localhost:5000/tenant/demo/login</a></p>
+                            <p><strong>Email:</strong> akki@primussoft.com</p>
+                            <p><strong>Password:</strong> Demo123</p>
+                        </div>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Failed to create tenant</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${data.message || "Unknown error"}</p>
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Request failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+        }
+      }
+
+      async function checkExistingTenants() {
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "<p>🔍 Checking existing tenants...</p>";
+
+        try {
+          const response = await fetch("/api/tenants");
+          const data = await response.json();
+
+          if (response.ok) {
+            let html = '<div class="result success"><h3>📋 Existing Tenants:</h3>';
+            if (data.length === 0) {
+              html += "<p>No tenants found.</p>";
+            } else {
+              data.forEach(tenant => {
+                html += `
+                                <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                                    <p><strong>Name:</strong> ${tenant.name}</p>
+                                    <p><strong>Org ID:</strong> ${tenant.orgId}</p>
+                                    <p><strong>Admin Email:</strong> ${tenant.adminEmail}</p>
+                                    <p><strong>Login URL:</strong> <a href="/tenant/${tenant.orgId}/login" target="_blank">http://localhost:5000/tenant/${tenant.orgId}/login</a></p>
+                                </div>
+                            `;
+              });
+            }
+            html += "</div>";
+            resultDiv.innerHTML = html;
+          } else {
+            resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Failed to fetch tenants</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${data.message || "Unknown error"}</p>
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Request failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Client - Authentication Redirect</title>
+</head>
+<body>
+    <h1>Testing Authentication Redirect</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Test function to check authentication behavior
+        async function testAuthRedirect() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // Make a request to the main page
+                const response = await fetch('/', {
+                    method: 'GET',
+                    redirect: 'manual' // Don't follow redirects automatically
+                });
+                
+                resultDiv.innerHTML = `
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Redirect Location:</strong> ${response.headers.get('location') || 'None'}</p>
+                    <p><strong>Response Type:</strong> ${response.type}</p>
+                    <p><strong>URL:</strong> ${response.url}</p>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        // Test on page load
+        window.onload = testAuthRedirect;
+    </script>
+</body>
+</html>

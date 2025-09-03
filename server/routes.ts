@@ -993,6 +993,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // V2 API Login endpoint (used by the tenant portal)
+  app.post("/api/v2/auth/login", async (req, res) => {
+    try {
+      const { email, password, tenantId, orgId } = req.body;
+
+      if (!email || !password || (!tenantId && !orgId)) {
+        return res
+          .status(400)
+          .json({ message: "Email, password, and tenantId (or orgId) are required" });
+      }
+
+      // If orgId is provided, convert it to tenantId
+      let actualTenantId = tenantId;
+      if (orgId && !tenantId) {
+        const tenant = await storage.getTenantByOrgId(orgId);
+        if (!tenant) {
+          return res.status(404).json({ message: "Tenant not found" });
+        }
+        actualTenantId = tenant.id;
+      }
+
+      const result = await authService.login(email, password, actualTenantId);
+
+      if (!result) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("V2 Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   // Tenant user logout
   app.post("/auth/logout", async (req, res) => {
     try {
@@ -1010,6 +1044,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Logged out successfully" });
     } catch (error) {
       console.error("Logout error:", error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  // V2 API Verify endpoint (used by the tenant portal)
+  app.get("/api/v2/auth/verify", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "No valid authorization token provided" });
+      }
+
+      const token = authHeader.split(" ")[1];
+      const result = await authService.verifyToken(token);
+
+      if (!result) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
+
+      // Check if tenant is suspended
+      const tenant = await storage.getTenant(result.tenantId);
+      if (tenant && tenant.status === "suspended") {
+        return res.status(403).json({
+          error: "TENANT_SUSPENDED",
+          message: "Your organization's account has been suspended",
+        });
+      }
+
+      res.json({
+        valid: true,
+        user: result,
+      });
+    } catch (error) {
+      console.error("V2 Token verification error:", error);
+      res.status(401).json({ message: "Token verification failed" });
+    }
+  });
+
+  // V2 API Logout endpoint (used by the tenant portal)
+  app.post("/api/v2/auth/logout", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "No token provided" });
+      }
+
+      const token = authHeader.split(" ")[1];
+
+      // Delete session from database if applicable
+      await storage.deleteSession(token);
+
+      console.log("👋 Tenant user logout requested (V2)");
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error("V2 Logout error:", error);
       res.status(500).json({ message: "Logout failed" });
     }
   });

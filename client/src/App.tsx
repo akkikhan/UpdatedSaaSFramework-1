@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AdminLayout from "@/components/layout/admin-layout";
+import AuthGuard from "@/components/auth/AuthGuard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import TenantsPage from "@/pages/tenants";
 import AddTenantPage from "@/pages/add-tenant";
@@ -23,6 +24,7 @@ import TenantPortalPage from "@/pages/tenant-portal";
 import RBACManagementPage from "@/pages/rbac-management";
 import RBACConfigPage from "@/pages/rbac-config";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
+import PlatformAdminLogin from "@/pages/platform-admin-login";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
 
@@ -33,34 +35,39 @@ function Router() {
       <Route path="/auth-success" component={AuthSuccessPage} />
       <Route path="/auth-error" component={AuthErrorPage} />
 
+      {/* Admin Login Page - MUST come before protected routes */}
+      <Route path="/admin/login" component={PlatformAdminLogin} />
+
       {/* Tenant Portal Routes */}
       <Route path="/tenant/:orgId/login" component={TenantLogin} />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
       <Route path="/tenant/:orgId/*" component={TenantDashboard} />
 
-      {/* Admin Portal Routes */}
+      {/* Protected Admin Portal Routes */}
       <Route>
-        <AdminLayout>
-          <Switch>
-            <Route path="/" component={AdminDashboard} />
-            <Route path="/admin" component={AdminDashboard} />
-            <Route path="/tenants" component={TenantsPage} />
-            <Route path="/tenants/add" component={AddTenantPage} />
-            <Route path="/tenants/wizard" component={OnboardingWizard} />
-            <Route path="/tenants/success" component={TenantSuccessPage} />
-            <Route path="/tenants/:tenantId/portal" component={TenantPortalPage} />
-            <Route path="/tenants/:tenantId/rbac" component={RBACManagementPage} />
-            <Route path="/rbac-config" component={RBACConfigPage} />
-            <Route path="/modules" component={ModuleManagementPage} />
-            <Route path="/logs" component={LogsPage} />
-            <Route path="/compliance" component={ComplianceDashboard} />
-            <Route path="/sdk" component={SDKIntegrationPage} />
-            <Route path="/emails" component={EmailTemplatesPage} />
-            <Route path="/system" component={SystemHealthPage} />
-            <Route path="/test-azure" component={AzureTestPage} />
-            <Route component={NotFound} />
-          </Switch>
-        </AdminLayout>
+        <AuthGuard>
+          <AdminLayout>
+            <Switch>
+              <Route path="/" component={AdminDashboard} />
+              <Route path="/admin" component={AdminDashboard} />
+              <Route path="/tenants" component={TenantsPage} />
+              <Route path="/tenants/add" component={AddTenantPage} />
+              <Route path="/tenants/wizard" component={OnboardingWizard} />
+              <Route path="/tenants/success" component={TenantSuccessPage} />
+              <Route path="/tenants/:tenantId/portal" component={TenantPortalPage} />
+              <Route path="/tenants/:tenantId/rbac" component={RBACManagementPage} />
+              <Route path="/rbac-config" component={RBACConfigPage} />
+              <Route path="/modules" component={ModuleManagementPage} />
+              <Route path="/logs" component={LogsPage} />
+              <Route path="/compliance" component={ComplianceDashboard} />
+              <Route path="/sdk" component={SDKIntegrationPage} />
+              <Route path="/emails" component={EmailTemplatesPage} />
+              <Route path="/system" component={SystemHealthPage} />
+              <Route path="/test-azure" component={AzureTestPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </AdminLayout>
+        </AuthGuard>
       </Route>
     </Switch>
   );
