@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,14 +21,54 @@ import {
 } from "lucide-react";
 import { Link, useParams } from "wouter";
 import type { Tenant } from "@/../../shared/schema";
+import { api } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TenantPortalPage() {
   const { tenantId } = useParams();
+  const { toast } = useToast();
+  const qc = useQueryClient();
 
   const { data: tenant, isLoading } = useQuery<Tenant>({
     queryKey: ["/api/tenants", tenantId],
     enabled: !!tenantId,
   });
+
+  const updateModules = useMutation({
+    mutationFn: (payload: { enabledModules?: string[]; moduleConfigs?: Record<string, any> }) =>
+      api.updateTenantModules(tenantId as string, payload),
+    onSuccess: async () => {
+      toast({ title: "Saved", description: "Authentication settings updated" });
+      await qc.invalidateQueries({ queryKey: ["/api/tenants", tenantId] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Update failed", description: e.message, variant: "destructive" }),
+  });
+
+  const configureAzure = useMutation({
+    mutationFn: (payload: {
+      tenantId: string;
+      clientId: string;
+      clientSecret: string;
+      callbackUrl?: string;
+    }) => api.configureTenantAzureAD(tenantId as string, payload),
+    onSuccess: async () => {
+      toast({ title: "Azure AD configured" });
+      await qc.invalidateQueries({ queryKey: ["/api/tenants", tenantId] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Azure config failed", description: e.message, variant: "destructive" }),
+  });
+
+  const [azureForm, setAzureForm] = useState({
+    tenantId: "",
+    clientId: "",
+    clientSecret: "",
+    callbackUrl: "",
+  });
+  const [auth0Form, setAuth0Form] = useState({ domain: "", clientId: "", clientSecret: "" });
 
   const moduleInfo = [
     {
@@ -369,16 +409,134 @@ export default function TenantPortalPage() {
                       <p className="text-sm text-slate-600 mb-2">
                         Add another authentication provider
                       </p>
-                      <div className="flex justify-center gap-2">
-                        <Button variant="outline" size="sm">
-                          + Azure AD
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          + Auth0
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          + SAML
-                        </Button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mt-4">
+                        <div className="p-4 border rounded-lg">
+                          <h4 className="font-semibold mb-2">Azure AD</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <Label>Tenant ID</Label>
+                              <Input
+                                value={azureForm.tenantId}
+                                onChange={e =>
+                                  setAzureForm({ ...azureForm, tenantId: e.target.value })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label>Client ID</Label>
+                              <Input
+                                value={azureForm.clientId}
+                                onChange={e =>
+                                  setAzureForm({ ...azureForm, clientId: e.target.value })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label>Client Secret</Label>
+                              <Input
+                                type="password"
+                                value={azureForm.clientSecret}
+                                onChange={e =>
+                                  setAzureForm({ ...azureForm, clientSecret: e.target.value })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label>Callback URL (optional)</Label>
+                              <Input
+                                value={azureForm.callbackUrl}
+                                onChange={e =>
+                                  setAzureForm({ ...azureForm, callbackUrl: e.target.value })
+                                }
+                                placeholder={`${window.location.origin}/api/auth/azure/callback`}
+                              />
+                            </div>
+                            <div className="pt-2">
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  configureAzure.mutate({
+                                    tenantId: azureForm.tenantId,
+                                    clientId: azureForm.clientId,
+                                    clientSecret: azureForm.clientSecret,
+                                    callbackUrl: azureForm.callbackUrl || undefined,
+                                  })
+                                }
+                                disabled={configureAzure.isPending}
+                              >
+                                {configureAzure.isPending ? "Saving..." : "+ Add Azure AD"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4 border rounded-lg">
+                          <h4 className="font-semibold mb-2">Auth0</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <Label>Domain</Label>
+                              <Input
+                                value={auth0Form.domain}
+                                onChange={e =>
+                                  setAuth0Form({ ...auth0Form, domain: e.target.value })
+                                }
+                                placeholder="your-tenant.auth0.com"
+                              />
+                            </div>
+                            <div>
+                              <Label>Client ID</Label>
+                              <Input
+                                value={auth0Form.clientId}
+                                onChange={e =>
+                                  setAuth0Form({ ...auth0Form, clientId: e.target.value })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label>Client Secret</Label>
+                              <Input
+                                type="password"
+                                value={auth0Form.clientSecret}
+                                onChange={e =>
+                                  setAuth0Form({ ...auth0Form, clientSecret: e.target.value })
+                                }
+                              />
+                            </div>
+                            <div className="pt-2">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  const current = (tenant as any)?.moduleConfigs || {};
+                                  const providers = (current.auth?.providers || []).filter(
+                                    (p: any) => p.type !== "auth0"
+                                  );
+                                  providers.push({
+                                    type: "auth0",
+                                    name: "Auth0",
+                                    priority: 1,
+                                    enabled: true,
+                                    config: {
+                                      domain: auth0Form.domain,
+                                      clientId: auth0Form.clientId,
+                                      clientSecret: auth0Form.clientSecret,
+                                    },
+                                  });
+                                  updateModules.mutate({
+                                    enabledModules: Array.isArray(tenant?.enabledModules)
+                                      ? (tenant!.enabledModules as any)
+                                      : ["auth"],
+                                    moduleConfigs: {
+                                      ...current,
+                                      auth: { ...(current.auth || {}), providers },
+                                    },
+                                  });
+                                }}
+                                disabled={updateModules.isPending}
+                              >
+                                {updateModules.isPending ? "Saving..." : "+ Add Auth0"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

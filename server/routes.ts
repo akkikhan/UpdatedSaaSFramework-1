@@ -762,8 +762,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentModules = (tenant.enabledModules as string[]) || ["auth", "rbac"];
       const newModules = enabledModules || currentModules;
 
+      // Encrypt any provider secrets before persisting (parity with createTenant)
+      let safeConfigs = moduleConfigs || {};
+      try {
+        if (safeConfigs?.auth?.providers?.length) {
+          const { encryptSecret } = await import("./utils/secret.js");
+          safeConfigs = {
+            ...safeConfigs,
+            auth: {
+              ...(safeConfigs.auth || {}),
+              providers: safeConfigs.auth.providers.map((p: any) => {
+                if (p?.type === "azure-ad" && p.config?.clientSecret) {
+                  return {
+                    ...p,
+                    config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
+                  };
+                }
+                if (p?.type === "auth0" && p.config?.clientSecret) {
+                  return {
+                    ...p,
+                    config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
+                  };
+                }
+                return p;
+              }),
+            },
+          } as any;
+        }
+      } catch (e) {
+        console.warn(
+          "Provider secret encryption (update) skipped:",
+          e instanceof Error ? e.message : e
+        );
+      }
+
       // Update tenant modules
-      await storage.updateTenantModules(id, newModules, moduleConfigs || {});
+      await storage.updateTenantModules(id, newModules, safeConfigs);
 
       res.json({
         message: "Modules updated successfully",

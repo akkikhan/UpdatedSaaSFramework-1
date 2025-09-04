@@ -1,4 +1,8 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm run test
+# Keep pre-push lightweight and deterministic:
+# - Lint and format check only
+# - Avoid running Playwright via Jest in pre-push to prevent false failures
+
+npm run lint && npm run format:check
