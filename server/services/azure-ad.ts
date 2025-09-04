@@ -93,7 +93,7 @@ export class AzureADService {
       // Generate PKCE parameters
       const { challenge, verifier } = await this.cryptoProvider.generatePkceCodes();
 
-      const authCodeUrlParameters = {
+      const authCodeUrlParameters: any = {
         scopes,
         redirectUri:
           this.config.redirectUri ||
@@ -104,8 +104,14 @@ export class AzureADService {
         state: tenantId
           ? JSON.stringify({ tenantId, codeVerifier: verifier })
           : JSON.stringify({ codeVerifier: verifier }),
-        prompt: "consent", // Force consent to ensure we get refresh token
       };
+
+      // Default to select_account for better UX; allow forcing consent via env
+      if (process.env.AZURE_FORCE_CONSENT === "true") {
+        authCodeUrlParameters.prompt = "consent";
+      } else {
+        authCodeUrlParameters.prompt = "select_account";
+      }
 
       const authUrl = await this.msalApp.getAuthCodeUrl(authCodeUrlParameters);
       return authUrl;

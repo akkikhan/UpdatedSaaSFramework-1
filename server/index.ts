@@ -1,4 +1,11 @@
 import dotenv from "dotenv";
+// Prefer IPv4 DNS results first to avoid IPv6 connectivity issues (e.g., PG over IPv6 timeouts)
+import { setDefaultResultOrder } from "node:dns";
+try {
+  setDefaultResultOrder("ipv4first");
+  // eslint-disable-next-line no-console
+  console.log("Networking: DNS result order set to ipv4first");
+} catch {}
 
 // Load environment variables FIRST before any other imports
 dotenv.config();

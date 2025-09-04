@@ -186,6 +186,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/admin/login?error=invalid_state");
       }
 
+      // Prevent double-processing the same authorization code (browser retries/back button)
+      const handledCodes = (global as any).__platformHandledCodes || new Map<string, number>();
+      (global as any).__platformHandledCodes = handledCodes;
+
+      if (typeof code === "string") {
+        // Clear expired entries
+        const now = Date.now();
+        for (const [k, t] of handledCodes.entries()) {
+          if (now - t > 5 * 60 * 1000) handledCodes.delete(k);
+        }
+        if (handledCodes.has(code)) {
+          console.warn("Authorization code already processed recently; restarting login.");
+          return res.redirect("/api/platform/auth/azure/login");
+        }
+        handledCodes.set(code, Date.now());
+      }
+
       // Exchange code for tokens and get user info (platform admin - no tenant provisioning)
       let authResult;
       try {
@@ -196,6 +213,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           innerError instanceof Error ? innerError.message : String(innerError)
         );
         const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
+        // If the code was already redeemed, restart login to get a fresh code
+        if (
+          typeof detail === "string" &&
+          /invalid_grant/i.test(detail) &&
+          /already redeemed/i.test(detail)
+        ) {
+          console.warn("Authorization code already redeemed. Restarting Azure AD login flow...");
+          return res.redirect("/api/platform/auth/azure/login");
+        }
         return res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
       }
 
@@ -329,7 +355,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.redirect(`/?token=${platformAdminToken}&admin=true`);
     } catch (error) {
       console.error("Azure AD callback processing error:", error);
-      const detail = encodeURIComponent(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+
+      // Special handling: authorization code already redeemed -> restart login to get a fresh code
+      if (/invalid_grant/i.test(message) && /already redeemed/i.test(message)) {
+        console.warn("Authorization code already redeemed. Restarting Azure AD login flow...");
+        return res.redirect("/api/platform/auth/azure/login");
+      }
+
+      const detail = encodeURIComponent(message);
       const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
       res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
     }
@@ -492,6 +526,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tenants", platformAdminMiddleware, async (req, res) => {
     try {
       const tenantData = insertTenantSchema.parse(req.body);
+
+      // Encrypt any provider secrets before persisting
+      try {
+        if (tenantData.moduleConfigs?.auth?.providers?.length) {
+          const { encryptSecret } = await import("./utils/secret.js");
+          tenantData.moduleConfigs.auth.providers = tenantData.moduleConfigs.auth.providers.map(
+            (p: any) => {
+              if (p?.type === "azure-ad" && p.config?.clientSecret) {
+                return {
+                  ...p,
+                  config: {
+                    ...p.config,
+                    clientSecret: encryptSecret(p.config.clientSecret),
+                  },
+                };
+              }
+              if (p?.type === "auth0" && p.config?.clientSecret) {
+                return {
+                  ...p,
+                  config: {
+                    ...p.config,
+                    clientSecret: encryptSecret(p.config.clientSecret),
+                  },
+                };
+              }
+              return p;
+            }
+          );
+        }
+      } catch (e) {
+        console.warn("Provider secret encryption skipped:", e instanceof Error ? e.message : e);
+      }
 
       // Check if orgId is already taken
       const existingTenant = await storage.getTenantByOrgId(tenantData.orgId);
@@ -745,6 +811,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Add new Azure AD provider
+      // Encrypt secret before storing
+      let encryptedSecret: string | undefined = clientSecret;
+      try {
+        const { encryptSecret } = await import("./utils/secret.js");
+        encryptedSecret = encryptSecret(clientSecret);
+      } catch {}
+
       moduleConfigs.auth.providers.push({
         type: "azure-ad",
         name: "Azure AD SSO",
@@ -752,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         config: {
           tenantId,
           clientId,
-          clientSecret,
+          clientSecret: encryptedSecret,
           callbackUrl:
             callbackUrl ||
             `${process.env.BASE_URL || "http://localhost:5000"}/api/auth/azure/callback`,
@@ -859,7 +932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const moduleConfigs = (tenant.moduleConfigs as any) || {};
       const authConfig = moduleConfigs.auth;
-      const azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
+      let azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
 
       if (!azureProvider) {
         console.error("Azure AD provider not found in tenant configuration");
@@ -867,6 +940,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("Azure AD provider found, creating service instance...");
+
+      // Decrypt clientSecret if encrypted
+      try {
+        const { decryptSecret } = await import("./utils/secret.js");
+        if (azureProvider.config?.clientSecret) {
+          azureProvider = {
+            ...azureProvider,
+            config: {
+              ...azureProvider.config,
+              clientSecret: decryptSecret(azureProvider.config.clientSecret),
+            },
+          };
+        }
+      } catch {}
+
+      // Guard: ensure required fields for SSO
+      if (
+        !azureProvider.config?.tenantId ||
+        !azureProvider.config?.clientId ||
+        !azureProvider.config?.clientSecret
+      ) {
+        console.error("Azure AD provider is incomplete for tenant", tenant.orgId);
+        return res.status(400).json({
+          message: "Azure AD not fully configured for this tenant",
+          next: `/tenant/${tenant.orgId}/settings/auth-providers`,
+          required: ["tenantId", "clientId", "clientSecret"],
+        });
+      }
 
       // Create Azure AD service instance
       const azureADService = new AzureADService({

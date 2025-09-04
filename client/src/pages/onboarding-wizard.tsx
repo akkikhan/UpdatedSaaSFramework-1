@@ -116,7 +116,8 @@ export default function OnboardingWizard() {
   });
 
   const watchedModules = form.watch("enabledModules") || [];
-  const watchedAuthProviders = form.watch("moduleConfigs.authentication.providers");
+  // Align with shared schema key: "auth" (not "authentication")
+  const watchedAuthProviders = form.watch("moduleConfigs.auth.providers");
 
   const handleNext = async () => {
     let fieldsToValidate: (keyof FormData)[] = [];
@@ -142,36 +143,23 @@ export default function OnboardingWizard() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      // Transform module names from frontend format to backend format
-      const moduleNameMap: Record<string, string> = {
-        authentication: "auth",
-        rbac: "rbac",
-        logging: "logging",
-        notifications: "notifications",
-        aiCopilot: "ai-copilot",
-      };
-
-      const transformedModules = data.enabledModules.map(module => moduleNameMap[module] || module);
-
-      // Transform moduleConfigs object keys to match backend expectations
+      // Module configs transformation: keep keys aligned with shared schema
       const transformedModuleConfigs: any = {};
-      Object.entries(data.moduleConfigs).forEach(([key, value]) => {
-        const transformedKey = moduleNameMap[key] || key;
+      Object.entries(data.moduleConfigs || {}).forEach(([key, value]) => {
+        const transformedKey = key; // already using shared keys (e.g., "auth", "rbac")
 
-        // Special handling for authentication module
         if (transformedKey === "auth" && value && typeof value === "object") {
           const authConfig = value as any;
-          const transformedAuth = { ...authConfig };
+          const transformedAuth: any = { ...authConfig };
 
           // Transform providers from simple strings to complex objects
           if (authConfig.providers && Array.isArray(authConfig.providers)) {
             transformedAuth.providers = authConfig.providers.map(
               (providerType: string, index: number) => {
                 // Get provider-specific config
-                let config = {};
-                const providerKey = providerType.replace("-", "").replace("_", ""); // "azure-ad" -> "azuread"
+                let config: any = {};
 
-                // Map provider keys to form field names
+                // Map provider keys to form field names within moduleConfigs.auth
                 const configKeyMap: Record<string, string> = {
                   "azure-ad": "azureAd",
                   auth0: "auth0",
@@ -184,15 +172,14 @@ export default function OnboardingWizard() {
                   config = authConfig[formConfigKey];
                 }
 
-                // Create provider object structure expected by backend
                 return {
                   type: providerType,
                   name: providerType
                     .split("-")
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(" "), // "azure-ad" -> "Azure Ad"
+                    .join(" "),
                   priority: index + 1,
-                  config: config,
+                  config,
                   userMapping: {
                     emailField: "email",
                     nameField: "name",
@@ -209,6 +196,9 @@ export default function OnboardingWizard() {
             delete transformedAuth.saml;
           }
 
+          transformedModuleConfigs[transformedKey] = transformedAuth;
+        } else {
+          // Pass-through other module configs (rbac, logging, etc.)
           transformedModuleConfigs[transformedKey] = value;
         }
       });
@@ -545,16 +535,21 @@ export default function OnboardingWizard() {
                       ) : (
                         <div className="space-y-6">
                           {/* Authentication Module Configuration */}
-                          {watchedModules.includes("authentication") && (
+                          {watchedModules.includes("auth") && (
                             <div className="space-y-4">
                               <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <Lock className="w-5 h-5" />
                                 Authentication Configuration
                               </h3>
+                              <p className="text-sm text-slate-600 -mt-2">
+                                Optional during onboarding. You can configure providers later in the
+                                tenant portal. Fields marked "SSO-required" are needed for SSO to
+                                work immediately.
+                              </p>
 
                               <FormField
                                 control={form.control}
-                                name="moduleConfigs.authentication.providers"
+                                name="moduleConfigs.auth.providers"
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Select Authentication Providers</FormLabel>
@@ -614,10 +609,15 @@ export default function OnboardingWizard() {
                                   <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.auth0.domain"
+                                      name="moduleConfigs.auth.auth0.domain"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Domain</FormLabel>
+                                          <FormLabel>
+                                            Domain{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="your-tenant.auth0.com" />
                                           </FormControl>
@@ -626,12 +626,38 @@ export default function OnboardingWizard() {
                                     />
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.auth0.clientId"
+                                      name="moduleConfigs.auth.auth0.clientId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Client ID</FormLabel>
+                                          <FormLabel>
+                                            Client ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Auth0 Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.auth0.clientSecret"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Client Secret{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              type="password"
+                                              placeholder="Your Auth0 Client Secret"
+                                            />
                                           </FormControl>
                                         </FormItem>
                                       )}
@@ -647,10 +673,15 @@ export default function OnboardingWizard() {
                                   <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.azureAd.tenantId"
+                                      name="moduleConfigs.auth.azureAd.tenantId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Tenant ID</FormLabel>
+                                          <FormLabel>
+                                            Tenant ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Tenant ID" />
                                           </FormControl>
@@ -659,12 +690,38 @@ export default function OnboardingWizard() {
                                     />
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.azureAd.clientId"
+                                      name="moduleConfigs.auth.azureAd.clientId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Client ID</FormLabel>
+                                          <FormLabel>
+                                            Client ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.azureAd.clientSecret"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Client Secret{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              type="password"
+                                              placeholder="Your Azure Client Secret"
+                                            />
                                           </FormControl>
                                         </FormItem>
                                       )}
