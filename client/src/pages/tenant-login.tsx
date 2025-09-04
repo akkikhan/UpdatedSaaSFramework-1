@@ -4,7 +4,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,10 +40,15 @@ export default function TenantLogin() {
 
   const onSubmit = async (data: LoginData) => {
     if (!orgId) return;
-    
+
     try {
       setError(null);
-      await login.mutateAsync({ ...data, orgId });
+      const result = await login.mutateAsync({ ...data, orgId });
+      // If first login with temp password, force change in-portal
+      if ((result as any)?.user?.metadata?.mustChangePassword) {
+        setLocation(`/tenant/${orgId}/password/change`);
+        return;
+      }
       setLocation(`/tenant/${orgId}/dashboard`);
     } catch (err: any) {
       setError(err.message || "Login failed. Please check your credentials.");
@@ -54,9 +66,7 @@ export default function TenantLogin() {
               </span>
             </div>
             <CardTitle className="text-2xl">Welcome back</CardTitle>
-            <CardDescription>
-              Sign in to your {orgId} tenant portal
-            </CardDescription>
+            <CardDescription>Sign in to your {orgId} tenant portal</CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
@@ -64,7 +74,7 @@ export default function TenantLogin() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -118,7 +128,17 @@ export default function TenantLogin() {
 
             <div className="mt-6 text-center text-sm text-slate-600">
               <p>Use the temporary password from your onboarding email</p>
-              <p className="mt-2">Default: <code className="bg-slate-100 px-1 rounded">temp123!</code></p>
+              <p className="mt-2">
+                Default: <code className="bg-slate-100 px-1 rounded">temp123!</code>
+              </p>
+              <p className="mt-3">
+                <a
+                  href={`/tenant/${orgId}/password/forgot`}
+                  className="text-blue-600 hover:underline"
+                >
+                  Forgot your password?
+                </a>
+              </p>
             </div>
           </CardContent>
         </Card>

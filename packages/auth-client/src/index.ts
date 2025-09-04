@@ -88,3 +88,39 @@ export async function fetchWithAuth(input: RequestInfo | URL, init: RequestInit 
 export function logout() {
   clearToken();
 }
+
+/** Refresh token using platform sliding refresh endpoint */
+export async function refreshToken(baseUrl?: string) {
+  const base = baseUrl || "";
+  const t = getToken();
+  if (!t) return null;
+  const res = await fetch(`${base}/api/v2/auth/refresh`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${t}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data?.token) setToken(data.token);
+  return data?.token || null;
+}
+
+/** Fetch current user's RBAC profile (roles and permissions) */
+export async function getRbacProfile(
+  baseUrl?: string
+): Promise<{ roles: any[]; permissions: string[] } | null> {
+  const base = baseUrl || "";
+  const res = await fetchWithAuth(`${base}/rbac/me`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/** Check if current user (or given profile) has a permission */
+export async function hasPermission(
+  permission: string,
+  profile?: { permissions: string[] },
+  baseUrl?: string
+) {
+  const p = profile || (await getRbacProfile(baseUrl));
+  if (!p) return false;
+  return Array.isArray(p.permissions) && p.permissions.includes(permission);
+}

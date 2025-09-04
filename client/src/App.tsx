@@ -16,6 +16,9 @@ import EmailTemplatesPage from "@/pages/email-templates";
 import SystemHealthPage from "@/pages/system-health";
 import TenantLogin from "@/pages/tenant-login";
 import TenantDashboard from "@/pages/tenant-dashboard";
+import PasswordResetRequest from "@/pages/password-reset-request";
+import PasswordResetConfirm from "@/pages/password-reset-confirm";
+import PasswordChange from "@/pages/password-change";
 import AzureTestPage from "@/pages/azure-test";
 import AuthSuccessPage from "@/pages/auth-success";
 import AuthErrorPage from "@/pages/auth-error";
@@ -42,6 +45,9 @@ function Router() {
 
       {/* Tenant Portal Routes */}
       <Route path="/tenant/:orgId/login" component={TenantLogin} />
+      <Route path="/tenant/:orgId/password/forgot" component={PasswordResetRequest} />
+      <Route path="/tenant/:orgId/password/reset" component={PasswordResetConfirm} />
+      <Route path="/tenant/:orgId/password/change" component={PasswordChange} />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
       <Route path="/tenant/:orgId/*" component={TenantDashboard} />
 

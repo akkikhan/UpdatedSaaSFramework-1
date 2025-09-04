@@ -139,37 +139,49 @@ export const MODULE_CONFIGS_SCHEMA = z
 export type ModuleConfigs = z.infer<typeof MODULE_CONFIGS_SCHEMA>;
 
 // Tenant creation schema - shared between frontend and backend
-export const TENANT_CREATION_SCHEMA = z.object({
-  name: z.string().min(1, "Organization name is required"),
-  orgId: z
-    .string()
-    .min(1, "Organization ID is required")
-    .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
-  adminEmail: z.string().email("Valid email address required"),
-  adminName: z.string().min(1, "Admin name is required"),
-  sendEmail: z.boolean().default(true),
-  enabledModules: z
-    .array(
-      z.enum([
-        MODULE_IDS.AUTH,
-        MODULE_IDS.RBAC,
-        MODULE_IDS.AZURE_AD,
-        MODULE_IDS.AUTH0,
-        MODULE_IDS.SAML,
-        MODULE_IDS.LOGGING,
-        MODULE_IDS.NOTIFICATIONS,
-        MODULE_IDS.AI_COPILOT,
-      ])
-    )
-    .default([MODULE_IDS.AUTH, MODULE_IDS.RBAC]),
-  moduleConfigs: MODULE_CONFIGS_SCHEMA,
-  metadata: z
-    .object({
-      adminName: z.string().optional(),
-      companyWebsite: z.string().optional(),
-    })
-    .optional(),
-});
+export const TENANT_CREATION_SCHEMA = z
+  .object({
+    name: z.string().min(1, "Organization name is required"),
+    orgId: z
+      .string()
+      .min(1, "Organization ID is required")
+      .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
+    adminEmail: z.string().email("Valid email address required"),
+    adminName: z.string().min(1, "Admin name is required"),
+    sendEmail: z.boolean().default(true),
+    enabledModules: z
+      .array(
+        z.enum([
+          MODULE_IDS.AUTH,
+          MODULE_IDS.RBAC,
+          MODULE_IDS.AZURE_AD,
+          MODULE_IDS.AUTH0,
+          MODULE_IDS.SAML,
+          MODULE_IDS.LOGGING,
+          MODULE_IDS.NOTIFICATIONS,
+          MODULE_IDS.AI_COPILOT,
+        ])
+      )
+      .default([MODULE_IDS.AUTH, MODULE_IDS.RBAC]),
+    moduleConfigs: MODULE_CONFIGS_SCHEMA,
+    metadata: z
+      .object({
+        adminName: z.string().optional(),
+        companyWebsite: z.string().optional(),
+      })
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Enforce: if RBAC selected, Auth must be selected
+    const mods = data.enabledModules || [];
+    if (mods.includes(MODULE_IDS.RBAC) && !mods.includes(MODULE_IDS.AUTH)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["enabledModules"],
+        message: "RBAC requires Authentication to be enabled",
+      });
+    }
+  });
 
 export type TenantCreationData = z.infer<typeof TENANT_CREATION_SCHEMA>;
 

@@ -31,6 +31,12 @@ npm i @saas-framework/auth-client
   - Like `fetch`, but automatically attaches the `Authorization: Bearer <token>`
     header.
 - `setTokenStorageKey(key)`, `getToken()`, `setToken(token)`, `logout()`
+- `refreshToken(baseUrl?)`
+  - Requests a new token from the platform using the current token.
+- `getRbacProfile(baseUrl?)`
+  - Returns `{ roles, permissions }` for the current user.
+- `hasPermission(permission, profile?, baseUrl?)`
+  - Returns `true/false` if the user has the given permission.
 
 ## Typical usage
 
@@ -60,6 +66,60 @@ await loginWithPassword({
 // 4) Call your (or platform) APIs with the token attached
 const res = await fetchWithAuth("/api/tenant/me");
 const me = await res.json();
+```
+
+### Angular HttpInterceptor example
+
+```ts
+// auth.interceptor.ts
+import { Injectable } from "@angular/core";
+import {
+  HttpEvent,
+  HttpHandler,
+  HttpInterceptor,
+  HttpRequest,
+} from "@angular/common/http";
+import { Observable } from "rxjs";
+import { getToken } from "@saas-framework/auth-client";
+
+@Injectable()
+export class AuthInterceptor implements HttpInterceptor {
+  intercept(
+    req: HttpRequest<any>,
+    next: HttpHandler
+  ): Observable<HttpEvent<any>> {
+    const token = getToken();
+    if (token) {
+      const cloned = req.clone({
+        setHeaders: { Authorization: `Bearer ${token}` },
+      });
+      return next.handle(cloned);
+    }
+    return next.handle(req);
+  }
+}
+
+// app.module.ts
+providers: [
+  { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+];
+```
+
+### .NET (Minimal API) verification snippet
+
+```csharp
+app.Use(async (ctx, next) => {
+  var auth = ctx.Request.Headers["Authorization"].ToString();
+  if (auth.StartsWith("Bearer ")) {
+    var token = auth.Substring(7);
+    var client = new HttpClient();
+    var req = new HttpRequestMessage(HttpMethod.Get, "https://your-platform.com/api/v2/auth/verify");
+    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    var res = await client.SendAsync(req);
+    if (!res.IsSuccessStatusCode) { ctx.Response.StatusCode = 401; return; }
+  }
+  await next();
+});
 ```
 
 ## Why use this SDK?

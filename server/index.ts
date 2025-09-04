@@ -20,6 +20,7 @@ try {
 }
 
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
@@ -54,6 +55,18 @@ app.use(
       includeSubDomains: true,
       preload: true,
     },
+  })
+);
+
+// CORS - allowlist from env CORS_ORIGINS (comma-separated), default * in dev
+const corsOrigins = (process.env.CORS_ORIGINS || "*")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin: corsOrigins.length === 1 && corsOrigins[0] === "*" ? true : corsOrigins,
+    credentials: true,
   })
 );
 

@@ -21,6 +21,8 @@ export default function AuthSuccessPage() {
         setToken(token);
         // Also ensure legacy key used by the portal is populated
         localStorage.setItem("tenant_token", token);
+        // Store org-scoped token for multi-tenant admin devices
+        localStorage.setItem(`tenant_token_${orgId}`, token);
       } catch {}
       // Clean the URL and go to tenant dashboard
       const pathOnly = window.location.pathname;

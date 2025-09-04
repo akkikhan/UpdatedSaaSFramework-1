@@ -69,7 +69,11 @@ The server will start on http://localhost:5000
 2. Click "Create Test Tenant" button
 3. Note the credentials displayed
 
-#### Option B: Using the API
+#### Option B: Using the API (Public registration simplified)
+
+Public registration no longer accepts an admin password. A default admin is
+provisioned with a temporary password and must change it at first login.
+Example:
 
 ```bash
 curl -X POST http://localhost:5000/api/register \
@@ -79,7 +83,6 @@ curl -X POST http://localhost:5000/api/register \
     "orgId": "test-company",
     "adminEmail": "admin@test.com",
     "adminName": "Test Admin",
-    "adminPassword": "TestPassword123!",
     "enabledModules": ["auth", "rbac"]
   }'
 ```
@@ -98,10 +101,8 @@ Example: `http://localhost:5000/tenant/test-company/login`
 
 ### 4. Login Credentials
 
-Use the credentials you provided during tenant registration:
-
-- Email: `admin@test.com`
-- Password: `TestPassword123!`
+Use the admin email and the temporary password from the onboarding email
+(default in dev: `temp123!`).
 
 ## Testing
 

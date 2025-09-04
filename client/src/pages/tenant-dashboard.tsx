@@ -113,11 +113,23 @@ export default function TenantDashboard() {
     window.location.href = `/tenant/${orgId}/login`;
   };
 
+  // Helper to get auth headers for tenant-scoped routes
+  const getAuthHeaders = () => {
+    const token =
+      localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+    return {
+      Authorization: `Bearer ${token}`,
+      "x-tenant-id": tenant?.id || "",
+      "Content-Type": "application/json",
+    } as Record<string, string>;
+  };
+
   // User CRUD operations
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await fetch(`/api/tenants/${tenant?.id}/users/${userId}`, {
+      const response = await fetch(`/auth/users/${userId}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       if (!response.ok) {
         throw new Error("Failed to delete user");
@@ -125,7 +137,7 @@ export default function TenantDashboard() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
+      queryClient.invalidateQueries({ queryKey: ["/auth/users", tenant?.id] });
       toast({
         title: "Success",
         description: "User deleted successfully",
@@ -142,8 +154,9 @@ export default function TenantDashboard() {
 
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
-      const response = await fetch(`/api/tenants/${tenant?.id}/roles/${roleId}`, {
+      const response = await fetch(`/rbac/roles/${roleId}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       if (!response.ok) {
         throw new Error("Failed to delete role");
@@ -151,7 +164,7 @@ export default function TenantDashboard() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/roles`] });
+      queryClient.invalidateQueries({ queryKey: ["/rbac/roles", tenant?.id] });
       toast({
         title: "Success",
         description: "Role deleted successfully",
@@ -216,6 +229,21 @@ export default function TenantDashboard() {
     refetchIntervalInBackground: true,
   }) as { data: any };
 
+  // Guard: Only tenant admin (adminEmail) can access the portal
+  if (user && tenant && user.email.toLowerCase() !== (tenant.adminEmail || "").toLowerCase()) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-slate-800 mb-2">Access Denied</h2>
+          <p className="text-slate-600 mb-4">You do not have admin access to this tenant portal</p>
+          <Button onClick={() => (window.location.href = `/tenant/${orgId}/login`)}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Track previous enabled modules for real-time change detection
   const [previousModules, setPreviousModules] = useState<string[]>([]);
 
@@ -256,13 +284,31 @@ export default function TenantDashboard() {
   }, [tenant?.enabledModules, toast]);
 
   const { data: tenantUsers = [] } = useQuery({
-    queryKey: [`/api/tenants/${tenant?.id}/users`],
+    queryKey: ["/auth/users", tenant?.id],
     enabled: !!tenant?.id,
+    queryFn: async () => {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const res = await fetch(`/auth/users`, {
+        headers: { Authorization: `Bearer ${token}`, "x-tenant-id": tenant?.id || "" },
+      });
+      if (!res.ok) throw new Error("Failed to get users");
+      return res.json();
+    },
   }) as { data: any[] };
 
   const { data: tenantRoles = [] } = useQuery({
-    queryKey: [`/api/tenants/${tenant?.id}/roles`],
+    queryKey: ["/rbac/roles", tenant?.id],
     enabled: !!tenant?.id,
+    queryFn: async () => {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const res = await fetch(`/rbac/roles`, {
+        headers: { Authorization: `Bearer ${token}`, "x-tenant-id": tenant?.id || "" },
+      });
+      if (!res.ok) throw new Error("Failed to get roles");
+      return res.json();
+    },
   }) as { data: any[] };
 
   // Check if tenant is suspended and handle accordingly
@@ -323,6 +369,9 @@ export default function TenantDashboard() {
     roles: tenantRoles || [],
   };
 
+  // Show banner if must change password
+  const mustChange = (user as any)?.metadata?.mustChangePassword;
+
   // Check if modules are enabled
   const isModuleEnabled = (moduleName: string) => {
     return tenantInfo.enabledModules.includes(moduleName);
@@ -330,9 +379,11 @@ export default function TenantDashboard() {
 
   const isAuthEnabled = isModuleEnabled("auth");
   const isRbacEnabled = isModuleEnabled("rbac");
-  const isAzureAdEnabled = isModuleEnabled("azure-ad");
-  const isAuth0Enabled = isModuleEnabled("auth0");
-  const isSamlEnabled = isModuleEnabled("saml");
+  const providers = ((tenantInfo.moduleConfigs as any)?.auth?.providers || []) as Array<any>;
+  const providerTypes = new Set((providers || []).map((p: any) => p?.type));
+  const isAzureAdEnabled = providerTypes.has("azure-ad");
+  const isAuth0Enabled = providerTypes.has("auth0");
+  const isSamlEnabled = providerTypes.has("saml");
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -379,6 +430,17 @@ export default function TenantDashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {mustChange && (
+          <div className="mb-4 bg-amber-50 border border-amber-300 rounded-md p-3 text-sm text-amber-900">
+            For security, please change your temporary password.{" "}
+            <button
+              className="underline"
+              onClick={() => (window.location.href = `/tenant/${orgId}/password/change`)}
+            >
+              Change now
+            </button>
+          </div>
+        )}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -513,7 +575,7 @@ export default function TenantDashboard() {
                         onSuccess={() => {
                           setShowAddUserModal(false);
                           queryClient.invalidateQueries({
-                            queryKey: [`/api/tenants/${tenant?.id}/users`],
+                            queryKey: ["/auth/users", tenant?.id],
                           });
                         }}
                       />
@@ -593,9 +655,7 @@ export default function TenantDashboard() {
                   onSuccess={() => {
                     setShowEditUserModal(false);
                     setSelectedUser(null);
-                    queryClient.invalidateQueries({
-                      queryKey: [`/api/tenants/${tenant?.id}/users`],
-                    });
+                    queryClient.invalidateQueries({ queryKey: ["/auth/users", tenant?.id] });
                   }}
                 />
               </Dialog>
@@ -620,7 +680,7 @@ export default function TenantDashboard() {
                       onSuccess={() => {
                         setShowAddRoleModal(false);
                         queryClient.invalidateQueries({
-                          queryKey: [`/api/tenants/${tenant?.id}/roles`],
+                          queryKey: ["/rbac/roles", tenant?.id],
                         });
                       }}
                     />
@@ -695,14 +755,14 @@ export default function TenantDashboard() {
                 onSuccess={() => {
                   setShowEditRoleModal(false);
                   setSelectedRole(null);
-                  queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/roles`] });
+                  queryClient.invalidateQueries({ queryKey: ["/rbac/roles", tenant?.id] });
                 }}
               />
             </Dialog>
           </TabsContent>
 
           <TabsContent value="modules" className="space-y-6">
-            <Card>
+            <Card className="max-h-[70vh] overflow-auto">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Authentication Modules</CardTitle>
@@ -713,6 +773,13 @@ export default function TenantDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {!isAuthEnabled && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-900 text-sm">
+                    Authentication Module is not enabled for your application. You can request
+                    enablement from the Platform Admin. Users and SSO settings are unavailable until
+                    enabled.
+                  </div>
+                )}
                 {isAuthEnabled && (
                   <div className="p-4 border rounded-lg bg-white">
                     <p className="text-sm font-medium mb-3">Auth Settings</p>
@@ -721,9 +788,10 @@ export default function TenantDashboard() {
                         <Label className="text-xs">Default Provider</Label>
                         <Select
                           onValueChange={async val => {
+                            const headers = getAuthHeaders();
                             await fetch(`/api/tenant/${tenant?.id}/auth/settings`, {
                               method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
+                              headers,
                               body: JSON.stringify({ defaultProvider: val }),
                             });
                             toast({ title: "Saved", description: "Default provider updated" });
@@ -752,9 +820,10 @@ export default function TenantDashboard() {
                           <Select
                             onValueChange={async val => {
                               const enforce = val === "true";
+                              const headers = getAuthHeaders();
                               await fetch(`/api/tenant/${tenant?.id}/auth/settings`, {
                                 method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
+                                headers,
                                 body: JSON.stringify({ allowFallback: !enforce }),
                               });
                               toast({
@@ -867,41 +936,91 @@ export default function TenantDashboard() {
                               {isEnabled ? "Active" : "Disabled"}
                             </Badge>
                             {!isEnabled && !module.required && (
-                              <span className="text-xs text-slate-500">
-                                Contact admin to enable
-                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    const headers = getAuthHeaders();
+                                    const res = await fetch(
+                                      `/api/tenant/${tenant?.id}/modules/request`,
+                                      {
+                                        method: "POST",
+                                        headers,
+                                        body: JSON.stringify({
+                                          moduleId: module.id,
+                                          action: "enable",
+                                        }),
+                                      }
+                                    );
+                                    if (!res.ok) throw new Error("Request failed");
+                                    toast({
+                                      title: "Requested",
+                                      description: "Platform admin will review your request",
+                                    });
+                                  } catch (e: any) {
+                                    toast({
+                                      title: "Failed",
+                                      description: e.message || "Could not send request",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                Request Enable
+                              </Button>
                             )}
                           </div>
                         </div>
                       </CardHeader>
                       {isEnabled &&
                         (module.id === "azure-ad" || module.id === "auth0") &&
-                        (tenantInfo.moduleConfigs as any)[module.id] && (
+                        providerTypes.has(module.id) && (
                           <CardContent className="pt-0">
                             <div className="space-y-2 bg-white p-3 rounded-lg border border-green-200">
                               <p className="text-sm font-medium text-slate-700">Configuration:</p>
                               {module.id === "azure-ad" && (
                                 <>
-                                  <p className="text-xs text-slate-600">
-                                    Tenant ID: {tenantInfo.moduleConfigs[module.id].tenantId}
-                                  </p>
-                                  <p className="text-xs text-slate-600">
-                                    Client ID: {tenantInfo.moduleConfigs[module.id].clientId}
-                                  </p>
-                                  <p className="text-xs text-slate-600">
-                                    Domain: {tenantInfo.moduleConfigs[module.id].domain}
-                                  </p>
+                                  {(() => {
+                                    const cfg =
+                                      (providers || []).find((p: any) => p.type === "azure-ad")
+                                        ?.config || {};
+                                    return (
+                                      <>
+                                        <p className="text-xs text-slate-600">
+                                          Tenant ID: {cfg.tenantId || "—"}
+                                        </p>
+                                        <p className="text-xs text-slate-600">
+                                          Client ID: {cfg.clientId || "—"}
+                                        </p>
+                                        <p className="text-xs text-slate-600">
+                                          Callback: {cfg.callbackUrl || "—"}
+                                        </p>
+                                      </>
+                                    );
+                                  })()}
                                 </>
                               )}
                               {module.id === "auth0" && (
                                 <>
-                                  <p className="text-xs text-slate-600">
-                                    Domain: {(tenantInfo.moduleConfigs as any)[module.id]?.domain}
-                                  </p>
-                                  <p className="text-xs text-slate-600">
-                                    Client ID:{" "}
-                                    {(tenantInfo.moduleConfigs as any)[module.id]?.clientId}
-                                  </p>
+                                  {(() => {
+                                    const cfg =
+                                      (providers || []).find((p: any) => p.type === "auth0")
+                                        ?.config || {};
+                                    return (
+                                      <>
+                                        <p className="text-xs text-slate-600">
+                                          Domain: {cfg.domain || "—"}
+                                        </p>
+                                        <p className="text-xs text-slate-600">
+                                          Audience: {cfg.audience || "—"}
+                                        </p>
+                                        <p className="text-xs text-slate-600">
+                                          Callback: {cfg.callbackUrl || "—"}
+                                        </p>
+                                      </>
+                                    );
+                                  })()}
                                 </>
                               )}
                             </div>
@@ -1018,14 +1137,16 @@ function UserModal({
 
   const mutation = useMutation({
     mutationFn: async (data: UserFormData) => {
-      const url = user
-        ? `/api/tenants/${tenantId}/users/${user.id}`
-        : `/api/tenants/${tenantId}/users`;
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const url = user ? `/auth/users/${user.id}` : `/auth/users`;
 
       const response = await fetch(url, {
-        method: user ? "PATCH" : "POST",
+        method: user ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "x-tenant-id": tenantId || "",
         },
         body: JSON.stringify(data),
       });
@@ -1183,14 +1304,16 @@ function RoleModal({
 
   const mutation = useMutation({
     mutationFn: async (data: RoleFormData) => {
-      const url = role
-        ? `/api/tenants/${tenantId}/roles/${role.id}`
-        : `/api/tenants/${tenantId}/roles`;
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const url = role ? `/rbac/roles/${role.id}` : `/rbac/roles`;
 
       const response = await fetch(url, {
-        method: role ? "PATCH" : "POST",
+        method: role ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "x-tenant-id": tenantId || "",
         },
         body: JSON.stringify({ ...data, permissions: selectedPermissions }),
       });

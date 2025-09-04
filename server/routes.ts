@@ -548,6 +548,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const tenantData = insertTenantSchema.parse(req.body);
 
+      // Enforce: RBAC cannot be enabled without Auth
+      try {
+        const mods: string[] = tenantData.enabledModules || [];
+        if (mods.includes("rbac") && !mods.includes("auth")) {
+          return res.status(400).json({ message: "RBAC requires Authentication to be enabled" });
+        }
+      } catch {}
+
       // Encrypt any provider secrets before persisting
       try {
         if (tenantData.moduleConfigs?.auth?.providers?.length) {
@@ -627,14 +635,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public Tenant Registration (no auth required)
+  // Public Tenant Registration (no auth required) - simplified: always temp password, no adminPassword
   app.post("/api/register", async (req, res) => {
     try {
-      const { name, orgId, adminEmail, adminName, adminPassword, enabledModules } = req.body;
+      const { name, orgId, adminEmail, adminName, enabledModules } = req.body;
 
       // Validate required fields
-      if (!name || !orgId || !adminEmail || !adminName || !adminPassword) {
-        return res.status(400).json({ message: "All fields are required" });
+      if (!name || !orgId || !adminEmail || !adminName) {
+        return res.status(400).json({ message: "name, orgId, adminEmail, adminName are required" });
       }
 
       // Validate orgId format
@@ -659,29 +667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "active" as const,
       };
 
-      // Create tenant
+      // Create tenant (also provisions a default admin with temp password)
       const tenant = await storage.createTenant(tenantData);
-
-      // Create admin user for the tenant
-      console.log(`🔧 Creating tenant user for: ${adminEmail}`);
-      const hashedPassword = await authService.hashPassword(adminPassword);
-      console.log(`🔐 Password hashed for tenant user: ${adminEmail}`);
-
-      const tenantUser = await storage.createTenantUser({
-        tenantId: tenant.id,
-        email: adminEmail,
-        passwordHash: hashedPassword,
-        firstName: adminName.split(" ")[0],
-        lastName: adminName.split(" ").slice(1).join(" ") || "",
-        status: "active" as const,
-      });
-
-      console.log(`✅ Tenant user created successfully:`, {
-        id: tenantUser.id,
-        email: tenantUser.email,
-        tenantId: tenantUser.tenantId,
-        status: tenantUser.status,
-      });
 
       // Send onboarding email
       const emailSent = await emailService.sendTenantOnboardingEmail({
@@ -709,6 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           orgId: tenant.orgId,
           status: tenant.status,
         },
+        note: "Admin temp password has been set. Check onboarding email.",
       });
     } catch (error) {
       console.error("Error registering tenant:", error);
@@ -858,6 +846,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating tenant modules:", error);
       res.status(500).json({ message: "Failed to update modules" });
+    }
+  });
+
+  // Tenant module change request (tenant admin can request enable/disable)
+  app.post("/api/tenant/:id/modules/request", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const { moduleId, action, reason } = req.body || {};
+      if (!moduleId || !action) {
+        return res.status(400).json({ message: "moduleId and action are required" });
+      }
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      // Log request
+      await storage.logSystemActivity({
+        tenantId: id,
+        action: "module_change_request",
+        entityType: "tenant",
+        entityId: id,
+        details: { moduleId, action, reason },
+        ipAddress: req.ip,
+        userAgent: req.get("User-Agent"),
+      });
+
+      // Attempt to notify platform admins by email (best-effort)
+      try {
+        const recipients = (process.env.AUTHORIZED_ADMIN_EMAILS || "").split(",").filter(Boolean);
+        const to = recipients[0] || process.env.ADMIN_EMAIL || tenant.adminEmail;
+        await emailService.sendSimpleTestEmail(
+          to,
+          `Module request: ${tenant.name} requests to ${action} ${moduleId}`
+        );
+      } catch {}
+
+      res.json({ message: "Request submitted" });
+    } catch (error) {
+      console.error("Module request error:", error);
+      res.status(500).json({ message: "Failed to submit request" });
     }
   });
 
@@ -1146,6 +1176,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // JWKS endpoint for RS256 verification (exposes RSA public key if configured)
+  app.get("/.well-known/jwks.json", async (req, res) => {
+    try {
+      const pub = process.env.RSA_PUBLIC_KEY;
+      if (!pub) return res.json({ keys: [] });
+      // Convert PEM to JWK
+      const { createPublicKey } = await import("crypto");
+      const keyObj = createPublicKey(pub);
+      // Node can export JWK in recent versions
+      // @ts-ignore
+      const jwk = keyObj.export({ format: "jwk" }) as any;
+      // Add typical fields
+      jwk.kid = process.env.JWKS_KID || "saas-rsa-1";
+      jwk.use = "sig";
+      jwk.alg = "RS256";
+      res.json({ keys: [jwk] });
+    } catch (e) {
+      console.error("JWKS error:", e);
+      res.json({ keys: [] });
+    }
+  });
+
   // Start Azure AD OAuth flow (MUST COME AFTER CALLBACK ROUTE)
   app.get("/api/auth/azure/:orgId", async (req, res) => {
     try {
@@ -1386,6 +1438,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // V2 API Refresh endpoint (sliding refresh)
+  app.post("/api/v2/auth/refresh", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(400).json({ message: "No token provided" });
+      }
+      const oldToken = authHeader.split(" ")[1];
+      const newToken = await authService.refreshToken(oldToken);
+      if (!newToken) return res.status(401).json({ message: "Invalid token" });
+      res.json({ token: newToken });
+    } catch (error) {
+      console.error("Refresh error:", error);
+      res.status(500).json({ message: "Failed to refresh token" });
+    }
+  });
+
   // =============================================================================
   // COMPREHENSIVE V2 API IMPLEMENTATION - ALL PROMISED FUNCTIONALITY
   // =============================================================================
@@ -1618,7 +1687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Roles Management
-  app.get("/rbac/roles", tenantMiddleware, async (req, res) => {
+  app.get("/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const roles = await storage.getTenantRoles(tenantId);
@@ -1629,7 +1698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/rbac/roles", validateApiKey, tenantMiddleware, async (req, res) => {
+  app.post("/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const { name, description, permissions } = req.body;
       const tenantId = req.tenantId;
@@ -1652,7 +1721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
+  app.put("/rbac/roles/:roleId", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
@@ -1670,7 +1739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/rbac/roles/:roleId", tenantMiddleware, async (req, res) => {
+  app.delete("/rbac/roles/:roleId", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
@@ -1684,7 +1753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Role Assignment
-  app.post("/rbac/users/:userId/roles", tenantMiddleware, async (req, res) => {
+  app.post("/rbac/users/:userId/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const { roleId } = req.body;
@@ -1702,21 +1771,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/rbac/users/:userId/roles/:roleId", tenantMiddleware, async (req, res) => {
-    try {
-      const { userId, roleId } = req.params;
-      const tenantId = req.tenantId;
+  app.delete(
+    "/rbac/users/:userId/roles/:roleId",
+    authMiddleware,
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const { userId, roleId } = req.params;
+        const tenantId = req.tenantId;
 
-      await storage.removeUserRole(userId, roleId, tenantId);
-      res.json({ message: "Role removed successfully" });
-    } catch (error) {
-      console.error("Remove role error:", error);
-      res.status(500).json({ message: "Failed to remove role" });
+        await storage.removeUserRole(userId, roleId, tenantId);
+        res.json({ message: "Role removed successfully" });
+      } catch (error) {
+        console.error("Remove role error:", error);
+        res.status(500).json({ message: "Failed to remove role" });
+      }
     }
-  });
+  );
 
   // Permission Checking
-  app.get("/rbac/users/:userId/permissions", tenantMiddleware, async (req, res) => {
+  app.get("/rbac/users/:userId/permissions", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const tenantId = req.tenantId;
@@ -1729,8 +1803,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RBAC: Get current user's roles and permissions from token
+  app.get("/rbac/me", authMiddleware, async (req, res) => {
+    try {
+      const user = req.user!;
+      const tenantId = user.tenantId;
+      const roles = await storage.getTenantUserRoles(tenantId, user.userId);
+      const permissions = await storage.getUserPermissions(user.userId, tenantId);
+      res.json({ roles, permissions });
+    } catch (error) {
+      console.error("RBAC me error:", error);
+      res.status(500).json({ message: "Failed to get RBAC profile" });
+    }
+  });
+
   // Simple RBAC endpoint that works independently of storage interface issues
-  app.post("/rbac/check-permission", validateApiKey, tenantMiddleware, (req, res) => {
+  app.post("/rbac/check-permission", authMiddleware, tenantMiddleware, (req, res) => {
     console.log("🔐 RBAC Permission Check Request:", req.body);
     const { userId, permission } = req.body;
 
@@ -1751,6 +1839,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("✅ RBAC check result:", { userId, permission, hasPermission });
     res.json({ hasPermission });
   }); // =============================================================================
+  // API v2 RBAC routes (SDK-compatible)
+  // -----------------------------------------------------------------------------
+  // Roles Management
+  app.get("/api/v2/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      const roles = await storage.getTenantRoles(tenantId);
+      res.json(roles);
+    } catch (error) {
+      console.error("[v2] Get roles error:", error);
+      res.status(500).json({ message: "Failed to get roles" });
+    }
+  });
+
+  app.post("/api/v2/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const { name, description, permissions } = req.body;
+      const tenantId = req.tenantId;
+      if (!name) return res.status(400).json({ message: "Role name is required" });
+      const role = await storage.createTenantRole({
+        tenantId,
+        name,
+        description: description || "",
+        permissions: permissions || [],
+      });
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("[v2] Create role error:", error);
+      res.status(500).json({ message: "Failed to create role" });
+    }
+  });
+
+  app.patch("/api/v2/rbac/roles/:roleId", authMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const { roleId } = req.params;
+      const tenantId = req.tenantId;
+      const updates = req.body;
+      const role = await storage.updateTenantRole(roleId, tenantId, updates);
+      if (!role) return res.status(404).json({ message: "Role not found" });
+      res.json(role);
+    } catch (error) {
+      console.error("[v2] Update role error:", error);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
+  app.delete("/api/v2/rbac/roles/:roleId", authMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const { roleId } = req.params;
+      const tenantId = req.tenantId;
+      await storage.deleteTenantRole(roleId, tenantId);
+      res.json({ message: "Role deleted successfully" });
+    } catch (error) {
+      console.error("[v2] Delete role error:", error);
+      res.status(500).json({ message: "Failed to delete role" });
+    }
+  });
+
+  // User Roles and Permissions
+  app.get(
+    "/api/v2/rbac/users/:userId/roles",
+    authMiddleware,
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const tenantId = req.tenantId!;
+        // Get assignments then fetch role details
+        const assignments = await storage.getTenantUserRoles(tenantId, userId);
+        const roleIds = (assignments || []).map((a: any) => a.roleId);
+        const roles = await Promise.all(
+          roleIds.map((id: string) => storage.getTenantRole?.(id)).filter(Boolean) as any
+        );
+        res.json(roles.filter(Boolean));
+      } catch (error) {
+        console.error("[v2] Get user roles error:", error);
+        res.status(500).json({ message: "Failed to get user roles" });
+      }
+    }
+  );
+
+  app.get("/api/v2/rbac/permissions", authMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.tenantId;
+      // Derive available permissions as the union of all role permissions for tenant
+      const roles = await storage.getTenantRoles(tenantId);
+      const set = new Set<string>();
+      for (const r of roles || []) {
+        (r.permissions || []).forEach((p: string) => set.add(p));
+      }
+      res.json(
+        Array.from(set).map(name => ({
+          id: name,
+          name,
+          resource: name.split(".")[0] || name,
+          action: name.split(".")[1] || "*",
+        }))
+      );
+    } catch (error) {
+      console.error("[v2] Get permissions error:", error);
+      res.status(500).json({ message: "Failed to get permissions" });
+    }
+  });
+
+  app.post("/api/v2/rbac/check-permission", authMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const { userId, resource, action } = req.body || {};
+      if (!userId || !resource || !action) {
+        return res.status(400).json({ message: "userId, resource, action are required" });
+      }
+      const tenantId = req.tenantId!;
+      const permissionKey = `${resource}.${action}`;
+      if (typeof storage.checkUserPermission === "function") {
+        const allowed = await storage.checkUserPermission(userId, permissionKey, tenantId);
+        return res.json({ hasPermission: !!allowed });
+      }
+      // Fallback: derive from roles
+      const perms: any = await storage.getUserPermissions?.(userId, tenantId);
+      const has = Array.isArray(perms) ? perms.includes(permissionKey) : false;
+      return res.json({ hasPermission: has });
+    } catch (error) {
+      console.error("[v2] Check permission error:", error);
+      res.status(500).json({ message: "Failed to check permission" });
+    }
+  });
   // LOGGING API v2 - Event Logging & Audit
   // =============================================================================
 
@@ -1976,6 +2189,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================================================
+  // Platform Admin: List module change requests (from system logs)
+  app.get("/api/admin/module-requests", platformAdminMiddleware, async (req, res) => {
+    try {
+      const includeResolved = String(req.query.includeResolved || "").toLowerCase() === "true";
+      const logs = await storage.getSystemLogs({ action: "module_change_request", limit: 100 });
+      if (includeResolved) {
+        res.json(logs);
+      } else {
+        const pending = logs.filter(
+          (r: any) => !r.details?.status || !["approved", "dismissed"].includes(r.details.status)
+        );
+        res.json(pending);
+      }
+    } catch (error) {
+      console.error("Error fetching module requests:", error);
+      res.status(500).json({ message: "Failed to fetch requests" });
+    }
+  });
+
+  // Approve a module request
+  app.post("/api/admin/module-requests/:id/approve", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { tenantId, moduleId } = req.body || {};
+      if (!tenantId || !moduleId) {
+        return res.status(400).json({ message: "tenantId and moduleId required" });
+      }
+
+      const tenant = await storage.getTenant(tenantId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const enabledModules = Array.from(new Set([...(tenant.enabledModules || []), moduleId]));
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      await storage.updateTenantModules(tenantId, enabledModules, moduleConfigs);
+
+      await storage.updateSystemLogDetails(id, { status: "approved", resolvedAt: new Date() });
+
+      await storage.logSystemActivity({
+        tenantId,
+        action: "module_enabled_by_admin",
+        entityType: "tenant",
+        entityId: tenantId,
+        details: { moduleId },
+      });
+
+      res.json({ message: "Approved" });
+    } catch (error) {
+      console.error("Approve request error:", error);
+      res.status(500).json({ message: "Failed to approve request" });
+    }
+  });
+
+  // Dismiss a module request
+  app.post("/api/admin/module-requests/:id/dismiss", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { tenantId, moduleId } = req.body || {};
+      await storage.updateSystemLogDetails(id, { status: "dismissed", resolvedAt: new Date() });
+      if (tenantId && moduleId) {
+        await storage.logSystemActivity({
+          tenantId,
+          action: "module_request_dismissed",
+          entityType: "tenant",
+          entityId: tenantId,
+          details: { moduleId },
+        });
+      }
+      res.json({ message: "Dismissed" });
+    } catch (error) {
+      console.error("Dismiss request error:", error);
+      res.status(500).json({ message: "Failed to dismiss request" });
+    }
+  });
+
   // EMAIL API v2 - Enhanced Email Service
   // =============================================================================
 

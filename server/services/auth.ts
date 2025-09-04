@@ -1,6 +1,7 @@
-import jwt from "jsonwebtoken";
+import jwt, { Algorithm } from "jsonwebtoken";
 import { storage } from "../storage";
 import { users, sessions, userRoles, type User, type Session } from "../../shared/schema";
+import { createPublicKey } from "crypto";
 
 export interface JWTPayload {
   userId: string;
@@ -12,10 +13,25 @@ export interface JWTPayload {
 export class AuthService {
   private jwtSecret: string;
   private jwtExpiryMinutes: number;
+  private rsaPrivateKey?: string;
+  private rsaPublicKey?: string;
+  private jwtAlg: Algorithm;
 
   constructor() {
     this.jwtSecret = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
     this.jwtExpiryMinutes = 60; // 1 hour
+    // Optional RSA keys (recommended for production)
+    this.rsaPrivateKey = process.env.RSA_PRIVATE_KEY || undefined;
+    this.rsaPublicKey = process.env.RSA_PUBLIC_KEY || undefined;
+    this.jwtAlg = this.rsaPrivateKey && this.rsaPublicKey ? "RS256" : "HS256";
+  }
+
+  private getSignKey(): string {
+    return this.jwtAlg === "RS256" && this.rsaPrivateKey ? this.rsaPrivateKey : this.jwtSecret;
+  }
+
+  private getVerifyKey(): string {
+    return this.jwtAlg === "RS256" && this.rsaPublicKey ? this.rsaPublicKey : this.jwtSecret;
   }
 
   async login(
@@ -48,23 +64,30 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + this.jwtExpiryMinutes);
 
+    // Fetch permissions from RBAC
+    let perms: string[] = [];
+    try {
+      perms = await storage.getUserPermissions(user.id, user.tenantId);
+    } catch {}
+
     const payload: JWTPayload = {
       userId: user.id,
       tenantId: user.tenantId,
       email: user.email,
-      permissions: [], // TODO: Get user permissions from RBAC
+      permissions: perms,
     };
 
     // Generate JWT token
-    const token = jwt.sign(payload, this.jwtSecret, {
+    const token = jwt.sign(payload, this.getSignKey(), {
+      algorithm: this.jwtAlg,
       expiresIn: `${this.jwtExpiryMinutes}m`,
     });
 
     // Note: Skipping session storage for tenant users as JWT tokens are stateless
     // TODO: Implement tenant-specific session table if needed
 
-    // Update last login
-    await storage.updateUserLastLogin(user.id);
+    // Update last login for tenant user
+    await storage.updateTenantUserLastLogin(user.id);
 
     const { passwordHash, ...userWithoutPassword } = user;
 
@@ -77,7 +100,9 @@ export class AuthService {
 
   async verifyToken(token: string): Promise<JWTPayload | null> {
     try {
-      const payload = jwt.verify(token, this.jwtSecret) as JWTPayload;
+      const payload = jwt.verify(token, this.getVerifyKey(), {
+        algorithms: [this.jwtAlg],
+      }) as JWTPayload;
 
       // For JWT tokens, we don't need to check session storage
       // The token itself is the source of truth
@@ -103,7 +128,8 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + this.jwtExpiryMinutes);
 
-    const newToken = jwt.sign(payload, this.jwtSecret, {
+    const newToken = jwt.sign(payload, this.getSignKey(), {
+      algorithm: this.jwtAlg,
       expiresIn: `${this.jwtExpiryMinutes}m`,
     });
 
@@ -183,7 +209,8 @@ export class AuthService {
       permissions: [], // Tenant-level permissions
     };
 
-    const token = jwt.sign(payload, this.jwtSecret, {
+    const token = jwt.sign(payload, this.getSignKey(), {
+      algorithm: this.jwtAlg,
       expiresIn: `${this.jwtExpiryMinutes}m`,
     });
 

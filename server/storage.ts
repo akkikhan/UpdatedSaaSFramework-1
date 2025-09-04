@@ -365,9 +365,11 @@ export class DatabaseStorage implements IStorage {
     await this.createTenantUser({
       tenantId: tenant.id,
       email: tenant.adminEmail,
-      name: "Admin",
+      firstName: "Admin",
+      lastName: "",
       passwordHash: await this.hashPassword("temp123!"), // Temporary password
       status: "active",
+      metadata: { mustChangePassword: true },
     });
 
     // Create default roles
@@ -539,6 +541,16 @@ export class DatabaseStorage implements IStorage {
     } else {
       return await baseQuery.limit(options.limit || 50).offset(options.offset || 0);
     }
+  }
+
+  async updateSystemLogDetails(id: string, updates: any): Promise<void> {
+    await db
+      .update(systemLogs)
+      .set({
+        details: sql`COALESCE(${systemLogs.details}, '{}'::jsonb) || ${JSON.stringify(updates)}::jsonb`,
+        timestamp: new Date(),
+      })
+      .where(eq(systemLogs.id, id));
   }
 
   // Update tenant modules
@@ -857,6 +869,11 @@ export class DatabaseStorage implements IStorage {
     return newAssignment;
   }
 
+  // Back-compat wrappers used by routes.ts
+  async assignUserRole(userId: string, roleId: string, tenantId: string): Promise<void> {
+    await this.assignTenantUserRole({ tenantId, userId, roleId, assignedBy: null as any });
+  }
+
   async getTenantUserRoles(tenantId: string, userId?: string): Promise<TenantUserRole[]> {
     if (userId) {
       return await db
@@ -874,6 +891,27 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(tenantUserRoles)
       .where(sql`${tenantUserRoles.userId} = ${userId} AND ${tenantUserRoles.roleId} = ${roleId}`);
+  }
+
+  async removeUserRole(userId: string, roleId: string, _tenantId: string): Promise<void> {
+    await this.removeTenantUserRole(userId, roleId);
+  }
+
+  async getUserPermissions(userId: string, tenantId: string): Promise<string[]> {
+    // Get role assignments
+    const assignments = await this.getTenantUserRoles(tenantId, userId);
+    if (!assignments || assignments.length === 0) return [];
+    const roleIds = assignments.map(a => a.roleId);
+    // Fetch roles
+    const rolesResult = await db
+      .select()
+      .from(tenantRoles)
+      .where(sql`${tenantRoles.id} = ANY(${sql.array(roleIds, "uuid")})`);
+    const permissions = new Set<string>();
+    for (const r of rolesResult) {
+      (r.permissions || []).forEach(p => permissions.add(p));
+    }
+    return Array.from(permissions);
   }
 
   // Tenant Notification Implementation

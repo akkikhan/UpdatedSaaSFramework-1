@@ -60,10 +60,24 @@ import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
 
 // Use a relaxed schema for the wizard to allow provider "string[]" during form filling
-// We transform providers into the backend shape right before submit.
-const WIZARD_FORM_SCHEMA = TENANT_CREATION_SCHEMA.extend({
-  // Accept any shape for moduleConfigs while filling the form; we'll normalize on submit
+// Some environments may not expose `.extend` on imported schemas; define a local schema explicitly.
+const WIZARD_FORM_SCHEMA = z.object({
+  name: z.string().min(1, "Organization name is required"),
+  orgId: z
+    .string()
+    .min(1, "Organization ID is required")
+    .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
+  adminEmail: z.string().email("Valid email address required"),
+  adminName: z.string().min(1, "Admin name is required"),
+  sendEmail: z.boolean().optional(),
+  enabledModules: z.array(z.string()).optional(),
   moduleConfigs: z.any().optional(),
+  metadata: z
+    .object({
+      adminName: z.string().optional(),
+      companyWebsite: z.string().optional(),
+    })
+    .optional(),
 });
 
 type FormData = TenantCreationData;
@@ -485,6 +499,26 @@ export default function OnboardingWizard() {
 
                                 const handleToggle = () => {
                                   const currentValue = field.value || [];
+                                  // Enforce RBAC requires Auth: if selecting RBAC, auto-select Auth
+                                  if (
+                                    !isSelected &&
+                                    module.id === "rbac" &&
+                                    !currentValue.includes("auth")
+                                  ) {
+                                    const newValue = Array.from(
+                                      new Set([...currentValue, "auth", "rbac"])
+                                    );
+                                    field.onChange(newValue);
+                                    return;
+                                  }
+                                  // If trying to deselect Auth while RBAC is selected, block action
+                                  if (
+                                    isSelected &&
+                                    module.id === "auth" &&
+                                    currentValue.includes("rbac")
+                                  ) {
+                                    return; // do nothing; RBAC depends on Auth
+                                  }
                                   const newValue = isSelected
                                     ? currentValue.filter(v => v !== module.id)
                                     : [...currentValue, module.id];
@@ -526,6 +560,14 @@ export default function OnboardingWizard() {
                                         </div>
                                         <p className="text-sm text-slate-600 mt-1">
                                           {module.description}
+                                          {module.id === "rbac" && (
+                                            <>
+                                              {" "}
+                                              <span className="text-xs text-slate-500">
+                                                (requires Authentication)
+                                              </span>
+                                            </>
+                                          )}
                                         </p>
                                         {module.providers && (
                                           <div className="flex flex-wrap gap-2 mt-2">
