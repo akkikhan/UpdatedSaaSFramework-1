@@ -59,7 +59,13 @@ import {
 import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
 
-// Use shared schema for form validation - ensures frontend/backend compatibility
+// Use a relaxed schema for the wizard to allow provider "string[]" during form filling
+// We transform providers into the backend shape right before submit.
+const WIZARD_FORM_SCHEMA = TENANT_CREATION_SCHEMA.extend({
+  // Accept any shape for moduleConfigs while filling the form; we'll normalize on submit
+  moduleConfigs: z.any().optional(),
+});
+
 type FormData = TenantCreationData;
 
 const STEPS = [
@@ -92,6 +98,25 @@ const STEPS = [
 // Use shared module definitions - ensures consistency with backend
 const MODULES = Object.values(MODULES_INFO);
 
+// Map string icon names from MODULES_INFO to actual Lucide components
+const ICONS: Record<string, React.ComponentType<any>> = {
+  Lock,
+  Shield,
+  FileText,
+  Bell,
+  Bot,
+  Users,
+  Activity,
+  Globe,
+  Zap,
+  Key,
+  Cloud,
+  Database,
+  Building2,
+  Settings,
+  CheckCircle,
+};
+
 export default function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [, setLocation] = useLocation();
@@ -99,7 +124,7 @@ export default function OnboardingWizard() {
   const createTenant = useCreateTenant();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(TENANT_CREATION_SCHEMA),
+    resolver: zodResolver(WIZARD_FORM_SCHEMA as any),
     defaultValues: {
       name: "",
       orgId: "",
@@ -116,7 +141,8 @@ export default function OnboardingWizard() {
   });
 
   const watchedModules = form.watch("enabledModules") || [];
-  const watchedAuthProviders = form.watch("moduleConfigs.authentication.providers");
+  // Align with shared schema key: "auth" (not "authentication")
+  const watchedAuthProviders = form.watch("moduleConfigs.auth.providers");
 
   const handleNext = async () => {
     let fieldsToValidate: (keyof FormData)[] = [];
@@ -142,36 +168,24 @@ export default function OnboardingWizard() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      // Transform module names from frontend format to backend format
-      const moduleNameMap: Record<string, string> = {
-        authentication: "auth",
-        rbac: "rbac",
-        logging: "logging",
-        notifications: "notifications",
-        aiCopilot: "ai-copilot",
-      };
-
-      const transformedModules = data.enabledModules.map(module => moduleNameMap[module] || module);
-
-      // Transform moduleConfigs object keys to match backend expectations
+      // Module configs transformation: keep keys aligned with shared schema
       const transformedModuleConfigs: any = {};
-      Object.entries(data.moduleConfigs).forEach(([key, value]) => {
-        const transformedKey = moduleNameMap[key] || key;
+      Object.entries(data.moduleConfigs || {}).forEach(([key, value]) => {
+        // Normalize internal form keys to shared schema keys
+        const transformedKey = key === "aiCopilot" ? ("ai-copilot" as const) : (key as string);
 
-        // Special handling for authentication module
         if (transformedKey === "auth" && value && typeof value === "object") {
           const authConfig = value as any;
-          const transformedAuth = { ...authConfig };
+          const transformedAuth: any = { ...authConfig };
 
           // Transform providers from simple strings to complex objects
           if (authConfig.providers && Array.isArray(authConfig.providers)) {
             transformedAuth.providers = authConfig.providers.map(
               (providerType: string, index: number) => {
                 // Get provider-specific config
-                let config = {};
-                const providerKey = providerType.replace("-", "").replace("_", ""); // "azure-ad" -> "azuread"
+                let config: any = {};
 
-                // Map provider keys to form field names
+                // Map provider keys to form field names within moduleConfigs.auth
                 const configKeyMap: Record<string, string> = {
                   "azure-ad": "azureAd",
                   auth0: "auth0",
@@ -184,15 +198,14 @@ export default function OnboardingWizard() {
                   config = authConfig[formConfigKey];
                 }
 
-                // Create provider object structure expected by backend
                 return {
                   type: providerType,
                   name: providerType
                     .split("-")
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(" "), // "azure-ad" -> "Azure Ad"
+                    .join(" "),
                   priority: index + 1,
-                  config: config,
+                  config,
                   userMapping: {
                     emailField: "email",
                     nameField: "name",
@@ -209,6 +222,9 @@ export default function OnboardingWizard() {
             delete transformedAuth.saml;
           }
 
+          transformedModuleConfigs[transformedKey] = transformedAuth;
+        } else {
+          // Pass-through other module configs (rbac, logging, etc.)
           transformedModuleConfigs[transformedKey] = value;
         }
       });
@@ -461,7 +477,10 @@ export default function OnboardingWizard() {
                           <FormItem>
                             <div className="space-y-4">
                               {MODULES.map(module => {
-                                const Icon = module.icon;
+                                const Icon =
+                                  typeof module.icon === "string"
+                                    ? ICONS[module.icon] || Settings
+                                    : (module.icon as any);
                                 const isSelected = field.value?.includes(module.id) || false;
 
                                 const handleToggle = () => {
@@ -545,16 +564,21 @@ export default function OnboardingWizard() {
                       ) : (
                         <div className="space-y-6">
                           {/* Authentication Module Configuration */}
-                          {watchedModules.includes("authentication") && (
+                          {watchedModules.includes("auth") && (
                             <div className="space-y-4">
                               <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <Lock className="w-5 h-5" />
                                 Authentication Configuration
                               </h3>
+                              <p className="text-sm text-slate-600 -mt-2">
+                                Optional during onboarding. You can configure providers later in the
+                                tenant portal. Fields marked "SSO-required" are needed for SSO to
+                                work immediately.
+                              </p>
 
                               <FormField
                                 control={form.control}
-                                name="moduleConfigs.authentication.providers"
+                                name="moduleConfigs.auth.providers"
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Select Authentication Providers</FormLabel>
@@ -614,10 +638,15 @@ export default function OnboardingWizard() {
                                   <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.auth0.domain"
+                                      name="moduleConfigs.auth.auth0.domain"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Domain</FormLabel>
+                                          <FormLabel>
+                                            Domain{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="your-tenant.auth0.com" />
                                           </FormControl>
@@ -626,12 +655,38 @@ export default function OnboardingWizard() {
                                     />
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.auth0.clientId"
+                                      name="moduleConfigs.auth.auth0.clientId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Client ID</FormLabel>
+                                          <FormLabel>
+                                            Client ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Auth0 Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.auth0.clientSecret"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Client Secret{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              type="password"
+                                              placeholder="Your Auth0 Client Secret"
+                                            />
                                           </FormControl>
                                         </FormItem>
                                       )}
@@ -647,10 +702,15 @@ export default function OnboardingWizard() {
                                   <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.azureAd.tenantId"
+                                      name="moduleConfigs.auth.azureAd.tenantId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Tenant ID</FormLabel>
+                                          <FormLabel>
+                                            Tenant ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Tenant ID" />
                                           </FormControl>
@@ -659,12 +719,38 @@ export default function OnboardingWizard() {
                                     />
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.azureAd.clientId"
+                                      name="moduleConfigs.auth.azureAd.clientId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Client ID</FormLabel>
+                                          <FormLabel>
+                                            Client ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.azureAd.clientSecret"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Client Secret{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              type="password"
+                                              placeholder="Your Azure Client Secret"
+                                            />
                                           </FormControl>
                                         </FormItem>
                                       )}
@@ -915,21 +1001,20 @@ export default function OnboardingWizard() {
                             </div>
                           </div>
 
-                          {watchedModules.includes("authentication") &&
-                            watchedAuthProviders?.length > 0 && (
-                              <div>
-                                <span className="text-sm text-slate-600">
-                                  Authentication Providers:
-                                </span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {watchedAuthProviders.map(provider => (
-                                    <Badge key={provider} variant="outline">
-                                      {provider.replace("-", " ").toUpperCase()}
-                                    </Badge>
-                                  ))}
-                                </div>
+                          {watchedModules.includes("auth") && watchedAuthProviders?.length > 0 && (
+                            <div>
+                              <span className="text-sm text-slate-600">
+                                Authentication Providers:
+                              </span>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {watchedAuthProviders.map(provider => (
+                                  <Badge key={provider} variant="outline">
+                                    {provider.replace("-", " ").toUpperCase()}
+                                  </Badge>
+                                ))}
                               </div>
-                            )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -972,16 +1057,6 @@ export default function OnboardingWizard() {
               </Button>
             ) : (
               <div className="flex items-center gap-3">
-                {/* Extra affordance to go back to Modules and tweak selections ("Back & Mix") */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentStep(1)}
-                  className="flex items-center gap-2"
-                >
-                  Back & Mix
-                </Button>
-
                 <Button
                   type="submit"
                   disabled={createTenant.isPending}

@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 async function migrateExistingTenant() {
   const client = new Client({
     connectionString:
-      "postgresql://postgres:NGPTmpisb@95@db.kakmznvbklmtpskudngq.supabase.co:5432/postgres",
+      "postgresql://postgres:NGPTmpisb95@db.kakmznvbklmtpskudngq.supabase.co:5432/postgres",
     ssl: {
       rejectUnauthorized: false,
     },

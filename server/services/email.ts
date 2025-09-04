@@ -35,7 +35,8 @@ export class EmailService {
     this.config = {
       smtpHost: process.env.SMTP_HOST || smtpSettings.host,
       smtpPort: parseInt(process.env.SMTP_PORT || "") || smtpSettings.port,
-      smtpUsername: fromEmail, // Use FROM_EMAIL as username for authentication
+      // Prefer explicit SMTP_USERNAME, fall back to FROM_EMAIL
+      smtpUsername: process.env.SMTP_USERNAME || fromEmail,
       smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || "",
       fromEmail: fromEmail,
       fromName: process.env.FROM_NAME || "SaaS Framework Platform",
@@ -67,11 +68,25 @@ export class EmailService {
             pass: this.config.smtpPassword,
           }
         : undefined,
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: "SSLv3",
-      },
+      // Office365 typically requires STARTTLS on 587
+      requireTLS: this.config.smtpPort === 587,
+      tls: { rejectUnauthorized: false },
     });
+
+    // Proactively verify SMTP connectivity on startup (non-blocking)
+    void this.transporter
+      .verify()
+      .then(() => {
+        console.log(
+          `📨 SMTP verify OK for ${this.config.smtpHost}:${this.config.smtpPort} as ${this.config.smtpUsername}`
+        );
+      })
+      .catch(err => {
+        console.warn(
+          `⚠️  SMTP verify failed for ${this.config.smtpHost}:${this.config.smtpPort} as ${this.config.smtpUsername}:`,
+          err?.message || err
+        );
+      });
   }
 
   private getSmtpSettings(email: string): { host: string; port: number; secure: boolean } {
@@ -591,7 +606,21 @@ ${npmInstallCommand}
             
             <p>Example integration:</p>
             <div class="code-block">
-${integrationExample}
+// Using our lightweight auth client so your app always calls our APIs
+import { startAzure, handleSuccessFromUrl, loginWithPassword, fetchWithAuth } from '@saas-framework/auth-client';
+
+// 1) Add a button for Azure AD SSO
+document.getElementById('btn-azure').addEventListener('click', () => startAzure('${tenant.orgId}'));
+
+// 2) On your /auth/success page, capture the token from URL once
+handleSuccessFromUrl(); // stores token in localStorage
+
+// 3) For local login (optional fallback)
+await loginWithPassword({ orgId: '${tenant.orgId}', email: 'user@example.com', password: '••••••••' });
+
+// 4) Call APIs with the token attached
+const res = await fetchWithAuth('/api/tenant/me');
+const me = await res.json();
             </div>
         </div>
         

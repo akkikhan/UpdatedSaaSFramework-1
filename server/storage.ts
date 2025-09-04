@@ -1942,9 +1942,15 @@ class DemoStorage implements IStorage {
 // Use demo storage if database connection fails, otherwise use database storage
 let storage: IStorage;
 try {
-  // Check if database is available
-  if (process.env.DATABASE_URL || process.env.NEON_DATABASE_URL) {
+  // Only use database storage when a DB URL is provided AND a live connection exists
+  const hasDbConfig = Boolean(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL);
+  const hasLiveConnection = Boolean(db);
+
+  if (hasDbConfig && hasLiveConnection) {
     storage = new DatabaseStorage();
+  } else if (hasDbConfig && !hasLiveConnection) {
+    console.warn("Database configured but connection not available — using demo storage fallback");
+    storage = new DemoStorage();
   } else {
     console.log("No database configuration found, using demo storage");
     storage = new DemoStorage();

@@ -30,17 +30,9 @@ const __dirname = path.dirname(__filename);
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public routes
 
-  // Tenant Registration Page
-  app.get("/register", (req, res) => {
-    const registrationPagePath = path.resolve(__dirname, "../client/tenant-registration.html");
-    res.sendFile(registrationPagePath);
-  });
-
-  // Platform Admin Login Page - Azure AD Integration
-  app.get("/admin/login", (req, res) => {
-    const loginPagePath = path.resolve(__dirname, "../client/platform-admin-login.html");
-    res.sendFile(loginPagePath);
-  });
+  // NOTE: Static HTML routes removed in favor of SPA routes
+  // - /admin/login handled by client router (PlatformAdminLogin page)
+  // - /tenants/wizard used for tenant onboarding
 
   // Admin redirect route
   app.get("/admin", (req, res) => {
@@ -64,6 +56,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // SMTP quick test (platform admin only)
+  app.post("/api/email/test", platformAdminMiddleware, async (req, res) => {
+    try {
+      const to = (req.body?.to as string) || process.env.ADMIN_EMAIL || "";
+      if (!to) return res.status(400).json({ message: "Recipient not provided" });
+
+      const ok = await emailService.sendSimpleTestEmail(to, "SMTP Test - SaaS Framework");
+      return res.json({ success: ok, to });
+    } catch (err) {
+      console.error("/api/email/test failed:", err);
+      return res.status(500).json({ message: "SMTP test failed" });
+    }
   });
 
   // Platform Admin Authentication Routes
@@ -167,6 +173,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { code, error, error_description, state } = req.query;
 
+      console.log("[PlatformAdmin][AzureAD] Callback hit");
+      console.log("[PlatformAdmin][AzureAD] Query:", JSON.stringify(req.query));
+
       if (error) {
         console.error("Azure AD callback error:", error, error_description);
         const errorMessage =
@@ -183,8 +192,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/admin/login?error=invalid_state");
       }
 
+      // Prevent double-processing the same authorization code (browser retries/back button)
+      const handledCodes = (global as any).__platformHandledCodes || new Map<string, number>();
+      (global as any).__platformHandledCodes = handledCodes;
+
+      if (typeof code === "string") {
+        // Clear expired entries
+        const now = Date.now();
+        for (const [k, t] of handledCodes.entries()) {
+          if (now - t > 5 * 60 * 1000) handledCodes.delete(k);
+        }
+        if (handledCodes.has(code)) {
+          console.warn("Authorization code already processed recently; restarting login.");
+          return res.redirect("/api/platform/auth/azure/login");
+        }
+        handledCodes.set(code, Date.now());
+      }
+
       // Exchange code for tokens and get user info (platform admin - no tenant provisioning)
-      const authResult = await azureADService.handlePlatformAdminCallback(code, state);
+      let authResult;
+      try {
+        authResult = await azureADService.handlePlatformAdminCallback(code, state);
+      } catch (innerError) {
+        console.error("[PlatformAdmin][AzureAD] handlePlatformAdminCallback failed:", innerError);
+        const detail = encodeURIComponent(
+          innerError instanceof Error ? innerError.message : String(innerError)
+        );
+        const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
+        // If the code was already redeemed, restart login to get a fresh code
+        if (
+          typeof detail === "string" &&
+          /invalid_grant/i.test(detail) &&
+          /already redeemed/i.test(detail)
+        ) {
+          console.warn("Authorization code already redeemed. Restarting Azure AD login flow...");
+          return res.redirect("/api/platform/auth/azure/login");
+        }
+        return res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
+      }
 
       // Check if user email is authorized
       const userEmail = authResult.user.email?.toLowerCase();
@@ -196,38 +241,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create or update platform admin record for Azure AD user
-      let platformAdmin = await storage.getPlatformAdminByEmail(authResult.user.email);
+      let platformAdmin;
+      let retryCount = 0;
+      const maxRetries = 3;
 
-      if (!platformAdmin) {
-        // Create new platform admin
-        platformAdmin = await storage.createPlatformAdmin({
-          email: authResult.user.email,
-          name:
-            authResult.user.firstName && authResult.user.lastName
-              ? `${authResult.user.firstName} ${authResult.user.lastName}`
-              : authResult.user.email,
-          role: "super_admin",
-          passwordHash: "AZURE_AD_SSO", // Placeholder for SSO users - not a real password
-          isActive: true,
-        });
-      } else {
-        // Update last login
-        await storage.updatePlatformAdminLastLogin(platformAdmin.id);
+      while (retryCount < maxRetries) {
+        try {
+          platformAdmin = await storage.getPlatformAdminByEmail(authResult.user.email);
+          break; // Success, exit retry loop
+        } catch (dbError) {
+          retryCount++;
+          console.log(
+            `Database connection attempt ${retryCount}/${maxRetries} failed:`,
+            dbError.message
+          );
+
+          if (retryCount >= maxRetries) {
+            throw dbError; // Re-throw if max retries reached
+          }
+
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
       }
 
-      // Log Azure AD login
-      await storage.logSystemActivity({
-        action: "platform_admin_azure_login",
-        entityType: "platform_admin",
-        entityId: platformAdmin.id,
-        details: {
-          email: authResult.user.email,
-          provider: "azure_ad",
-          userId: authResult.user.id,
-        },
-        ipAddress: req.ip,
-        userAgent: req.get("User-Agent"),
-      });
+      if (!platformAdmin) {
+        // Create new platform admin with retry logic
+        retryCount = 0;
+        while (retryCount < maxRetries) {
+          try {
+            platformAdmin = await storage.createPlatformAdmin({
+              email: authResult.user.email,
+              name:
+                authResult.user.firstName && authResult.user.lastName
+                  ? `${authResult.user.firstName} ${authResult.user.lastName}`
+                  : authResult.user.email,
+              role: "super_admin",
+              passwordHash: "AZURE_AD_SSO", // Placeholder for SSO users - not a real password
+              isActive: true,
+            });
+            break; // Success, exit retry loop
+          } catch (dbError) {
+            retryCount++;
+            console.log(
+              `Database creation attempt ${retryCount}/${maxRetries} failed:`,
+              dbError.message
+            );
+
+            if (retryCount >= maxRetries) {
+              throw dbError; // Re-throw if max retries reached
+            }
+
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
+      } else {
+        // Update last login with retry logic
+        retryCount = 0;
+        while (retryCount < maxRetries) {
+          try {
+            await storage.updatePlatformAdminLastLogin(platformAdmin.id);
+            break; // Success, exit retry loop
+          } catch (dbError) {
+            retryCount++;
+            console.log(
+              `Database update attempt ${retryCount}/${maxRetries} failed:`,
+              dbError.message
+            );
+
+            if (retryCount >= maxRetries) {
+              console.warn("Failed to update last login, but continuing..."); // Non-critical operation
+            } else {
+              // Wait before retry
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            }
+          }
+        }
+      }
+
+      // Log Azure AD login with retry logic
+      retryCount = 0;
+      while (retryCount < maxRetries) {
+        try {
+          await storage.logSystemActivity({
+            action: "platform_admin_azure_login",
+            entityType: "platform_admin",
+            entityId: platformAdmin.id,
+            details: {
+              email: authResult.user.email,
+              provider: "azure_ad",
+              userId: authResult.user.id,
+            },
+            ipAddress: req.ip,
+            userAgent: req.get("User-Agent"),
+          });
+          break; // Success, exit retry loop
+        } catch (dbError) {
+          retryCount++;
+          console.log(
+            `System logging attempt ${retryCount}/${maxRetries} failed:`,
+            dbError.message
+          );
+
+          if (retryCount >= maxRetries) {
+            console.warn("Failed to log system activity, but continuing..."); // Non-critical operation
+            break;
+          }
+
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
 
       // Generate a platform admin token for this user
       const platformAdminToken = await platformAdminAuthService.generateToken(platformAdmin);
@@ -236,7 +361,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.redirect(`/?token=${platformAdminToken}&admin=true`);
     } catch (error) {
       console.error("Azure AD callback processing error:", error);
-      res.redirect("/admin/login?error=callback_processing_failed");
+      const message = error instanceof Error ? error.message : String(error);
+
+      // Special handling: authorization code already redeemed -> restart login to get a fresh code
+      if (/invalid_grant/i.test(message) && /already redeemed/i.test(message)) {
+        console.warn("Authorization code already redeemed. Restarting Azure AD login flow...");
+        return res.redirect("/api/platform/auth/azure/login");
+      }
+
+      const detail = encodeURIComponent(message);
+      const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
+      res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
     }
   });
 
@@ -393,10 +528,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get tenant by id (Platform Admin Only) - used by tenant portal view
+  app.get("/api/tenants/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const tenant = await storage.getTenant(id);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error fetching tenant by id:", error);
+      res.status(500).json({ message: "Failed to fetch tenant" });
+    }
+  });
+
   // Create new tenant
   app.post("/api/tenants", platformAdminMiddleware, async (req, res) => {
     try {
       const tenantData = insertTenantSchema.parse(req.body);
+
+      // Encrypt any provider secrets before persisting
+      try {
+        if (tenantData.moduleConfigs?.auth?.providers?.length) {
+          const { encryptSecret } = await import("./utils/secret.js");
+          tenantData.moduleConfigs.auth.providers = tenantData.moduleConfigs.auth.providers.map(
+            (p: any) => {
+              if (p?.type === "azure-ad" && p.config?.clientSecret) {
+                return {
+                  ...p,
+                  config: {
+                    ...p.config,
+                    clientSecret: encryptSecret(p.config.clientSecret),
+                  },
+                };
+              }
+              if (p?.type === "auth0" && p.config?.clientSecret) {
+                return {
+                  ...p,
+                  config: {
+                    ...p.config,
+                    clientSecret: encryptSecret(p.config.clientSecret),
+                  },
+                };
+              }
+              return p;
+            }
+          );
+        }
+      } catch (e) {
+        console.warn("Provider secret encryption skipped:", e instanceof Error ? e.message : e);
+      }
 
       // Check if orgId is already taken
       const existingTenant = await storage.getTenantByOrgId(tenantData.orgId);
@@ -587,6 +769,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant self-service: update limited auth settings (allowFallback, defaultProvider)
+  app.patch("/api/tenant/:id/auth/settings", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      // Ensure the tenant in token matches path id
+      if (req.tenantId !== id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const { allowFallback, defaultProvider } = req.body as {
+        allowFallback?: boolean;
+        defaultProvider?: string;
+      };
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const currentConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = { ...(currentConfigs.auth || {}) };
+      if (typeof allowFallback === "boolean") authConfig.allowFallback = allowFallback;
+      if (typeof defaultProvider === "string") authConfig.defaultProvider = defaultProvider;
+
+      const newConfigs = { ...currentConfigs, auth: authConfig };
+      const enabledModules = (tenant.enabledModules as string[]) || ["auth", "rbac"];
+      await storage.updateTenantModules(id, enabledModules, newConfigs);
+      res.json({ message: "Auth settings updated", auth: authConfig });
+    } catch (error) {
+      console.error("Error updating tenant auth settings:", error);
+      res.status(500).json({ message: "Failed to update auth settings" });
+    }
+  });
+
   // Update tenant modules (PLATFORM ADMIN ONLY)
   app.patch("/api/tenants/:id/modules", platformAdminMiddleware, async (req, res) => {
     try {
@@ -601,8 +815,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentModules = (tenant.enabledModules as string[]) || ["auth", "rbac"];
       const newModules = enabledModules || currentModules;
 
+      // Encrypt any provider secrets before persisting (parity with createTenant)
+      let safeConfigs = moduleConfigs || {};
+      try {
+        if (safeConfigs?.auth?.providers?.length) {
+          const { encryptSecret } = await import("./utils/secret.js");
+          safeConfigs = {
+            ...safeConfigs,
+            auth: {
+              ...(safeConfigs.auth || {}),
+              providers: safeConfigs.auth.providers.map((p: any) => {
+                if (p?.type === "azure-ad" && p.config?.clientSecret) {
+                  return {
+                    ...p,
+                    config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
+                  };
+                }
+                if (p?.type === "auth0" && p.config?.clientSecret) {
+                  return {
+                    ...p,
+                    config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
+                  };
+                }
+                return p;
+              }),
+            },
+          } as any;
+        }
+      } catch (e) {
+        console.warn(
+          "Provider secret encryption (update) skipped:",
+          e instanceof Error ? e.message : e
+        );
+      }
+
       // Update tenant modules
-      await storage.updateTenantModules(id, newModules, moduleConfigs || {});
+      await storage.updateTenantModules(id, newModules, safeConfigs);
 
       res.json({
         message: "Modules updated successfully",
@@ -650,6 +898,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Add new Azure AD provider
+      // Encrypt secret before storing
+      let encryptedSecret: string | undefined = clientSecret;
+      try {
+        const { encryptSecret } = await import("./utils/secret.js");
+        encryptedSecret = encryptSecret(clientSecret);
+      } catch {}
+
       moduleConfigs.auth.providers.push({
         type: "azure-ad",
         name: "Azure AD SSO",
@@ -657,10 +912,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         config: {
           tenantId,
           clientId,
-          clientSecret,
+          clientSecret: encryptedSecret,
           callbackUrl:
             callbackUrl ||
-            `${process.env.BASE_URL || "http://localhost:3001"}/api/auth/azure/callback`,
+            `${process.env.BASE_URL || "http://localhost:5000"}/api/auth/azure/callback`,
         },
         userMapping: {
           emailField: "mail",
@@ -764,7 +1019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const moduleConfigs = (tenant.moduleConfigs as any) || {};
       const authConfig = moduleConfigs.auth;
-      const azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
+      let azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
 
       if (!azureProvider) {
         console.error("Azure AD provider not found in tenant configuration");
@@ -772,6 +1027,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("Azure AD provider found, creating service instance...");
+
+      // Decrypt clientSecret if encrypted
+      try {
+        const { decryptSecret } = await import("./utils/secret.js");
+        if (azureProvider.config?.clientSecret) {
+          azureProvider = {
+            ...azureProvider,
+            config: {
+              ...azureProvider.config,
+              clientSecret: decryptSecret(azureProvider.config.clientSecret),
+            },
+          };
+        }
+      } catch {}
+
+      // Guard: ensure required fields for SSO
+      if (
+        !azureProvider.config?.tenantId ||
+        !azureProvider.config?.clientId ||
+        !azureProvider.config?.clientSecret
+      ) {
+        console.error("Azure AD provider is incomplete for tenant", tenant.orgId);
+        return res.status(400).json({
+          message: "Azure AD not fully configured for this tenant",
+          next: `/tenant/${tenant.orgId}/settings/auth-providers`,
+          required: ["tenantId", "clientId", "clientSecret"],
+        });
+      }
 
       // Create Azure AD service instance
       const azureADService = new AzureADService({
@@ -826,7 +1109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Logged successful Azure AD login");
 
       // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/success?token=${appToken}&tenant=${tenant.orgId}`;
+      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-success?token=${appToken}&tenant=${tenant.orgId}`;
 
       console.log(`Redirecting to success page: ${redirectUrl}`);
 
@@ -858,7 +1141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/error?error=${encodeURIComponent("Authentication failed")}`;
+      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent("Authentication failed")}`;
       res.redirect(errorUrl);
     }
   });

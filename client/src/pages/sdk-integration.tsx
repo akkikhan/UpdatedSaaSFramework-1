@@ -8,7 +8,8 @@ export default function SDKIntegrationPage() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">SDK Integration</h3>
         <p className="text-slate-600 mb-6">
-          Integrate our authentication and RBAC SDKs into your applications for seamless tenant management.
+          Integrate our authentication and RBAC SDKs into your applications for seamless tenant
+          management.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -18,19 +19,27 @@ export default function SDKIntegrationPage() {
                 <Shield className="text-blue-600" size={20} />
               </div>
               <div>
-                <h4 className="font-semibold text-slate-800">Authentication SDK</h4>
-                <p className="text-sm text-slate-500">@saas-framework/auth</p>
+                <h4 className="font-semibold text-slate-800">Auth Client (Browser)</h4>
+                <p className="text-sm text-slate-500">@saas-framework/auth-client</p>
               </div>
             </div>
             <p className="text-sm text-slate-600 mb-4">
-              Handle user authentication, JWT tokens, and session management.
+              Start Azure SSO, capture the platform JWT on callback, perform local login, and call
+              APIs with auth attached.
             </p>
             <div className="bg-slate-50 rounded-lg p-3 mb-4">
-              <code className="text-sm text-slate-800">npm install @saas-framework/auth</code>
+              <code className="text-sm text-slate-800">
+                npm install @saas-framework/auth-client
+              </code>
             </div>
-            <Button variant="ghost" className="text-blue-600 hover:text-blue-500 text-sm font-medium">
-              View Documentation <ExternalLink className="ml-1" size={14} />
-            </Button>
+            <a
+              className="inline-flex items-center text-blue-600 hover:text-blue-500 text-sm font-medium"
+              href="/packages/auth-client/README.md"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Auth Client README <ExternalLink className="ml-1" size={14} />
+            </a>
           </div>
 
           <div className="border border-slate-200 rounded-lg p-4">
@@ -49,7 +58,10 @@ export default function SDKIntegrationPage() {
             <div className="bg-slate-50 rounded-lg p-3 mb-4">
               <code className="text-sm text-slate-800">npm install @saas-framework/rbac</code>
             </div>
-            <Button variant="ghost" className="text-blue-600 hover:text-blue-500 text-sm font-medium">
+            <Button
+              variant="ghost"
+              className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+            >
               View Documentation <ExternalLink className="ml-1" size={14} />
             </Button>
           </div>
@@ -62,21 +74,25 @@ export default function SDKIntegrationPage() {
 
         <div className="space-y-6">
           <div>
-            <h4 className="font-medium text-slate-800 mb-3">Authentication Setup</h4>
+            <h4 className="font-medium text-slate-800 mb-3">Auth Client Quick Start</h4>
             <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
               <pre className="text-sm text-slate-300">
-                <code>{`import { SaaSAuth } from '@saas-framework/auth';
+                <code>{`import { startAzure, handleSuccessFromUrl, loginWithPassword, fetchWithAuth } from '@saas-framework/auth-client';
 
-const auth = new SaaSAuth({
-  apiKey: 'auth_your-tenant-key',
-  baseUrl: 'https://api.yourplatform.com/api/v2/auth'
-});
+// 1) Azure SSO button click (orgId from your tenant config)
+async function onMicrosoftSignIn(orgId) {
+  await startAzure(orgId); // redirects to Microsoft
+}
 
-// Login user
-const session = await auth.login('user@tenant.com', 'password');
+// 2) On your success route after our callback returns ?token=...
+handleSuccessFromUrl(); // stores our JWT
 
-// Express middleware
-app.use(auth.middleware());`}</code>
+// 3) Optional local login
+await loginWithPassword({ orgId: 'demo', email: 'user@example.com', password: '••••••••' });
+
+// 4) Call APIs with auth header attached
+const res = await fetchWithAuth('/api/tenant/me');
+const me = await res.json();`}</code>
               </pre>
             </div>
           </div>
@@ -148,20 +164,41 @@ app.get('/users',
           <div>
             <h4 className="font-medium text-slate-800 mb-2">Authentication API</h4>
             <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
-              <div><code className="text-slate-800">POST /api/v2/auth/login</code> - User login</div>
-              <div><code className="text-slate-800">POST /api/v2/auth/logout</code> - Invalidate session</div>
-              <div><code className="text-slate-800">GET /api/v2/auth/verify</code> - Verify token validity</div>
-              <div><code className="text-slate-800">POST /api/v2/auth/refresh</code> - Refresh JWT token</div>
+              <div>
+                <code className="text-slate-800">POST /api/v2/auth/login</code> - User login
+              </div>
+              <div>
+                <code className="text-slate-800">POST /api/v2/auth/logout</code> - Invalidate
+                session
+              </div>
+              <div>
+                <code className="text-slate-800">GET /api/v2/auth/verify</code> - Verify token
+                validity
+              </div>
+              <div>
+                <code className="text-slate-800">POST /api/v2/auth/refresh</code> - Refresh JWT
+                token
+              </div>
             </div>
           </div>
 
           <div>
             <h4 className="font-medium text-slate-800 mb-2">RBAC API</h4>
             <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
-              <div><code className="text-slate-800">GET /api/v2/rbac/roles</code> - List tenant roles</div>
-              <div><code className="text-slate-800">POST /api/v2/rbac/roles</code> - Create role</div>
-              <div><code className="text-slate-800">GET /api/v2/rbac/permissions</code> - List available permissions</div>
-              <div><code className="text-slate-800">POST /api/v2/rbac/check-permission</code> - Check user permission</div>
+              <div>
+                <code className="text-slate-800">GET /api/v2/rbac/roles</code> - List tenant roles
+              </div>
+              <div>
+                <code className="text-slate-800">POST /api/v2/rbac/roles</code> - Create role
+              </div>
+              <div>
+                <code className="text-slate-800">GET /api/v2/rbac/permissions</code> - List
+                available permissions
+              </div>
+              <div>
+                <code className="text-slate-800">POST /api/v2/rbac/check-permission</code> - Check
+                user permission
+              </div>
             </div>
           </div>
         </div>

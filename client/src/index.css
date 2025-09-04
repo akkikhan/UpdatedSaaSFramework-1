@@ -93,11 +93,7 @@ html, body {
   overflow-x: hidden;
 }
 
-.tenant-portal {
-  min-height: 100vh;
-  max-height: 100vh;
-  overflow-y: auto;
-}
+/* removed legacy .tenant-portal container (admin-embedded portal) */
 
 .page-container {
   height: 100%;

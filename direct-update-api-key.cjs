@@ -5,7 +5,7 @@ console.log("🔧 Directly updating tenant API key in database...");
 async function updateTenantApiKey() {
   const client = new Client({
     connectionString:
-      "postgresql://postgres:NGPTmpisb@95@db.kakmznvbklmtpskudngq.supabase.co:5432/postgres",
+      "postgresql://postgres:NGPTmpisb95@db.kakmznvbklmtpskudngq.supabase.co:5432/postgres",
   });
 
   try {
