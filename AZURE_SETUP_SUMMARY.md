@@ -97,6 +97,42 @@ If you encounter issues:
    node scripts/test-azure-integration.mjs
    ```
 
+### New Validation Tools
+
+- Verify Secret (client-credential flow): quickly checks `clientId/clientSecret`
+  without saving.
+  - Endpoint: `POST /api/tenant/:id/azure-ad/verify-secret`
+  - Headers: `Authorization: Bearer <tenant-token>`, `X-Tenant-ID: <tenantId>`,
+    `Accept: application/json`
+  - Body:
+    `{ "tenantId": "<GUID>", "clientId": "<GUID>", "clientSecret": "<secret>" }`
+  - Response: `{ valid: true }` or `{ valid: false, message: "..." }`
+
+  Example:
+
+  ```bash
+  curl -X POST \
+    -H "Authorization: Bearer $TENANT_TOKEN" \
+    -H "X-Tenant-ID: $TENANT_ID" \
+    -H "Content-Type: application/json" \
+    "$BASE_URL/api/tenant/$TENANT_ID/azure-ad/verify-secret" \
+    -d '{"tenantId":"'$AZURE_TENANT_ID'","clientId":"'$AZURE_CLIENT_ID'","clientSecret":"'$AZURE_CLIENT_SECRET'"}'
+  ```
+
+- Validate (saved config or override): both Validate buttons now call POST and
+  return JSON.
+  - Endpoint: `POST /api/tenant/:id/azure-ad/validate`
+  - Sends form overrides from the provider card (no save required).
+
+### Secret Decryption Guard
+
+If the platform `JWT_SECRET` changes after storing provider secrets, Azure
+callback will fail fast with a clear error:
+
+- Redirect: `/auth-error?code=SECRET_DECRYPTION_FAILED`
+- Fix: Re-enter the Azure client secret in the Tenant Portal (Azure provider
+  card), click Validate → Request Update, then approve in the Platform Admin.
+
 ## 📖 Azure CLI Commands Used
 
 ```bash

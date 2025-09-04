@@ -27,16 +27,32 @@ export async function validateApiKey(req: Request, res: Response, next: NextFunc
       });
     }
 
-    // Validate API key format
-    if (!apiKey.startsWith("auth_") || apiKey.length < 20) {
+    // Determine which module this API key targets
+    const isLoggingRoute =
+      (req.path || "").startsWith("/api/v2/logging/") || (req.path || "").startsWith("/logging/");
+
+    // Accept either dedicated logging key (preferred for logging routes) or auth key as fallback
+    const looksLikeAuthKey = apiKey.startsWith("auth_");
+    const looksLikeLoggingKey = apiKey.startsWith("logging_");
+
+    if (!looksLikeAuthKey && !looksLikeLoggingKey) {
       return res.status(401).json({
         error: "Invalid API key format",
-        details: 'API key must start with "auth_" and be at least 20 characters',
+        details: 'API key must start with "auth_" or "logging_"',
       });
     }
 
-    // Find tenant by API key
-    const tenant = await storage.getTenantByAuthApiKey(apiKey);
+    // Find tenant by appropriate key
+    let tenant = null as any;
+    if (isLoggingRoute) {
+      // Prefer logging key for logging routes; fallback to auth key for backward compatibility
+      tenant = looksLikeLoggingKey
+        ? await storage.getTenantByLoggingApiKey?.(apiKey)
+        : await storage.getTenantByAuthApiKey(apiKey);
+    } else {
+      // Non-logging routes use auth key
+      tenant = await storage.getTenantByAuthApiKey(apiKey);
+    }
 
     if (!tenant) {
       return res.status(401).json({

@@ -326,6 +326,61 @@ export default function TenantsPage() {
             </CardContent>
           </Card>
 
+          {/* Logging Settings (read-only) */}
+          {Array.isArray(selectedTenant.enabledModules) &&
+            selectedTenant.enabledModules.includes("logging") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Logging Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Levels</label>
+                    <p className="text-slate-900">
+                      {Array.isArray((selectedTenant.moduleConfigs as any)?.logging?.levels)
+                        ? ((selectedTenant.moduleConfigs as any).logging.levels as string[]).join(
+                            ", "
+                          )
+                        : "error, warning, info"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Destinations</label>
+                    <p className="text-slate-900">
+                      {Array.isArray((selectedTenant.moduleConfigs as any)?.logging?.destinations)
+                        ? (
+                            (selectedTenant.moduleConfigs as any).logging.destinations as string[]
+                          ).join(", ")
+                        : "—"}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-700">Retention (days)</label>
+                      <p className="text-slate-900">
+                        {typeof (selectedTenant.moduleConfigs as any)?.logging?.retentionDays ===
+                        "number"
+                          ? (selectedTenant.moduleConfigs as any).logging.retentionDays
+                          : 30}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-700">PII Redaction</label>
+                      <p className="text-slate-900">
+                        {(selectedTenant.moduleConfigs as any)?.logging?.redactionEnabled
+                          ? "Enabled"
+                          : "Disabled"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Edit Logging settings in Platform Module Management or in Tenant Portal →
+                    Modules.
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           {/* Actions */}
           <Card>
             <CardHeader>
@@ -659,6 +714,12 @@ export default function TenantsPage() {
                             RBAC:{" "}
                             {tenant.rbacApiKey
                               ? `${tenant.rbacApiKey.substring(0, 12)}...`
+                              : "not generated"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Logging:{" "}
+                            {(tenant as any).loggingApiKey
+                              ? `${(tenant as any).loggingApiKey.substring(0, 12)}...`
                               : "not generated"}
                           </div>
                         </div>

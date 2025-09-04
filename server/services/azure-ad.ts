@@ -485,6 +485,24 @@ export class AzureADService {
   }
 
   /**
+   * Verify client credentials by acquiring an application token
+   */
+  async verifyClientCredentials(): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const result = await this.msalApp.acquireTokenByClientCredential({
+        scopes: ["https://graph.microsoft.com/.default"],
+      });
+      if (!result || !result.accessToken) {
+        return { ok: false, message: "No access token returned" };
+      }
+      return { ok: true };
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      return { ok: false, message: msg };
+    }
+  }
+
+  /**
    * Create AzureADService from tenant configuration
    */
   static createFromTenantConfig(config: any): AzureADService {

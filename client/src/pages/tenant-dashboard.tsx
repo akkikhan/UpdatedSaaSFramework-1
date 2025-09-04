@@ -114,6 +114,24 @@ export default function TenantDashboard() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState<any>(null);
   const [permissionExplain, setPermissionExplain] = useState<any | null>(null);
+  const [assignmentUserId, setAssignmentUserId] = useState<string>("");
+  const [assignmentRoleId, setAssignmentRoleId] = useState<string>("");
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ["/api/v2/rbac/users", assignmentUserId, "roles", orgId],
+    enabled: !!assignmentUserId,
+    queryFn: async () => {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+      const t = tRes.ok ? await tRes.json() : null;
+      if (!t) return [] as any[];
+      const res = await fetch(`/api/v2/rbac/users/${assignmentUserId}/roles`, {
+        headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
+      });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -130,6 +148,49 @@ export default function TenantDashboard() {
       "Content-Type": "application/json",
     } as Record<string, string>;
   };
+
+  // RBAC settings sync with platform admin onboarding selections
+  const { data: rbacSettings } = useQuery({
+    queryKey: ["/api/tenant", "rbac", "settings", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      // Need tenant to resolve id; fetch minimal tenant first
+      const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+      const t = tRes.ok ? await tRes.json() : null;
+      if (!t) return null;
+      const res = await fetch(`/api/tenant/${t.id}/rbac/settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  // Dynamic catalogs for RBAC editor in tenant portal
+  const { data: rbacCatalog = { templates: [], businessTypes: [] } } = useQuery({
+    queryKey: ["/api/tenant", orgId, "rbac", "catalog"],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+      const t = tRes.ok ? await tRes.json() : null;
+      if (!t) return { templates: [], businessTypes: [] };
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const [tplRes, btRes] = await Promise.all([
+        fetch(`/api/tenant/${t.id}/rbac/catalog/templates`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/tenant/${t.id}/rbac/catalog/business-types`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      const templates = tplRes.ok ? await tplRes.json() : [];
+      const businessTypes = btRes.ok ? await btRes.json() : [];
+      return { templates, businessTypes } as any;
+    },
+  });
 
   // User CRUD operations
   const deleteUserMutation = useMutation({
@@ -354,6 +415,21 @@ export default function TenantDashboard() {
     );
   }
 
+  // Provider status (last validated/tested) — must be declared before conditional returns to keep hook order stable
+  const { data: providerStatus = [] } = useQuery({
+    queryKey: ["/api/tenant", tenant?.id, "providers/status"],
+    enabled: !!tenant?.id,
+    queryFn: async () => {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const headers: any = { "Content-Type": "application/json", "x-tenant-id": tenant?.id || "" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/tenant/${tenant?.id}/auth/providers/status`, { headers });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  }) as { data: any[] };
+
   if (!tenant) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -401,6 +477,7 @@ export default function TenantDashboard() {
 
   const isAuthEnabled = isModuleEnabled("auth");
   const isRbacEnabled = isModuleEnabled("rbac");
+  const isLoggingEnabled = isModuleEnabled("logging");
   const providers = ((tenantInfo.moduleConfigs as any)?.auth?.providers || []) as Array<any>;
   const providerTypes = new Set((providers || []).map((p: any) => p?.type));
   // Module activation (source of truth for enabling)
@@ -523,6 +600,136 @@ export default function TenantDashboard() {
                 <CardTitle>Getting Started</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Simple user-role assignment */}
+                <div className="border rounded-md p-4 bg-slate-50">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                      <Label className="text-xs">User</Label>
+                      <Select onValueChange={v => setAssignmentUserId(v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(tenantUsers as any[]).map((u: any) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Role</Label>
+                      <Select onValueChange={v => setAssignmentRoleId(v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(tenantRoles as any[]).map((r: any) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Button
+                        onClick={async () => {
+                          try {
+                            if (!assignmentUserId || !assignmentRoleId) return;
+                            const token =
+                              localStorage.getItem(`tenant_token_${orgId}`) ||
+                              localStorage.getItem("tenant_token") ||
+                              "";
+                            const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+                            const t = tRes.ok ? await tRes.json() : null;
+                            if (!t) return;
+                            const res = await fetch(
+                              `/api/v2/rbac/users/${assignmentUserId}/roles`,
+                              {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  Authorization: `Bearer ${token}`,
+                                  "x-tenant-id": t.id || "",
+                                },
+                                body: JSON.stringify({ roleId: assignmentRoleId }),
+                              }
+                            );
+                            if (!res.ok) throw new Error("Assign failed");
+                            toast({ title: "Role assigned" });
+                            queryClient.invalidateQueries({
+                              queryKey: ["/api/v2/rbac/users", assignmentUserId, "roles", orgId],
+                            });
+                          } catch (e: any) {
+                            toast({
+                              title: "Failed to assign",
+                              description: e.message || "Error",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Assign Role
+                      </Button>
+                    </div>
+                  </div>
+                  {assignmentUserId && (
+                    <div className="mt-3 text-sm">
+                      <span className="text-slate-600">Current roles:</span>
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {(userRoles as any[]).map((r: any) => (
+                          <Badge key={r.id} variant="outline" className="text-xs">
+                            {r.name}
+                            <button
+                              className="ml-2 text-slate-500 hover:text-slate-700"
+                              onClick={async () => {
+                                try {
+                                  const token =
+                                    localStorage.getItem(`tenant_token_${orgId}`) ||
+                                    localStorage.getItem("tenant_token") ||
+                                    "";
+                                  const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+                                  const t = tRes.ok ? await tRes.json() : null;
+                                  if (!t) return;
+                                  const res = await fetch(
+                                    `/api/v2/rbac/users/${assignmentUserId}/roles/${r.id}`,
+                                    {
+                                      method: "DELETE",
+                                      headers: {
+                                        Authorization: `Bearer ${token}`,
+                                        "x-tenant-id": t.id || "",
+                                      },
+                                    }
+                                  );
+                                  if (!res.ok) throw new Error("Remove failed");
+                                  toast({ title: "Role removed" });
+                                  queryClient.invalidateQueries({
+                                    queryKey: [
+                                      "/api/v2/rbac/users",
+                                      assignmentUserId,
+                                      "roles",
+                                      orgId,
+                                    ],
+                                  });
+                                } catch (e: any) {
+                                  toast({
+                                    title: "Failed to remove",
+                                    description: e.message || "Error",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                   <div>
@@ -693,6 +900,231 @@ export default function TenantDashboard() {
           </TabsContent>
 
           <TabsContent value="roles">
+            {/* RBAC Settings full editor */}
+            {rbacSettings && (
+              <Card className="mb-4">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">RBAC Settings</CardTitle>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Adjust defaults for this tenant.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs">Permission Template</Label>
+                      <Select
+                        defaultValue={(rbacSettings as any)?.permissionTemplate || "standard"}
+                        onValueChange={val => ((rbacSettings as any).permissionTemplate = val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select template" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(rbacCatalog.templates as any[]).length
+                            ? (rbacCatalog.templates as any[]).map((t: any) => (
+                                <SelectItem
+                                  key={t.id}
+                                  value={(t.name || t.id).toString().toLowerCase()}
+                                >
+                                  {t.name}
+                                </SelectItem>
+                              ))
+                            : [
+                                <SelectItem key="standard" value="standard">
+                                  Standard
+                                </SelectItem>,
+                                <SelectItem key="enterprise" value="enterprise">
+                                  Enterprise
+                                </SelectItem>,
+                                <SelectItem key="custom" value="custom">
+                                  Custom
+                                </SelectItem>,
+                              ]}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Business Type</Label>
+                      <Select
+                        defaultValue={(rbacSettings as any)?.businessType || "general"}
+                        onValueChange={val => ((rbacSettings as any).businessType = val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select business type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(rbacCatalog.businessTypes as any[]).length
+                            ? (rbacCatalog.businessTypes as any[]).map((b: any) => (
+                                <SelectItem
+                                  key={b.id}
+                                  value={(b.name || b.id).toString().toLowerCase()}
+                                >
+                                  {b.name}
+                                </SelectItem>
+                              ))
+                            : [
+                                <SelectItem key="general" value="general">
+                                  General
+                                </SelectItem>,
+                                <SelectItem key="healthcare" value="healthcare">
+                                  Healthcare
+                                </SelectItem>,
+                                <SelectItem key="finance" value="finance">
+                                  Finance
+                                </SelectItem>,
+                                <SelectItem key="education" value="education">
+                                  Education
+                                </SelectItem>,
+                                <SelectItem key="government" value="government">
+                                  Government
+                                </SelectItem>,
+                              ]}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Default Roles</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(((rbacSettings as any)?.defaultRoles || []) as string[]).map(r => (
+                        <Badge key={r} variant="secondary" className="px-2 py-1">
+                          <span className="mr-2">{r}</span>
+                          <button
+                            type="button"
+                            className="text-slate-500 hover:text-slate-700"
+                            onClick={() => {
+                              (rbacSettings as any).defaultRoles = (
+                                (rbacSettings as any).defaultRoles || []
+                              ).filter((x: string) => x !== r);
+                              queryClient.invalidateQueries({
+                                queryKey: ["/api/tenant", "rbac", "settings", orgId],
+                              });
+                            }}
+                            aria-label={`Remove ${r}`}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        placeholder="Add a role"
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const v = (e.target as HTMLInputElement).value.trim();
+                            if (!v) return;
+                            const arr = Array.from(
+                              new Set([
+                                ...(((rbacSettings as any).defaultRoles || []) as string[]),
+                                v,
+                              ])
+                            );
+                            (rbacSettings as any).defaultRoles = arr;
+                            (e.target as HTMLInputElement).value = "";
+                            queryClient.invalidateQueries({
+                              queryKey: ["/api/tenant", "rbac", "settings", orgId],
+                            });
+                          }
+                        }}
+                      />
+                      <Button variant="secondary">Add</Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Custom Permissions</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(((rbacSettings as any)?.customPermissions || []) as string[]).map(p => (
+                        <Badge key={p} variant="outline" className="px-2 py-1">
+                          <span className="mr-2">{p}</span>
+                          <button
+                            type="button"
+                            className="text-slate-500 hover:text-slate-700"
+                            onClick={() => {
+                              (rbacSettings as any).customPermissions = (
+                                (rbacSettings as any).customPermissions || []
+                              ).filter((x: string) => x !== p);
+                              queryClient.invalidateQueries({
+                                queryKey: ["/api/tenant", "rbac", "settings", orgId],
+                              });
+                            }}
+                            aria-label={`Remove ${p}`}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        placeholder="Add permission (e.g., reports.export)"
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const v = (e.target as HTMLInputElement).value.trim();
+                            if (!v) return;
+                            const arr = Array.from(
+                              new Set([
+                                ...(((rbacSettings as any).customPermissions || []) as string[]),
+                                v,
+                              ])
+                            );
+                            (rbacSettings as any).customPermissions = arr;
+                            (e.target as HTMLInputElement).value = "";
+                            queryClient.invalidateQueries({
+                              queryKey: ["/api/tenant", "rbac", "settings", orgId],
+                            });
+                          }
+                        }}
+                      />
+                      <Button variant="secondary">Add</Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const token =
+                            localStorage.getItem(`tenant_token_${orgId}`) ||
+                            localStorage.getItem("tenant_token") ||
+                            "";
+                          const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+                          const t = tRes.ok ? await tRes.json() : null;
+                          if (!t) return;
+                          const res = await fetch(`/api/tenant/${t.id}/rbac/settings`, {
+                            method: "PATCH",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify(rbacSettings),
+                          });
+                          if (!res.ok) throw new Error("Save failed");
+                          queryClient.invalidateQueries({
+                            queryKey: ["/api/tenant", "rbac", "settings", orgId],
+                          });
+                          toast({ title: "RBAC settings saved" });
+                        } catch (e: any) {
+                          toast({
+                            title: "Failed to save",
+                            description: e.message || "Error",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -887,7 +1319,7 @@ export default function TenantDashboard() {
             <Card className="max-h-[70vh] overflow-auto">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Authentication Modules</CardTitle>
+                  <CardTitle>Modules</CardTitle>
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                     <span className="text-xs text-slate-500">Live status monitoring</span>
@@ -1007,9 +1439,10 @@ export default function TenantDashboard() {
                               if (token) headers.Authorization = `Bearer ${token}`;
                               if (tenant?.id) headers["x-tenant-id"] = tenant.id;
                               const base = window.location.origin;
+                              // Switch to POST so behavior matches provider card overrides
                               const res = await fetch(
                                 `${base}/api/tenant/${tenant?.id}/azure-ad/validate`,
-                                { headers }
+                                { method: "POST", headers, body: JSON.stringify({}) }
                               );
                               const data = await res.json();
                               if (res.ok && data?.valid) {
@@ -1039,6 +1472,17 @@ export default function TenantDashboard() {
                       </div>
                     </div>
                   </div>
+                )}
+
+                {isLoggingEnabled && (
+                  <>
+                    <LoggingSettingsCard tenantId={tenant?.id} orgId={orgId!} />
+                    <LoggingViewerCard
+                      tenantId={tenant?.id}
+                      orgId={orgId!}
+                      loggingApiKey={(tenant as any)?.loggingApiKey}
+                    />
+                  </>
                 )}
 
                 {/* Authentication Providers (Accordion) */}
@@ -1108,6 +1552,12 @@ export default function TenantDashboard() {
                     required: true,
                   },
                   {
+                    id: "logging",
+                    name: "Logging & Monitoring",
+                    description: "Application logs, search and basic alerts",
+                    required: false,
+                  },
+                  {
                     id: "azure-ad",
                     name: "Azure Active Directory",
                     description: "Single sign-on with Microsoft Azure AD",
@@ -1155,6 +1605,7 @@ export default function TenantDashboard() {
                             >
                               {isEnabled ? "Active" : "Disabled"}
                             </Badge>
+                            {/* Request enable/disable mirrors Platform Admin governance */}
                             {!isEnabled && !module.required && (
                               <Button
                                 size="sm"
@@ -1188,6 +1639,55 @@ export default function TenantDashboard() {
                                 }}
                               >
                                 Request Enable
+                              </Button>
+                            )}
+                            {isEnabled && !module.required && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  try {
+                                    const headers = getAuthHeaders();
+                                    const res = await fetch(
+                                      `/api/tenant/${tenant?.id}/modules/request`,
+                                      {
+                                        method: "POST",
+                                        headers,
+                                        body: JSON.stringify({
+                                          moduleId: module.id,
+                                          action: "disable",
+                                        }),
+                                      }
+                                    );
+                                    if (!res.ok) throw new Error("Request failed");
+                                    toast({
+                                      title: "Requested",
+                                      description: "Disable request sent to platform admin",
+                                    });
+                                  } catch (e: any) {
+                                    toast({
+                                      title: "Failed",
+                                      description: e.message || "Could not send request",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                Request Disable
+                              </Button>
+                            )}
+                            {/* Deep-link to Configure Azure AD when RBAC present but no SSO */}
+                            {module.id === "azure-ad" && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  // Jump to provider accordion if present
+                                  const el = document.querySelector('[data-provider="azure-ad"]');
+                                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                }}
+                              >
+                                Configure Azure AD
                               </Button>
                             )}
                           </div>
@@ -1319,6 +1819,35 @@ export default function TenantDashboard() {
                     </div>
                     <p className="text-xs text-slate-600 mt-2">
                       Use this key for role and permission management
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center space-x-2">
+                      <Users className="h-4 w-4" />
+                      <span>Logging API Key</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center space-x-2">
+                      <code className="flex-1 bg-slate-100 px-3 py-2 rounded text-sm font-mono">
+                        {showApiKeys ? (tenant as any)?.loggingApiKey || "" : "•".repeat(32)}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          copyToClipboard((tenant as any)?.loggingApiKey || "", "Logging API Key")
+                        }
+                        data-testid="button-copy-logging-key"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-2">
+                      Use this key to ingest/query logs via /logging/* endpoints
                     </p>
                   </CardContent>
                 </Card>
@@ -1655,6 +2184,313 @@ function RoleModal({
 }
 
 // Provider Cards
+function LoggingSettingsCard({ tenantId, orgId }: { tenantId?: string; orgId: string }) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [levels, setLevels] = useState<string[]>(["error", "warning", "info"]);
+  const [destinations, setDestinations] = useState<string>("database");
+  const [retentionDays, setRetentionDays] = useState<number>(30);
+  const [redactionEnabled, setRedactionEnabled] = useState<boolean>(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!tenantId) return;
+      setLoading(true);
+      try {
+        const token =
+          localStorage.getItem(`tenant_token_${orgId}`) ||
+          localStorage.getItem("tenant_token") ||
+          "";
+        const headers: any = { Accept: "application/json" };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        headers["x-tenant-id"] = tenantId;
+        const res = await fetch(`/api/tenant/${tenantId}/logging/settings`, { headers });
+        const data = await res.json();
+        if (res.ok) {
+          setLevels(Array.isArray(data.levels) ? data.levels : ["error", "warning", "info"]);
+          setDestinations("database");
+          setRetentionDays(typeof data.retentionDays === "number" ? data.retentionDays : 30);
+          setRedactionEnabled(!!data.redactionEnabled);
+        }
+      } catch {}
+      setLoading(false);
+    })();
+  }, [tenantId, orgId]);
+
+  const toggleLevel = (lvl: string) => {
+    setLevels(prev => (prev.includes(lvl) ? prev.filter(l => l !== lvl) : [...prev, lvl]));
+  };
+
+  const save = async () => {
+    try {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const headers: any = { "Content-Type": "application/json", Accept: "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      headers["x-tenant-id"] = tenantId || "";
+      const body = {
+        levels,
+        destinations: ["database"],
+        retentionDays,
+        redactionEnabled,
+      };
+      const res = await fetch(`/api/tenant/${tenantId}/logging/settings`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Save failed");
+      toast({ title: "Saved", description: "Logging settings updated" });
+    } catch (e: any) {
+      toast({
+        title: "Failed",
+        description: e?.message || "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="p-4 border rounded-lg bg-white mt-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium">Logging Settings</p>
+        <span className="text-xs text-slate-500">Tenant-managed (enable/disable via Platform)</span>
+      </div>
+      {loading ? (
+        <div className="text-sm text-slate-500">Loading...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+          <div className="space-y-2">
+            <Label className="text-xs">Levels</Label>
+            <div className="flex flex-wrap gap-2">
+              {["error", "warning", "info", "debug"].map(l => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => toggleLevel(l)}
+                  className={`px-2 py-1 rounded text-xs border ${
+                    levels.includes(l)
+                      ? "bg-blue-50 border-blue-300"
+                      : "bg-slate-50 border-slate-200"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Destinations (comma-separated)</Label>
+            <Input value="database" disabled />
+            <p className="text-[11px] text-slate-500 mt-1">Leave blank to keep default storage.</p>
+          </div>
+          <div>
+            <Label className="text-xs">Retention Days</Label>
+            <Input
+              type="number"
+              min={1}
+              max={365}
+              value={retentionDays}
+              onChange={e => setRetentionDays(parseInt(e.target.value || "30", 10))}
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                id="redact"
+                type="checkbox"
+                checked={redactionEnabled}
+                onChange={e => setRedactionEnabled(e.target.checked)}
+              />
+              <Label htmlFor="redact" className="text-xs">
+                Enable PII redaction
+              </Label>
+            </div>
+          </div>
+          <div className="md:col-span-3">
+            <Button onClick={save}>Save Logging Settings</Button>
+          </div>
+          <div className="md:col-span-3 text-xs text-slate-500">
+            Usage: send logs with your Logging API key. Example:
+            <pre className="bg-slate-50 border border-slate-200 rounded p-2 mt-2 overflow-auto">
+              {`
+curl -X POST \
+  -H "X-API-Key: logging_..." \
+  -H "Content-Type: application/json" \
+  ${window.location.origin}/api/v2/logging/events \
+  -d '{"level":"info","message":"hello","category":"app"}'
+`}
+            </pre>
+            See docs/logging-quickstart.md for more.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LoggingViewerCard({
+  tenantId,
+  orgId,
+  loggingApiKey,
+}: {
+  tenantId?: string;
+  orgId: string;
+  loggingApiKey?: string;
+}) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [level, setLevel] = useState<string>("");
+  const [category, setCategory] = useState<string>("");
+
+  const fetchLogs = async () => {
+    if (!loggingApiKey) {
+      toast({
+        title: "Missing key",
+        description: "Logging API key not available",
+        variant: "destructive",
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (level) params.set("level", level);
+      if (category) params.set("category", category);
+      params.set("limit", "20");
+      const res = await fetch(`/api/v2/logging/events?${params.toString()}`, {
+        headers: { "X-API-Key": loggingApiKey },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Failed to load logs");
+      // Normalize shape
+      const normalized = (Array.isArray(data) ? data : []).map((row: any) => {
+        const ts = row.timestamp || row.time || new Date().toISOString();
+        const details = row.message || row.details || {};
+        const lvlRaw = row.level || details.level || "";
+        const lvl = typeof lvlRaw === "string" ? String(lvlRaw).split(":")[0] : "";
+        const cat =
+          row.eventType ||
+          details.category ||
+          (typeof lvlRaw === "string" ? String(lvlRaw).split(":")[1] : "");
+        return {
+          id: row.id,
+          time: ts,
+          level: lvl || "info",
+          category: cat || "application",
+          message: details.message || details || "",
+        };
+      });
+      setLogs(normalized);
+    } catch (e: any) {
+      toast({
+        title: "Load failed",
+        description: e?.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // initial fetch
+    if (tenantId && loggingApiKey) fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, loggingApiKey]);
+
+  return (
+    <div className="p-4 border rounded-lg bg-white mt-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium">Recent Logs</p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open("/docs/logging-quickstart.md", "_blank")}
+          >
+            Open Quickstart
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchLogs}>
+            Refresh
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+        <div>
+          <Label className="text-xs">Level</Label>
+          <Select onValueChange={setLevel} defaultValue="">
+            <SelectTrigger>
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All</SelectItem>
+              <SelectItem value="error">Error</SelectItem>
+              <SelectItem value="warning">Warning</SelectItem>
+              <SelectItem value="info">Info</SelectItem>
+              <SelectItem value="debug">Debug</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="md:col-span-2">
+          <Label className="text-xs">Category</Label>
+          <Input
+            placeholder="e.g., application"
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+          />
+        </div>
+        <div className="flex items-end">
+          <Button onClick={fetchLogs} disabled={loading}>
+            {loading ? "Loading..." : "Apply"}
+          </Button>
+        </div>
+      </div>
+      <div className="overflow-auto border rounded-md">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-slate-600">
+            <tr>
+              <th className="text-left p-2">Time</th>
+              <th className="text-left p-2">Level</th>
+              <th className="text-left p-2">Category</th>
+              <th className="text-left p-2">Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="p-3 text-slate-500 text-center">
+                  {loading ? "Loading..." : "No logs found"}
+                </td>
+              </tr>
+            ) : (
+              logs.map(row => (
+                <tr key={row.id || row.time} className="border-t">
+                  <td className="p-2 whitespace-nowrap">{new Date(row.time).toLocaleString()}</td>
+                  <td className="p-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {row.level}
+                    </Badge>
+                  </td>
+                  <td className="p-2">{row.category}</td>
+                  <td className="p-2">
+                    {typeof row.message === "string" ? (
+                      row.message
+                    ) : (
+                      <code className="text-xs bg-slate-50 border px-1 py-0.5 rounded">
+                        {JSON.stringify(row.message)}
+                      </code>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 function ProviderAzureCard({
   orgId,
   tenantId,
@@ -1703,7 +2539,7 @@ function ProviderAzureCard({
   };
 
   return (
-    <div className="border rounded-md p-3 mb-3">
+    <div className="border rounded-md p-3 mb-3" data-provider="azure-ad">
       <div className="flex items-center justify-between mb-2">
         <div>
           <p className="font-medium">Azure Active Directory</p>
@@ -1746,6 +2582,51 @@ function ProviderAzureCard({
         </div>
       </div>
       <div className="flex items-center gap-2 mt-2">
+        <Button
+          variant="secondary"
+          disabled={!isEnabled}
+          onClick={async () => {
+            try {
+              const headers: any = {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              };
+              const token =
+                localStorage.getItem(`tenant_token_${orgId}`) ||
+                localStorage.getItem("tenant_token") ||
+                "";
+              if (token) headers.Authorization = `Bearer ${token}`;
+              if (tenantId) headers["x-tenant-id"] = tenantId;
+              const base = window.location.origin;
+              const res = await fetch(`${base}/api/tenant/${tenantId}/azure-ad/verify-secret`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                  tenantId: form.tenantId,
+                  clientId: form.clientId,
+                  clientSecret: form.clientSecret,
+                }),
+              });
+              const data = await res.json();
+              if (res.ok && data?.valid)
+                toast({ title: "Secret verified", description: "Client credentials succeeded." });
+              else
+                toast({
+                  title: "Secret invalid",
+                  description: data?.message || "Client credential flow failed",
+                  variant: "destructive",
+                });
+            } catch (e: any) {
+              toast({
+                title: "Verification failed",
+                description: e?.message || "Unknown error",
+                variant: "destructive",
+              });
+            }
+          }}
+        >
+          Verify Secret
+        </Button>
         <Button
           variant="outline"
           disabled={!isEnabled}

@@ -231,6 +231,17 @@ export default function ModuleManagementPage() {
         description: "Authentication was enabled because RBAC depends on it.",
       });
     }
+    // Guard: Logging requires Auth
+    if (payload.enabledModules.includes("logging") && !payload.enabledModules.includes("auth")) {
+      payload = {
+        ...payload,
+        enabledModules: Array.from(new Set([...payload.enabledModules, "auth"])),
+      };
+      toast({
+        title: "Dependency added",
+        description: "Authentication was enabled because Logging depends on it.",
+      });
+    }
 
     updateModulesMutation.mutate({
       tenantId: selectedTenant.id,
@@ -474,6 +485,142 @@ export default function ModuleManagementPage() {
                   </Form>
                 </CardContent>
               </Card>
+
+              {/* Logging Settings (Platform Admin editable) */}
+              {selectedTenant.enabledModules?.includes("logging") && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Logging Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <Label className="text-sm">Levels</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {(["error", "warning", "info", "debug"] as const).map(lvl => (
+                                <FormField
+                                  key={lvl}
+                                  control={form.control}
+                                  name="moduleConfigs.logging.levels"
+                                  render={({ field }) => {
+                                    const list: string[] = Array.isArray(field.value)
+                                      ? (field.value as string[])
+                                      : ["error", "warning", "info"];
+                                    const checked = list.includes(lvl);
+                                    return (
+                                      <button
+                                        type="button"
+                                        className={`px-2 py-1 rounded text-xs border ${
+                                          checked
+                                            ? "bg-blue-50 border-blue-300"
+                                            : "bg-slate-50 border-slate-200"
+                                        }`}
+                                        onClick={() => {
+                                          const next = checked
+                                            ? list.filter(v => v !== lvl)
+                                            : Array.from(new Set([...list, lvl]));
+                                          form.setValue("moduleConfigs.logging.levels", next);
+                                        }}
+                                      >
+                                        {lvl}
+                                      </button>
+                                    );
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Destinations</Label>
+                            <div className="flex gap-2 mt-2">
+                              <Badge variant="secondary">database</Badge>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Database only for v1. External sinks coming soon.
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Retention Days</Label>
+                            <FormField
+                              control={form.control}
+                              name="moduleConfigs.logging.retentionDays"
+                              render={({ field }) => (
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={365}
+                                  value={field.value ?? 30}
+                                  onChange={e =>
+                                    field.onChange(parseInt(e.target.value || "30", 10))
+                                  }
+                                />
+                              )}
+                            />
+                            <div className="mt-2 flex items-center gap-2">
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.logging.redactionEnabled"
+                                render={({ field }) => (
+                                  <>
+                                    <input
+                                      id="admin-redaction"
+                                      type="checkbox"
+                                      checked={!!field.value}
+                                      onChange={e => field.onChange(e.target.checked)}
+                                    />
+                                    <Label htmlFor="admin-redaction" className="text-xs">
+                                      Enable PII redaction
+                                    </Label>
+                                  </>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button type="submit" disabled={updateModulesMutation.isPending}>
+                            <Save className="h-4 w-4 mr-2" />
+                            {updateModulesMutation.isPending ? "Saving..." : "Save Changes"}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="text-xs text-slate-500">
+                        Tip: Use Tenant Portal to view the Logging API key and try the Quickstart.
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", "/api/admin/logging/test-event", {
+                              tenantId: selectedTenant.id,
+                              level: "info",
+                              category: "admin-test",
+                              message: "Logging test from Platform Admin",
+                            });
+                            toast({ title: "Sent", description: "Test log event created" });
+                          } catch (e: any) {
+                            toast({
+                              title: "Failed",
+                              description: e?.message || "Could not send test event",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Send Test Event
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Module Statistics */}
               <Card>

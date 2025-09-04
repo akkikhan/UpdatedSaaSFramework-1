@@ -46,7 +46,7 @@ import {
   type InsertPlatformAdmin,
 } from "../shared/schema.ts";
 import { db } from "./db.ts";
-import { eq, desc, count, asc, and, like, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, count, asc, and, like, gte, lte, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // Helper function to ensure db is available
@@ -63,6 +63,7 @@ export interface IStorage {
   getTenant(id: string): Promise<Tenant | undefined>;
   getTenantByOrgId(orgId: string): Promise<Tenant | undefined>;
   getTenantByAuthApiKey(apiKey: string): Promise<Tenant | undefined>;
+  getTenantByLoggingApiKey?(apiKey: string): Promise<Tenant | undefined>;
   getAllTenants(): Promise<Tenant[]>;
   updateTenantStatus(id: string, status: string): Promise<void>;
 
@@ -238,7 +239,18 @@ export interface IStorage {
     userId?: string;
   }): Promise<void>;
   getLogEvents(
-    tenantId: string,
+    tenantId:
+      | string
+      | {
+          tenantId: string;
+          level?: string;
+          eventType?: string;
+          category?: string;
+          startDate?: Date;
+          endDate?: Date;
+          limit?: number;
+          offset?: number;
+        },
     options?: {
       level?: string;
       eventType?: string;
@@ -324,6 +336,14 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  async getTenantByLoggingApiKey(apiKey: string): Promise<Tenant | undefined> {
+    const row = await ensureDb()
+      .select()
+      .from(tenants)
+      .where(eq(tenants.loggingApiKey, apiKey))
+      .limit(1);
+    return row?.[0];
+  }
   async createTenant(insertTenant: InsertTenant): Promise<Tenant> {
     if (!db) {
       throw new Error(
@@ -372,29 +392,66 @@ export class DatabaseStorage implements IStorage {
       metadata: { mustChangePassword: true },
     });
 
-    // Create default roles
-    const adminRole = await this.createRole({
-      tenantId: tenant.id,
-      name: "Admin",
-      description: "Full administrative access",
-      permissions: [
-        "tenant.admin",
-        "user.create",
-        "user.read",
-        "user.update",
-        "user.delete",
-        "role.manage",
-      ],
-      isSystem: true,
-    });
+    // Create default roles from onboarding RBAC config if provided
+    try {
+      const rbacCfg = ((insertTenant as any)?.moduleConfigs || {}).rbac || {};
+      const template = (rbacCfg.permissionTemplate as string) || "standard";
+      const roleNames: string[] = Array.isArray(rbacCfg.defaultRoles)
+        ? (rbacCfg.defaultRoles as string[])
+        : ["Admin", "User"]; // fallback
 
-    await this.createRole({
-      tenantId: tenant.id,
-      name: "User",
-      description: "Standard user access",
-      permissions: ["user.read"],
-      isSystem: true,
-    });
+      const permsByTemplate = (name: string): string[] => {
+        const lower = name.toLowerCase();
+        if (lower.includes("admin")) {
+          return [
+            "tenant.admin",
+            "user.create",
+            "user.read",
+            "user.update",
+            "user.delete",
+            "role.manage",
+            ...(template === "enterprise"
+              ? ["audit.read", "system.config", "integration.manage"]
+              : []),
+          ];
+        }
+        if (lower.includes("manager")) {
+          return ["user.read", "user.update", "role.read", "report.generate"];
+        }
+        // viewer/user minimal
+        return ["user.read", "role.read"];
+      };
+
+      for (const rn of roleNames) {
+        await this.createRole({
+          tenantId: tenant.id,
+          name: rn,
+          description: rn.toLowerCase().includes("admin")
+            ? "Full administrative access"
+            : rn.toLowerCase().includes("manager")
+              ? "Manage users and view reports"
+              : "Standard user access",
+          permissions: permsByTemplate(rn),
+          isSystem: true,
+        });
+      }
+    } catch (e) {
+      console.warn("RBAC default roles generation failed; using minimal defaults.");
+      await this.createRole({
+        tenantId: tenant.id,
+        name: "Admin",
+        description: "Full administrative access",
+        permissions: ["tenant.admin", "user.read", "user.update", "role.manage"],
+        isSystem: true,
+      });
+      await this.createRole({
+        tenantId: tenant.id,
+        name: "User",
+        description: "Standard user access",
+        permissions: ["user.read"],
+        isSystem: true,
+      });
+    }
 
     return tenant;
   }
@@ -559,14 +616,21 @@ export class DatabaseStorage implements IStorage {
     enabledModules: string[],
     moduleConfigs: any
   ): Promise<void> {
-    await db
-      .update(tenants)
-      .set({
-        enabledModules: enabledModules,
-        moduleConfigs: moduleConfigs,
-        updatedAt: new Date(),
-      })
-      .where(eq(tenants.id, tenantId));
+    const currentRows = await ensureDb()
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+    const current = currentRows?.[0];
+    const patch: any = {
+      enabledModules: enabledModules,
+      moduleConfigs: moduleConfigs,
+      updatedAt: new Date(),
+    };
+    if (enabledModules.includes("logging") && !current?.loggingApiKey) {
+      patch.loggingApiKey = `logging_${randomUUID().replace(/-/g, "").substring(0, 20)}`;
+    }
+    await ensureDb().update(tenants).set(patch).where(eq(tenants.id, tenantId));
   }
 
   // Compliance audit logs
@@ -1326,22 +1390,34 @@ export class DatabaseStorage implements IStorage {
     metadata?: any;
     userId?: string;
   }): Promise<void> {
-    await db.insert(systemLogs).values({
-      tenantId: event.tenantId,
-      adminUserId: event.userId,
-      action: `${event.level}: ${event.eventType}`,
-      entityType: event.eventType,
-      entityId: event.userId || "system",
-      details: {
-        level: event.level,
-        message: event.message,
-        metadata: event.metadata,
-      },
-    });
+    await ensureDb()
+      .insert(systemLogs)
+      .values({
+        tenantId: event.tenantId,
+        adminUserId: event.userId,
+        action: `${event.level}: ${event.eventType}`,
+        entityType: event.eventType,
+        entityId: event.userId || "system",
+        details: {
+          level: event.level,
+          message: event.message,
+          metadata: event.metadata,
+        },
+      });
+  }
+
+  // Alias expected by routes.ts
+  async getLogStatistics(tenantId: string, period: string = "24h"): Promise<any> {
+    const now = new Date();
+    let startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (period === "7d") startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (period === "30d") startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const stats = await this.getLogStats(tenantId, startDate, now);
+    return stats;
   }
 
   async getLogEvents(
-    tenantId: string,
+    tenantIdOrOptions: any,
     options: {
       level?: string;
       eventType?: string;
@@ -1351,7 +1427,22 @@ export class DatabaseStorage implements IStorage {
       offset?: number;
     } = {}
   ): Promise<any[]> {
-    let query = db
+    const opts =
+      typeof tenantIdOrOptions === "string"
+        ? { tenantId: tenantIdOrOptions, ...options }
+        : tenantIdOrOptions || {};
+    const {
+      tenantId,
+      level,
+      eventType,
+      category,
+      startDate,
+      endDate,
+      limit = 50,
+      offset = 0,
+    } = opts;
+
+    let query = ensureDb()
       .select({
         id: systemLogs.id,
         eventType: systemLogs.entityType,
@@ -1363,23 +1454,29 @@ export class DatabaseStorage implements IStorage {
       .from(systemLogs)
       .where(eq(systemLogs.tenantId, tenantId));
 
-    if (options.level) {
-      query = query.where(like(systemLogs.action, `${options.level}:%`));
+    if (level) {
+      query = query.where(like(systemLogs.action, `${level}:%`));
     }
-    if (options.eventType) {
-      query = query.where(eq(systemLogs.entityType, options.eventType));
+    const eventTypeOrCategory = eventType || category;
+    if (eventTypeOrCategory) {
+      query = query.where(eq(systemLogs.entityType, eventTypeOrCategory));
     }
-    if (options.startDate) {
-      query = query.where(gte(systemLogs.timestamp, options.startDate));
+    if (startDate) {
+      query = query.where(gte(systemLogs.timestamp, startDate));
     }
-    if (options.endDate) {
-      query = query.where(lte(systemLogs.timestamp, options.endDate));
+    if (endDate) {
+      query = query.where(lte(systemLogs.timestamp, endDate));
     }
 
-    return await query
-      .orderBy(desc(systemLogs.timestamp))
-      .limit(options.limit || 50)
-      .offset(options.offset || 0);
+    return await query.orderBy(desc(systemLogs.timestamp)).limit(limit).offset(offset);
+  }
+
+  async purgeOldLogs(tenantId: string, retentionDays: number): Promise<void> {
+    const days = Math.max(1, Math.min(365, retentionDays || 30));
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    await ensureDb()
+      .delete(systemLogs)
+      .where(and(eq(systemLogs.tenantId, tenantId), lt(systemLogs.timestamp, cutoff)));
   }
 
   // Alert Rules (simplified implementation)

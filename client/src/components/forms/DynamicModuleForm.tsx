@@ -406,13 +406,28 @@ const LoggingModuleConfig: React.FC<{ form: UseFormReturn<TenantOnboardingConfig
         Logging Configuration
       </CardTitle>
     </CardHeader>
-    <CardContent>
+    <CardContent className="space-y-3">
       <Alert>
         <CheckCircle className="h-4 w-4" />
         <AlertDescription>
-          Database logging with standard levels (error, warn, info) will be enabled by default.
+          Basic logging (error, warning, info) will be enabled by default.
         </AlertDescription>
       </Alert>
+      <div className="text-sm text-slate-700">
+        <div className="font-medium">Dependencies</div>
+        <ul className="list-disc pl-5 mt-1">
+          <li>
+            <span className="font-medium">Required:</span> Authentication (Auth)
+          </li>
+          <li>
+            <span className="font-medium">Recommended:</span> RBAC (for log access control),
+            Notifications (for alerts)
+          </li>
+        </ul>
+        <div className="mt-2 text-xs text-slate-500">
+          If Auth isn’t selected, it will be enabled automatically during provisioning.
+        </div>
+      </div>
     </CardContent>
   </Card>
 );

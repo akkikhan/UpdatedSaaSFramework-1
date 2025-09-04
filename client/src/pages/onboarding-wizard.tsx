@@ -27,6 +27,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   ArrowLeft,
   ArrowRight,
@@ -57,6 +58,7 @@ import {
   type ModuleId,
 } from "../../../shared/types";
 import { useCreateTenant } from "@/hooks/use-tenants";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 // Use a relaxed schema for the wizard to allow provider "string[]" during form filling
@@ -136,6 +138,29 @@ export default function OnboardingWizard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createTenant = useCreateTenant();
+  // Dynamic RBAC options from Platform Admin config APIs (hooks must be top-level)
+  const { data: permissionTemplates = [] } = useQuery({
+    queryKey: ["/api/rbac-config/permission-templates"],
+    queryFn: async () => {
+      const token = localStorage.getItem("platformAdminToken") || "";
+      const res = await fetch("/api/rbac-config/permission-templates", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
+  const { data: businessTypes = [] } = useQuery({
+    queryKey: ["/api/rbac-config/business-types"],
+    queryFn: async () => {
+      const token = localStorage.getItem("platformAdminToken") || "";
+      const res = await fetch("/api/rbac-config/business-types", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(WIZARD_FORM_SCHEMA as any),
@@ -157,12 +182,49 @@ export default function OnboardingWizard() {
   const watchedModules = form.watch("enabledModules") || [];
   // Align with shared schema key: "auth" (not "authentication")
   const watchedAuthProviders = form.watch("moduleConfigs.auth.providers");
+  const watchedRBAC = watchedModules.includes("rbac");
 
   const handleNext = async () => {
     let fieldsToValidate: (keyof FormData)[] = [];
 
     if (currentStep === 0) {
       fieldsToValidate = ["name", "orgId", "adminEmail", "adminName"];
+    }
+
+    // Inter-step validations and auto-fixes
+    if (currentStep === 1) {
+      const mods = (form.getValues("enabledModules") || []) as string[];
+      if (mods.includes("rbac") && !mods.includes("auth")) {
+        // Auto-enable auth if RBAC selected
+        form.setValue("enabledModules", Array.from(new Set([...mods, "auth"])));
+        toast({
+          title: "RBAC requires Authentication",
+          description: "Authentication has been enabled automatically.",
+        });
+      }
+      // Ensure auth has at least one provider for smoother start
+      const providers = form.getValues("moduleConfigs.auth.providers") as any[] | undefined;
+      const hasAuth = (form.getValues("enabledModules") || []).includes("auth");
+      if (hasAuth && (!providers || providers.length === 0)) {
+        form.setValue("moduleConfigs.auth.providers", ["local"] as any);
+      }
+    }
+    if (currentStep === 2) {
+      const mods = (form.getValues("enabledModules") || []) as string[];
+      if (mods.includes("rbac")) {
+        const roles =
+          (form.getValues("moduleConfigs.rbac.defaultRoles") as string[] | undefined) || [];
+        if (roles.length === 0) {
+          form.setValue(
+            "moduleConfigs.rbac.defaultRoles" as any,
+            ["Admin", "Manager", "Viewer"] as any
+          );
+          toast({
+            title: "Default roles added",
+            description: "We added Admin, Manager, Viewer to get you started.",
+          });
+        }
+      }
     }
 
     const isValid = await form.trigger(fieldsToValidate as any);
@@ -243,6 +305,12 @@ export default function OnboardingWizard() {
         }
       });
 
+      // Enforce dependency at submit time as well
+      const selected = Array.from(new Set([...(data.enabledModules || [])])) as string[];
+      if (selected.includes("rbac") && !selected.includes("auth")) {
+        selected.push("auth");
+      }
+
       // Transform the data to match the API format
       const transformedData = {
         name: data.name,
@@ -250,7 +318,7 @@ export default function OnboardingWizard() {
         adminEmail: data.adminEmail,
         adminName: data.adminName,
         sendEmail: data.sendEmail,
-        enabledModules: data.enabledModules,
+        enabledModules: selected,
         moduleConfigs: transformedModuleConfigs,
         metadata: {
           adminName: data.adminName,
@@ -503,6 +571,49 @@ export default function OnboardingWizard() {
                                     ? currentValue.filter(v => v !== module.id)
                                     : [...currentValue, module.id];
                                   field.onChange(newValue);
+
+                                  // Dependency handling: RBAC -> Auth
+                                  if (!isSelected && module.id === "rbac") {
+                                    const mods = newValue as string[];
+                                    if (!mods.includes("auth")) {
+                                      const withAuth = Array.from(
+                                        new Set([...(mods as string[]), "auth"])
+                                      );
+                                      field.onChange(withAuth);
+                                      toast({
+                                        title: "Authentication enabled",
+                                        description:
+                                          "RBAC depends on Authentication. Enabled automatically.",
+                                      });
+                                    }
+                                    // Seed default RBAC config if missing
+                                    const currentRBAC = form.getValues("moduleConfigs.rbac");
+                                    if (!currentRBAC) {
+                                      form.setValue(
+                                        "moduleConfigs.rbac" as any,
+                                        {
+                                          permissionTemplate: "standard",
+                                          businessType: "general",
+                                          defaultRoles: ["Admin", "Manager", "Viewer"],
+                                        } as any
+                                      );
+                                    }
+                                  }
+
+                                  // Prevent disabling Auth when RBAC is selected
+                                  if (
+                                    isSelected &&
+                                    module.id === "auth" &&
+                                    (form.getValues("enabledModules") || []).includes("rbac")
+                                  ) {
+                                    toast({
+                                      title: "Cannot disable Authentication",
+                                      description:
+                                        "RBAC requires Authentication. Disable RBAC first.",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
                                 };
 
                                 return (
@@ -560,6 +671,14 @@ export default function OnboardingWizard() {
                                 );
                               })}
                             </div>
+                            {watchedRBAC && !watchedModules.includes("auth") && (
+                              <Alert className="mt-3">
+                                <AlertDescription>
+                                  RBAC requires Authentication. The wizard will enable Auth
+                                  automatically.
+                                </AlertDescription>
+                              </Alert>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -777,31 +896,239 @@ export default function OnboardingWizard() {
 
                           {/* RBAC Configuration */}
                           {watchedModules.includes("rbac") && (
-                            <div className="space-y-4">
+                            <div className="space-y-5">
                               <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <Users className="w-5 h-5" />
                                 RBAC Configuration
                               </h3>
 
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name="moduleConfigs.rbac.permissionTemplate"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Permission Template</FormLabel>
+                                      <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={(field.value as any) || "standard"}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select a template" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(permissionTemplates as any[]).length
+                                            ? (permissionTemplates as any[]).map(t => (
+                                                <SelectItem
+                                                  key={t.id}
+                                                  value={(t.name || t.id || "")
+                                                    .toString()
+                                                    .toLowerCase()}
+                                                >
+                                                  {t.name || t.id}
+                                                </SelectItem>
+                                              ))
+                                            : [
+                                                <SelectItem key="standard" value="standard">
+                                                  Standard
+                                                </SelectItem>,
+                                                <SelectItem key="enterprise" value="enterprise">
+                                                  Enterprise
+                                                </SelectItem>,
+                                                <SelectItem key="custom" value="custom">
+                                                  Custom
+                                                </SelectItem>,
+                                              ]}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormDescription>
+                                        Choose a base set of permissions for default roles
+                                      </FormDescription>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="moduleConfigs.rbac.businessType"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Business Type</FormLabel>
+                                      <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={(field.value as any) || "general"}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select business type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(businessTypes as any[]).length
+                                            ? (businessTypes as any[]).map(bt => (
+                                                <SelectItem
+                                                  key={bt.id}
+                                                  value={(bt.name || bt.id || "")
+                                                    .toString()
+                                                    .toLowerCase()}
+                                                >
+                                                  {bt.name}
+                                                </SelectItem>
+                                              ))
+                                            : [
+                                                <SelectItem key="general" value="general">
+                                                  General
+                                                </SelectItem>,
+                                                <SelectItem key="healthcare" value="healthcare">
+                                                  Healthcare
+                                                </SelectItem>,
+                                                <SelectItem key="finance" value="finance">
+                                                  Finance
+                                                </SelectItem>,
+                                                <SelectItem key="education" value="education">
+                                                  Education
+                                                </SelectItem>,
+                                                <SelectItem key="government" value="government">
+                                                  Government
+                                                </SelectItem>,
+                                              ]}
+                                        </SelectContent>
+                                      </Select>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              {/* Template preview */}
+                              <div className="border rounded-lg p-4 bg-slate-50">
+                                <p className="text-sm text-slate-700 mb-2">Template Preview</p>
+                                {Array.isArray(permissionTemplates) &&
+                                permissionTemplates.length > 0 ? (
+                                  (() => {
+                                    const selected =
+                                      (form.getValues(
+                                        "moduleConfigs.rbac.permissionTemplate"
+                                      ) as string) || "standard";
+                                    const match = (permissionTemplates as any[]).find(
+                                      t =>
+                                        (t.name || t.id || "").toString().toLowerCase() === selected
+                                    );
+                                    const perms: string[] = (match?.permissions || []).slice(0, 12);
+                                    return perms.length ? (
+                                      <div className="flex flex-wrap gap-2">
+                                        {perms.map(p => (
+                                          <Badge key={p} variant="outline" className="text-xs">
+                                            {p}
+                                          </Badge>
+                                        ))}
+                                        {(match?.permissions || []).length > perms.length && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            +{(match?.permissions || []).length - perms.length} more
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="text-slate-500 text-sm">
+                                        No permissions listed for this template.
+                                      </div>
+                                    );
+                                  })()
+                                ) : (
+                                  <div className="text-slate-500 text-sm">
+                                    Templates will appear here.
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Default Roles tag editor */}
                               <FormField
                                 control={form.control}
                                 name="moduleConfigs.rbac.defaultRoles"
+                                render={({ field }) => {
+                                  const roles: string[] = (field.value as any) || [
+                                    "Admin",
+                                    "Manager",
+                                    "Viewer",
+                                  ];
+                                  const [input, setInput] = React.useState("");
+                                  const addRole = () => {
+                                    const v = input.trim();
+                                    if (!v) return;
+                                    const next = Array.from(new Set([...(roles as string[]), v]));
+                                    field.onChange(next);
+                                    setInput("");
+                                  };
+                                  const removeRole = (name: string) => {
+                                    field.onChange((roles as string[]).filter(r => r !== name));
+                                  };
+                                  return (
+                                    <FormItem>
+                                      <FormLabel>Default Roles</FormLabel>
+                                      <div className="flex flex-wrap gap-2">
+                                        {roles.map(r => (
+                                          <Badge key={r} variant="secondary" className="px-2 py-1">
+                                            <span className="mr-2">{r}</span>
+                                            <button
+                                              type="button"
+                                              className="text-slate-500 hover:text-slate-700"
+                                              onClick={() => removeRole(r)}
+                                              aria-label={`Remove ${r}`}
+                                            >
+                                              ×
+                                            </button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-2 mt-2">
+                                        <Input
+                                          value={input}
+                                          onChange={e => setInput(e.target.value)}
+                                          placeholder="Add a role (e.g., Auditor)"
+                                          onKeyDown={e => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              addRole();
+                                            }
+                                          }}
+                                        />
+                                        <Button type="button" onClick={addRole} variant="secondary">
+                                          Add
+                                        </Button>
+                                      </div>
+                                      <FormDescription>
+                                        These roles will be created for the tenant. Permissions come
+                                        from the selected template and can be refined later.
+                                      </FormDescription>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+
+                              {/* Optional custom permissions */}
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.rbac.customPermissions"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Default Roles</FormLabel>
+                                    <FormLabel>Custom Permissions (optional)</FormLabel>
                                     <FormControl>
-                                      <Textarea
-                                        placeholder="Enter default roles (one per line)&#10;admin&#10;user&#10;viewer"
-                                        onChange={e => {
-                                          const roles = e.target.value
-                                            .split("\n")
-                                            .filter(r => r.trim());
-                                          field.onChange(roles);
-                                        }}
+                                      <Input
+                                        placeholder="comma,separated,permissions"
+                                        value={
+                                          (Array.isArray(field.value)
+                                            ? field.value.join(",")
+                                            : "") as any
+                                        }
+                                        onChange={e =>
+                                          field.onChange(
+                                            e.target.value
+                                              .split(",")
+                                              .map(s => s.trim())
+                                              .filter(Boolean)
+                                          )
+                                        }
                                       />
                                     </FormControl>
                                     <FormDescription>
-                                      Define default roles for this tenant
+                                      Extra permissions to add during creation
                                     </FormDescription>
                                   </FormItem>
                                 )}
@@ -1026,6 +1353,43 @@ export default function OnboardingWizard() {
                                     {provider.replace("-", " ").toUpperCase()}
                                   </Badge>
                                 ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {watchedModules.includes("rbac") && (
+                            <div>
+                              <span className="text-sm text-slate-600">RBAC:</span>
+                              <div className="mt-2 space-y-1 text-sm">
+                                <div>
+                                  Template:{" "}
+                                  <strong>
+                                    {(form.getValues(
+                                      "moduleConfigs.rbac.permissionTemplate"
+                                    ) as any) || "standard"}
+                                  </strong>
+                                </div>
+                                <div>
+                                  Business Type:{" "}
+                                  <strong>
+                                    {(form.getValues("moduleConfigs.rbac.businessType") as any) ||
+                                      "general"}
+                                  </strong>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <span>Default Roles:</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {(
+                                      form.getValues("moduleConfigs.rbac.defaultRoles") as
+                                        | any[]
+                                        | undefined
+                                    )?.map((r: any) => (
+                                      <Badge key={r} variant="secondary">
+                                        {r}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           )}

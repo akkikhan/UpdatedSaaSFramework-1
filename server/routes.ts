@@ -419,6 +419,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RBAC Configuration (Platform Admin only)
+  // Permission Templates
+  app.get("/api/rbac-config/permission-templates", platformAdminMiddleware, async (_req, res) => {
+    try {
+      const list = await storage.getPermissionTemplates();
+      res.json(list);
+    } catch (error) {
+      console.error("Error fetching permission templates:", error);
+      res.status(500).json({ message: "Failed to fetch permission templates" });
+    }
+  });
+
+  app.post("/api/rbac-config/permission-templates", platformAdminMiddleware, async (req, res) => {
+    try {
+      const input = insertPermissionTemplateSchema.parse(req.body);
+      const created = await storage.createPermissionTemplate(input);
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating permission template:", error);
+      res.status(400).json({ message: "Invalid template data" });
+    }
+  });
+
+  app.put(
+    "/api/rbac-config/permission-templates/:id",
+    platformAdminMiddleware,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updates = req.body || {};
+        const updated = await storage.updatePermissionTemplate(id, updates);
+        res.json(updated);
+      } catch (error) {
+        console.error("Error updating permission template:", error);
+        res.status(400).json({ message: "Failed to update permission template" });
+      }
+    }
+  );
+
+  app.delete(
+    "/api/rbac-config/permission-templates/:id",
+    platformAdminMiddleware,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        await storage.deletePermissionTemplate(id);
+        res.status(204).end();
+      } catch (error) {
+        console.error("Error deleting permission template:", error);
+        res.status(400).json({ message: "Failed to delete permission template" });
+      }
+    }
+  );
+
+  // Business Types
+  app.get("/api/rbac-config/business-types", platformAdminMiddleware, async (_req, res) => {
+    try {
+      const list = await storage.getBusinessTypes();
+      res.json(list);
+    } catch (error) {
+      console.error("Error fetching business types:", error);
+      res.status(500).json({ message: "Failed to fetch business types" });
+    }
+  });
+
+  app.post("/api/rbac-config/business-types", platformAdminMiddleware, async (req, res) => {
+    try {
+      const input = insertBusinessTypeSchema.parse(req.body);
+      const created = await storage.createBusinessType(input);
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating business type:", error);
+      res.status(400).json({ message: "Invalid business type data" });
+    }
+  });
+
+  app.put("/api/rbac-config/business-types/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const updates = req.body || {};
+      const updated = await storage.updateBusinessType(id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating business type:", error);
+      res.status(400).json({ message: "Failed to update business type" });
+    }
+  });
+
+  app.delete("/api/rbac-config/business-types/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const id = req.params.id;
+      await storage.deleteBusinessType(id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting business type:", error);
+      res.status(400).json({ message: "Failed to delete business type" });
+    }
+  });
+
+  // Default Roles
+  app.get("/api/rbac-config/default-roles", platformAdminMiddleware, async (_req, res) => {
+    try {
+      const list = await storage.getDefaultRoles();
+      res.json(list);
+    } catch (error) {
+      console.error("Error fetching default roles:", error);
+      res.status(500).json({ message: "Failed to fetch default roles" });
+    }
+  });
+
+  app.post("/api/rbac-config/default-roles", platformAdminMiddleware, async (req, res) => {
+    try {
+      const input = insertDefaultRoleSchema.parse(req.body);
+      const created = await storage.createDefaultRole(input);
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating default role:", error);
+      res.status(400).json({ message: "Invalid role data" });
+    }
+  });
+
+  app.put("/api/rbac-config/default-roles/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const updates = req.body || {};
+      const updated = await storage.updateDefaultRole(id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating default role:", error);
+      res.status(400).json({ message: "Failed to update default role" });
+    }
+  });
+
+  app.delete("/api/rbac-config/default-roles/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const id = req.params.id;
+      await storage.deleteDefaultRole(id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting default role:", error);
+      res.status(400).json({ message: "Failed to delete default role" });
+    }
+  });
+
   // Platform admin token refresh
   app.post("/api/platform/auth/refresh", async (req, res) => {
     try {
@@ -820,6 +964,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant self-service: read Logging settings
+  app.get("/api/tenant/:id/logging/settings", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      const logging = ((tenant.moduleConfigs as any) || {}).logging || {};
+      res.json({
+        levels: Array.isArray(logging.levels) ? logging.levels : ["error", "warning", "info"],
+        destinations: Array.isArray(logging.destinations) ? logging.destinations : [],
+        retentionDays: typeof logging.retentionDays === "number" ? logging.retentionDays : 30,
+        redactionEnabled: Boolean(logging.redactionEnabled),
+      });
+    } catch (error) {
+      console.error("Error fetching tenant logging settings:", error);
+      res.status(500).json({ message: "Failed to fetch logging settings" });
+    }
+  });
+
+  // Tenant self-service: update Logging settings (no enable/disable)
+  app.patch("/api/tenant/:id/logging/settings", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const body = req.body || {};
+      const schema = z.object({
+        levels: z.array(z.enum(["error", "warning", "info", "debug"]).optional()).optional(),
+        destinations: z.array(z.enum(["database"]).optional()).optional(),
+        retentionDays: z.number().int().min(1).max(365).optional(),
+        redactionEnabled: z.boolean().optional(),
+      });
+      const updates = schema.parse(body);
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const currentConfigs = (tenant.moduleConfigs as any) || {};
+      const loggingCfg = { ...(currentConfigs.logging || {}) };
+      const nextLogging = {
+        ...loggingCfg,
+        ...updates,
+        destinations: ["database"],
+      } as any;
+      const newConfigs = { ...currentConfigs, logging: nextLogging };
+      const enabledModules = (tenant.enabledModules as string[]) || [];
+      await storage.updateTenantModules(id, enabledModules, newConfigs);
+      res.json({ message: "Logging settings updated", logging: nextLogging });
+    } catch (error) {
+      console.error("Error updating tenant logging settings:", error);
+      res.status(400).json({ message: "Failed to update logging settings" });
+    }
+  });
+
+  // Tenant self-service: read RBAC settings (template, businessType, defaults)
+  app.get("/api/tenant/:id/rbac/settings", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      const rbac = ((tenant.moduleConfigs as any) || {}).rbac || {};
+      res.json({
+        permissionTemplate: rbac.permissionTemplate || "standard",
+        businessType: rbac.businessType || "general",
+        defaultRoles: rbac.defaultRoles || ["Admin", "Manager", "Viewer"],
+        customPermissions: rbac.customPermissions || [],
+      });
+    } catch (error) {
+      console.error("Error fetching tenant RBAC settings:", error);
+      res.status(500).json({ message: "Failed to fetch RBAC settings" });
+    }
+  });
+
+  // Platform Admin: send a quick test log event for a tenant
+  app.post("/api/admin/logging/test-event", platformAdminMiddleware, async (req, res) => {
+    try {
+      const {
+        tenantId,
+        level = "info",
+        category = "admin-test",
+        message = "Test event",
+      } = req.body || {};
+      if (!tenantId) return res.status(400).json({ message: "tenantId required" });
+      const tenant = await storage.getTenant(tenantId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      await storage.createLogEvent({
+        tenantId,
+        eventType: category,
+        level,
+        message,
+        metadata: { by: "platform-admin", at: new Date().toISOString() },
+      });
+      res.json({ success: true });
+    } catch (e) {
+      console.error("Admin test log event error:", e);
+      res.status(500).json({ message: "Failed to create test event" });
+    }
+  });
+
+  // Platform Admin: query tenant event logs
+  app.get("/api/admin/logging/events", platformAdminMiddleware, async (req, res) => {
+    try {
+      const tenantId = String(req.query.tenantId || "");
+      if (!tenantId) return res.status(400).json({ message: "tenantId required" });
+      const level = req.query.level ? String(req.query.level) : undefined;
+      const category = req.query.category ? String(req.query.category) : undefined;
+      const startDate = req.query.startDate ? new Date(String(req.query.startDate)) : undefined;
+      const endDate = req.query.endDate ? new Date(String(req.query.endDate)) : undefined;
+      const limit = req.query.limit ? parseInt(String(req.query.limit)) : 50;
+      const offset = req.query.offset ? parseInt(String(req.query.offset)) : 0;
+
+      const list = await storage.getLogEvents({
+        tenantId,
+        level,
+        category,
+        startDate,
+        endDate,
+        limit,
+        offset,
+      } as any);
+      res.json(list);
+    } catch (e) {
+      console.error("Admin get tenant logs error:", e);
+      res.status(500).json({ message: "Failed to fetch logs" });
+    }
+  });
+
+  // Tenant self-service: update RBAC settings (no enable/disable)
+  app.patch("/api/tenant/:id/rbac/settings", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const body = req.body || {};
+      const schema = z.object({
+        permissionTemplate: z.enum(["standard", "enterprise", "custom"]).optional(),
+        businessType: z
+          .enum(["general", "healthcare", "finance", "education", "government"])
+          .optional(),
+        defaultRoles: z.array(z.string()).optional(),
+        customPermissions: z.array(z.string()).optional(),
+      });
+      const updates = schema.parse(body);
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const currentConfigs = (tenant.moduleConfigs as any) || {};
+      const rbacCfg = { ...(currentConfigs.rbac || {}) };
+      const nextRbac = { ...rbacCfg, ...updates };
+      const newConfigs = { ...currentConfigs, rbac: nextRbac };
+      const enabledModules = (tenant.enabledModules as string[]) || [];
+      await storage.updateTenantModules(id, enabledModules, newConfigs);
+      res.json({ message: "RBAC settings updated", rbac: nextRbac });
+    } catch (error) {
+      console.error("Error updating tenant RBAC settings:", error);
+      res.status(400).json({ message: "Failed to update RBAC settings" });
+    }
+  });
+
+  // Tenant self-service: RBAC catalogs (templates, business types)
+  app.get("/api/tenant/:id/rbac/catalog/templates", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+      const templates = await storage.getPermissionTemplates();
+      // Return minimal shape
+      return res.json(templates.map(t => ({ id: (t as any).id, name: (t as any).name })));
+    } catch (e) {
+      console.error("Get RBAC templates error:", e);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  app.get("/api/tenant/:id/rbac/catalog/business-types", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+      const items = await storage.getBusinessTypes();
+      return res.json(items.map(i => ({ id: (i as any).id, name: (i as any).name })));
+    } catch (e) {
+      console.error("Get RBAC business types error:", e);
+      res.status(500).json({ message: "Failed to fetch business types" });
+    }
+  });
+
+  // Tenant RBAC catalogs (read-only): permission templates and business types
+  app.get("/api/tenant/:id/rbac/catalog/templates", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+      const list = await storage.getPermissionTemplates();
+      // Expose minimal fields
+      res.json(
+        (list || []).map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          permissions: t.permissions || [],
+          isActive: t.isActive,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching tenant RBAC templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  app.get("/api/tenant/:id/rbac/catalog/business-types", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+      const list = await storage.getBusinessTypes();
+      res.json(
+        (list || []).map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          description: b.description,
+          riskLevel: b.riskLevel,
+          isActive: b.isActive,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching tenant business types:", error);
+      res.status(500).json({ message: "Failed to fetch business types" });
+    }
+  });
+
   // Update tenant modules (PLATFORM ADMIN ONLY)
   app.patch("/api/tenants/:id/modules", platformAdminMiddleware, async (req, res) => {
     try {
@@ -864,6 +1240,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }),
             },
           } as any;
+        }
+        // Clamp logging destinations to database only and cap retentionDays
+        if (safeConfigs?.logging) {
+          safeConfigs.logging = {
+            ...safeConfigs.logging,
+            destinations: ["database"],
+            retentionDays: Math.max(
+              1,
+              Math.min(365, Number(safeConfigs.logging.retentionDays || 30))
+            ),
+          };
         }
       } catch (e) {
         console.warn(
@@ -1118,7 +1505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Azure AD provider found, creating service instance...");
 
-      // Decrypt clientSecret if encrypted
+      // Decrypt clientSecret if encrypted; surface clear error if undecryptable
+      let decryptErrorMessage = "";
       try {
         const { decryptSecret } = await import("./utils/secret.js");
         if (azureProvider.config?.clientSecret) {
@@ -1130,7 +1518,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
           };
         }
-      } catch {}
+      } catch (decErr: any) {
+        decryptErrorMessage = decErr?.message || String(decErr || "");
+        const details = encodeURIComponent(
+          "Stored clientSecret cannot be decrypted. The platform JWT_SECRET may have changed."
+        );
+        const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent(
+          "SECRET_DECRYPTION_FAILED"
+        )}&code=${encodeURIComponent("SECRET_DECRYPTION_FAILED")}&details=${details}`;
+        return res.redirect(errorUrl);
+      }
 
       // Guard: ensure required fields for SSO
       if (
@@ -2048,7 +2445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
 
   // Log Events
-  app.post("/logging/events", validateApiKey, tenantMiddleware, async (req, res) => {
+  app.post("/api/v2/logging/events", validateApiKey, tenantMiddleware, async (req, res) => {
     try {
       const { level, message, category, metadata, userId } = req.body;
       const tenantId = req.tenantId;
@@ -2057,12 +2454,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Level and message are required" });
       }
 
+      // Enforce tenant logging config (levels + PII redaction)
+      let allowedLevels: string[] | null = null;
+      let redactionEnabled = false;
+      try {
+        const tenant = await storage.getTenant(tenantId!);
+        const logging = ((tenant?.moduleConfigs as any) || {}).logging || {};
+        if (Array.isArray(logging.levels) && logging.levels.length) {
+          allowedLevels = logging.levels as string[];
+        }
+        redactionEnabled = Boolean(logging.redactionEnabled);
+      } catch {}
+
+      if (allowedLevels && !allowedLevels.includes(level)) {
+        return res.status(202).json({ message: "Filtered: level not permitted by tenant config" });
+      }
+
+      const maskPII = (val: any): any => {
+        if (!redactionEnabled) return val;
+        const maskEmail = (s: string) =>
+          s.replace(
+            /([\w.+-])([\w.+-]*)(@)([^@]+)$/g,
+            (_, a, b, at, dom) => `${a}${b ? "***" : ""}${at}${dom.replace(/\w/g, "*")}`
+          );
+        const maskPhone = (s: string) =>
+          s.replace(
+            /(?:\+?\d[\s-]?){7,}/g,
+            m => `${"*".repeat(Math.max(0, m.length - 4))}${m.slice(-4)}`
+          );
+        const maskObj = (o: any): any => {
+          if (o == null) return o;
+          if (typeof o === "string") return maskPhone(maskEmail(o));
+          if (Array.isArray(o)) return o.map(maskObj);
+          if (typeof o === "object") {
+            const out: any = {};
+            for (const [k, v] of Object.entries(o)) {
+              if (/password|secret|token|ssn|aadhar|pan|credit|card/i.test(k))
+                out[k] = "[REDACTED]";
+              else out[k] = maskObj(v);
+            }
+            return out;
+          }
+          return o;
+        };
+        return maskObj(val);
+      };
+
       const logEvent = await storage.createLogEvent({
         tenantId,
         eventType: category || "application",
         level,
-        message,
-        metadata: metadata || {},
+        message: maskPII(message),
+        metadata: maskPII(metadata || {}),
         userId: userId || null,
       });
 
@@ -2074,7 +2517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Query Logs
-  app.get("/logging/events", validateApiKey, tenantMiddleware, async (req, res) => {
+  app.get("/api/v2/logging/events", validateApiKey, tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const { level, category, startDate, endDate, limit = 100, offset = 0 } = req.query;
@@ -2097,8 +2540,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Platform Admin: trigger retention purge (optional maintenance endpoint)
+  app.post("/api/admin/logging/purge", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { tenantId } = req.body || {};
+      if (tenantId) {
+        const tenant = await storage.getTenant(tenantId);
+        if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+        const days = Number((tenant.moduleConfigs as any)?.logging?.retentionDays || 30);
+        await storage.purgeOldLogs(tenant.id, days);
+      } else {
+        const tenants = await storage.getAllTenants();
+        for (const t of tenants) {
+          const days = Number((t.moduleConfigs as any)?.logging?.retentionDays || 30);
+          await storage.purgeOldLogs(t.id, days);
+        }
+      }
+      res.json({ message: "Purge executed" });
+    } catch (error) {
+      console.error("Logging purge error:", error);
+      res.status(500).json({ message: "Failed to purge logs" });
+    }
+  });
+
   // Log Statistics
-  app.get("/logging/stats", tenantMiddleware, async (req, res) => {
+  app.get("/api/v2/logging/stats", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const { period = "24h" } = req.query;
@@ -2112,7 +2578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alert Rules
-  app.post("/logging/alert-rules", tenantMiddleware, async (req, res) => {
+  app.post("/api/v2/logging/alert-rules", tenantMiddleware, async (req, res) => {
     try {
       const { name, condition, threshold, action } = req.body;
       const tenantId = req.tenantId;
@@ -2137,7 +2603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/logging/alert-rules", tenantMiddleware, async (req, res) => {
+  app.get("/api/v2/logging/alert-rules", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
       const alertRules = await storage.getAlertRules(tenantId);
@@ -2302,7 +2768,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const enabledModules = Array.from(new Set([...(tenant.enabledModules || []), moduleId]));
       const moduleConfigs = (tenant.moduleConfigs as any) || {};
-      await storage.updateTenantModules(tenantId, enabledModules, moduleConfigs);
+
+      // Seed default config when enabling certain modules post-onboarding
+      const seededConfigs = { ...moduleConfigs } as any;
+      if (moduleId === "logging") {
+        const defaults = {
+          levels: ["error", "warn", "info"],
+          destinations: ["database"],
+          retention: { error: "90d", security: "180d", audit: "365d", performance: "30d" },
+          alerting: { errorThreshold: 10, securityEvents: true, performanceDegradation: true },
+        };
+        seededConfigs.logging = { ...(moduleConfigs.logging || {}), ...defaults };
+      }
+      if (moduleId === "notifications") {
+        const defaults = {
+          channels: ["email"],
+          emailProvider: "smtp",
+          templates: { welcome: true, security_alert: true },
+        };
+        seededConfigs.notifications = { ...(moduleConfigs.notifications || {}), ...defaults };
+      }
+
+      await storage.updateTenantModules(tenantId, enabledModules, seededConfigs);
 
       await storage.updateSystemLogDetails(id, { status: "approved", resolvedAt: new Date() });
 
@@ -2570,6 +3057,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Azure validate (POST) error:", error);
       res.status(500).json({ message: "Validation failed" });
+    }
+  });
+
+  // Quick test: verify Azure client credentials (no save)
+  app.post("/api/tenant/:id/azure-ad/verify-secret", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = moduleConfigs.auth || {};
+      const providers = authConfig.providers || [];
+      let azure = providers.find((p: any) => p.type === "azure-ad") || {
+        type: "azure-ad",
+        config: {},
+      };
+
+      // Allow overrides from request body without persisting
+      const bodyCfg = req.body || {};
+      const mergedCfg = { ...(azure.config || {}), ...bodyCfg } as any;
+
+      const sanitizeGuid = (v: any) =>
+        String(v ?? "")
+          .trim()
+          .replace(/[{}]/g, "");
+      const GUID_CANON =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+      const tenantIdVal = sanitizeGuid(mergedCfg.tenantId);
+      const clientIdVal = sanitizeGuid(mergedCfg.clientId);
+      const clientSecretVal = String(mergedCfg.clientSecret ?? "").trim();
+
+      const errors: string[] = [];
+      if (!tenantIdVal || !GUID_CANON.test(tenantIdVal))
+        errors.push("tenantId must be a GUID from Azure AD (format: 8-4-4-4-12)");
+      if (!clientIdVal || !GUID_CANON.test(clientIdVal))
+        errors.push("clientId must be a GUID (Application ID) (format: 8-4-4-4-12)");
+      if (!clientSecretVal) errors.push("clientSecret is required");
+
+      if (errors.length) return res.status(400).json({ valid: false, message: errors.join("; ") });
+
+      try {
+        const { AzureADService } = await import("./services/azure-ad.js");
+        const svc = new AzureADService({
+          tenantId: tenantIdVal,
+          clientId: clientIdVal,
+          clientSecret: clientSecretVal,
+          redirectUri: `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+        });
+        const result = await svc.verifyClientCredentials();
+        if (result.ok) return res.json({ valid: true });
+        return res
+          .status(400)
+          .json({ valid: false, message: result.message || "Verification failed" });
+      } catch (e: any) {
+        return res.status(400).json({ valid: false, message: e?.message || "Verification failed" });
+      }
+    } catch (error) {
+      console.error("Azure verify-secret error:", error);
+      res.status(500).json({ message: "Verification failed" });
     }
   });
 
