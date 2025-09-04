@@ -521,6 +521,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Tenant not found" });
       }
 
+      // Normalize enabledModules to include configured providers for consistency
+      try {
+        const mc = (tenant.moduleConfigs as any) || {};
+        const providers: any[] = (mc.auth?.providers || []) as any[];
+        if (providers?.length) {
+          const providerTypes = providers.map(p => p?.type).filter(Boolean);
+          const normalized = Array.from(
+            new Set([...((tenant.enabledModules as any[]) || []), ...providerTypes])
+          );
+          tenant.enabledModules = normalized as any;
+        }
+      } catch {}
+
       res.json(tenant);
     } catch (error) {
       console.error("Error fetching tenant by orgId:", error);
@@ -536,6 +549,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!tenant) {
         return res.status(404).json({ message: "Tenant not found" });
       }
+      // Normalize enabledModules by configured providers
+      try {
+        const mc = (tenant.moduleConfigs as any) || {};
+        const providers: any[] = (mc.auth?.providers || []) as any[];
+        if (providers?.length) {
+          const providerTypes = providers.map(p => p?.type).filter(Boolean);
+          const normalized = Array.from(
+            new Set([...((tenant.enabledModules as any[]) || []), ...providerTypes])
+          );
+          tenant.enabledModules = normalized as any;
+        }
+      } catch {}
       res.json(tenant);
     } catch (error) {
       console.error("Error fetching tenant by id:", error);
@@ -802,6 +827,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const currentModules = (tenant.enabledModules as string[]) || ["auth", "rbac"];
       const newModules = enabledModules || currentModules;
+      // Enforce dependency: RBAC requires Auth
+      if (newModules.includes("rbac") && !newModules.includes("auth")) {
+        return res.status(400).json({ message: "RBAC requires Authentication to be enabled" });
+      }
 
       // Encrypt any provider secrets before persisting (parity with createTenant)
       let safeConfigs = moduleConfigs || {};
@@ -837,8 +866,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
+      // Compute diff for notifications
+      const oldSet = new Set(currentModules);
+      const newSet = new Set(newModules);
+      const enabledDiff: string[] = [];
+      const disabledDiff: string[] = [];
+      for (const m of newSet) {
+        if (!oldSet.has(m)) enabledDiff.push(m);
+      }
+      for (const m of oldSet) {
+        if (!newSet.has(m)) disabledDiff.push(m);
+      }
+
       // Update tenant modules
       await storage.updateTenantModules(id, newModules, safeConfigs);
+
+      // Email tenant admin about changes (best-effort)
+      try {
+        const updated = await storage.getTenant(id);
+        if (updated && (enabledDiff.length || disabledDiff.length)) {
+          await emailService.sendModuleStatusEmail(
+            { id: updated.id, name: updated.name, adminEmail: updated.adminEmail },
+            { enabled: enabledDiff, disabled: disabledDiff }
+          );
+        }
+      } catch (e) {
+        console.warn("Module change email skipped:", e instanceof Error ? e.message : e);
+      }
 
       res.json({
         message: "Modules updated successfully",
@@ -1950,20 +2004,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/v2/rbac/check-permission", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
-      const { userId, resource, action } = req.body || {};
+      const { userId, resource, action, explain } = req.body || {};
       if (!userId || !resource || !action) {
         return res.status(400).json({ message: "userId, resource, action are required" });
       }
       const tenantId = req.tenantId!;
       const permissionKey = `${resource}.${action}`;
-      if (typeof storage.checkUserPermission === "function") {
+      if (typeof storage.checkUserPermission === "function" && !explain) {
         const allowed = await storage.checkUserPermission(userId, permissionKey, tenantId);
         return res.json({ hasPermission: !!allowed });
       }
-      // Fallback: derive from roles
-      const perms: any = await storage.getUserPermissions?.(userId, tenantId);
-      const has = Array.isArray(perms) ? perms.includes(permissionKey) : false;
-      return res.json({ hasPermission: has });
+      // Derive from roles and optionally explain
+      const perms: string[] = (await storage.getUserPermissions?.(userId, tenantId)) || [];
+      const has = perms.includes(permissionKey);
+      if (!explain) return res.json({ hasPermission: has });
+
+      const assignments = await storage.getTenantUserRoles(tenantId, userId);
+      const roleIds = (assignments || []).map((a: any) => a.roleId);
+      const roles = await Promise.all(roleIds.map((id: string) => storage.getTenantRole?.(id)));
+      const matchedRoles = (roles || [])
+        .filter((r: any) => Array.isArray(r?.permissions) && r.permissions.includes(permissionKey))
+        .map((r: any) => ({ id: r.id, name: r.name }));
+      return res.json({ hasPermission: has, details: { evaluated: permissionKey, matchedRoles } });
     } catch (error) {
       console.error("[v2] Check permission error:", error);
       res.status(500).json({ message: "Failed to check permission" });
@@ -2239,6 +2301,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: { moduleId },
       });
 
+      // Email tenant admin about enabled module
+      try {
+        await emailService.sendModuleStatusEmail(
+          { id: tenant.id, name: tenant.name, adminEmail: tenant.adminEmail },
+          { enabled: [moduleId], disabled: [] }
+        );
+      } catch {}
+
       res.json({ message: "Approved" });
     } catch (error) {
       console.error("Approve request error:", error);
@@ -2265,6 +2335,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Dismiss request error:", error);
       res.status(500).json({ message: "Failed to dismiss request" });
+    }
+  });
+
+  // Tenant: Request provider configuration change (Azure/Auth0/SAML)
+  app.post("/api/tenant/:id/auth/providers/request", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const { type, config } = req.body || {};
+      if (!type || !config)
+        return res.status(400).json({ message: "type and config are required" });
+
+      // Encrypt secrets before logging
+      let safeConfig = { ...config };
+      try {
+        const { encryptSecret } = await import("./utils/secret.js");
+        if (type === "azure-ad" && config.clientSecret) {
+          safeConfig.clientSecret = encryptSecret(config.clientSecret);
+        }
+        if (type === "auth0" && config.clientSecret) {
+          safeConfig.clientSecret = encryptSecret(config.clientSecret);
+        }
+        if (type === "saml" && config.cert) {
+          // Certificates are public material; keep as-is
+        }
+      } catch {}
+
+      await storage.logSystemActivity({
+        tenantId: id,
+        action: "provider_change_request",
+        entityType: "tenant",
+        entityId: id,
+        details: { provider: type, proposed: safeConfig },
+        ipAddress: req.ip,
+        userAgent: req.get("User-Agent"),
+      });
+
+      // Best-effort notify a platform admin by email
+      try {
+        const to = (process.env.AUTHORIZED_ADMIN_EMAILS || process.env.ADMIN_EMAIL || "").split(
+          ","
+        )[0];
+        if (to) {
+          await emailService.sendSimpleTestEmail(
+            to,
+            `Provider change requested for tenant ${id} (${type})`
+          );
+        }
+      } catch {}
+
+      res.json({ message: "Request submitted" });
+    } catch (error) {
+      console.error("Provider change request error:", error);
+      res.status(500).json({ message: "Failed to submit request" });
     }
   });
 
@@ -2301,11 +2426,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const cfg = azure.config || {};
       const errors: string[] = [];
-      const guid = /^[0-9a-fA-F-]{36}$/;
-      if (!cfg.tenantId || !guid.test(cfg.tenantId))
-        errors.push("tenantId must be a GUID from Azure AD");
-      if (!cfg.clientId || !guid.test(cfg.clientId))
-        errors.push("clientId must be a GUID (Application ID)");
+      // Canonical GUID 8-4-4-4-12, allow braces and trim whitespace
+      const GUID_CANON =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+      const sanitizeGuid = (v: any) =>
+        String(v ?? "")
+          .trim()
+          .replace(/[{}]/g, "");
+      const tenantIdVal = sanitizeGuid(cfg.tenantId);
+      const clientIdVal = sanitizeGuid(cfg.clientId);
+      if (!tenantIdVal || !GUID_CANON.test(tenantIdVal)) {
+        errors.push("tenantId must be a GUID from Azure AD (format: 8-4-4-4-12)");
+      }
+      if (!clientIdVal || !GUID_CANON.test(clientIdVal)) {
+        errors.push("clientId must be a GUID (Application ID) (format: 8-4-4-4-12)");
+      }
       if (!cfg.clientSecret) errors.push("clientSecret is required");
 
       const expectedRedirect = `${req.protocol}://${req.get("host")}/api/auth/azure/callback`;
@@ -2318,9 +2453,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { AzureADService } = await import("./services/azure-ad.js");
         const svc = new AzureADService({
-          tenantId: cfg.tenantId,
-          clientId: cfg.clientId,
+          tenantId: tenantIdVal,
+          clientId: clientIdVal,
           clientSecret: cfg.clientSecret,
+          redirectUri: expectedRedirect,
+        });
+        const authUrl = await svc.getAuthorizationUrl(["User.Read"], tenant.id);
+        try {
+          await storage.logSystemActivity({
+            tenantId: id,
+            action: "provider_validate",
+            entityType: "tenant",
+            entityId: id,
+            details: { provider: "azure-ad", success: true },
+            ipAddress: req.ip,
+            userAgent: req.get("User-Agent"),
+          });
+        } catch {}
+        return res.json({ valid: true, authUrl, expectedRedirect });
+      } catch (e: any) {
+        try {
+          await storage.logSystemActivity({
+            tenantId: id,
+            action: "provider_validate",
+            entityType: "tenant",
+            entityId: id,
+            details: { provider: "azure-ad", success: false, error: e?.message },
+            ipAddress: req.ip,
+            userAgent: req.get("User-Agent"),
+          });
+        } catch {}
+        return res
+          .status(400)
+          .json({ valid: false, message: e?.message || "Failed to init Azure" });
+      }
+    } catch (error) {
+      console.error("Azure validate error:", error);
+      res.status(500).json({ message: "Validation failed" });
+    }
+  });
+
+  // Validate Azure AD configuration (accepts overrides in body)
+  app.post("/api/tenant/:id/azure-ad/validate", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = moduleConfigs.auth || {};
+      const providers = authConfig.providers || [];
+      let azure = providers.find((p: any) => p.type === "azure-ad") || {
+        type: "azure-ad",
+        config: {},
+      };
+
+      // Allow overrides from request body without persisting
+      const bodyCfg = req.body || {};
+      const mergedCfg = { ...(azure.config || {}), ...bodyCfg } as any;
+
+      const sanitizeGuid = (v: any) =>
+        String(v ?? "")
+          .trim()
+          .replace(/[{}]/g, "");
+      const GUID_CANON =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+      const tenantIdVal = sanitizeGuid(mergedCfg.tenantId);
+      const clientIdVal = sanitizeGuid(mergedCfg.clientId);
+      const clientSecretVal = String(mergedCfg.clientSecret ?? "").trim();
+
+      const errors: string[] = [];
+      if (!tenantIdVal || !GUID_CANON.test(tenantIdVal))
+        errors.push("tenantId must be a GUID from Azure AD (format: 8-4-4-4-12)");
+      if (!clientIdVal || !GUID_CANON.test(clientIdVal))
+        errors.push("clientId must be a GUID (Application ID) (format: 8-4-4-4-12)");
+      if (!clientSecretVal) errors.push("clientSecret is required");
+
+      const expectedRedirect = `${req.protocol}://${req.get("host")}/api/auth/azure/callback`;
+      if (mergedCfg.callbackUrl && mergedCfg.callbackUrl !== expectedRedirect) {
+        errors.push(`callbackUrl should be ${expectedRedirect}`);
+      }
+
+      if (errors.length) return res.status(400).json({ valid: false, message: errors.join("; ") });
+
+      try {
+        const { AzureADService } = await import("./services/azure-ad.js");
+        const svc = new AzureADService({
+          tenantId: tenantIdVal,
+          clientId: clientIdVal,
+          clientSecret: clientSecretVal,
           redirectUri: expectedRedirect,
         });
         const authUrl = await svc.getAuthorizationUrl(["User.Read"], tenant.id);
@@ -2331,10 +2555,212 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ valid: false, message: e?.message || "Failed to init Azure" });
       }
     } catch (error) {
-      console.error("Azure validate error:", error);
+      console.error("Azure validate (POST) error:", error);
       res.status(500).json({ message: "Validation failed" });
     }
   });
+
+  // Validate Auth0 configuration (Tenant self-check)
+  app.get("/api/tenant/:id/auth0/validate", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      const auth = (tenant.moduleConfigs as any)?.auth || {};
+      const p = (auth.providers || []).find((x: any) => x.type === "auth0");
+      if (!p) return res.status(400).json({ valid: false, message: "Auth0 provider not found" });
+      const cfg = p.config || {};
+      const errors: string[] = [];
+      if (!cfg.domain || !/^[a-z0-9-]+\.auth0\.com$/i.test(cfg.domain))
+        errors.push("domain must look like your-tenant.auth0.com");
+      if (!cfg.clientId) errors.push("clientId is required");
+      if (!cfg.clientSecret) errors.push("clientSecret is required");
+      const expectedRedirect = `${req.protocol}://${req.get("host")}/api/auth/auth0/callback`;
+      if (cfg.callbackUrl && cfg.callbackUrl !== expectedRedirect)
+        errors.push(`callbackUrl should be ${expectedRedirect}`);
+      if (errors.length) {
+        try {
+          await storage.logSystemActivity({
+            tenantId: id,
+            action: "provider_validate",
+            entityType: "tenant",
+            entityId: id,
+            details: { provider: "auth0", success: false, error: errors.join("; ") },
+            ipAddress: req.ip,
+            userAgent: req.get("User-Agent"),
+          });
+        } catch {}
+        return res.status(400).json({ valid: false, message: errors.join("; ") });
+      }
+      try {
+        await storage.logSystemActivity({
+          tenantId: id,
+          action: "provider_validate",
+          entityType: "tenant",
+          entityId: id,
+          details: { provider: "auth0", success: true },
+          ipAddress: req.ip,
+          userAgent: req.get("User-Agent"),
+        });
+      } catch {}
+      return res.json({ valid: true, expectedRedirect });
+    } catch (e) {
+      console.error("Auth0 validate error:", e);
+      res.status(500).json({ message: "Validation failed" });
+    }
+  });
+
+  // Validate SAML configuration (Tenant self-check)
+  app.get("/api/tenant/:id/saml/validate", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      const auth = (tenant.moduleConfigs as any)?.auth || {};
+      const p = (auth.providers || []).find((x: any) => x.type === "saml");
+      if (!p) return res.status(400).json({ valid: false, message: "SAML provider not found" });
+      const cfg = p.config || {};
+      const errors: string[] = [];
+      if (!cfg.entryPoint || !/^https?:\/\//i.test(cfg.entryPoint))
+        errors.push("entryPoint must be a URL");
+      if (!cfg.issuer) errors.push("issuer is required");
+      if (!cfg.cert || !/-----BEGIN CERTIFICATE-----/.test(cfg.cert))
+        errors.push("cert must be PEM");
+      const acsUrl = `${req.protocol}://${req.get("host")}/api/auth/saml/callback`;
+      if (cfg.callbackUrl && cfg.callbackUrl !== acsUrl)
+        errors.push(`callbackUrl should be ${acsUrl}`);
+      if (errors.length) {
+        try {
+          await storage.logSystemActivity({
+            tenantId: id,
+            action: "provider_validate",
+            entityType: "tenant",
+            entityId: id,
+            details: { provider: "saml", success: false, error: errors.join("; ") },
+            ipAddress: req.ip,
+            userAgent: req.get("User-Agent"),
+          });
+        } catch {}
+        return res.status(400).json({ valid: false, message: errors.join("; ") });
+      }
+      try {
+        await storage.logSystemActivity({
+          tenantId: id,
+          action: "provider_validate",
+          entityType: "tenant",
+          entityId: id,
+          details: { provider: "saml", success: true },
+          ipAddress: req.ip,
+          userAgent: req.get("User-Agent"),
+        });
+      } catch {}
+      return res.json({ valid: true, acsUrl });
+    } catch (e) {
+      console.error("SAML validate error:", e);
+      res.status(500).json({ message: "Validation failed" });
+    }
+  });
+
+  // Admin: List provider change requests
+  app.get("/api/admin/provider-requests", platformAdminMiddleware, async (req, res) => {
+    try {
+      const includeResolved = String(req.query.includeResolved || "").toLowerCase() === "true";
+      const logs = await storage.getSystemLogs({ action: "provider_change_request", limit: 200 });
+      const list = includeResolved ? logs : logs.filter((r: any) => !r.details?.status);
+      res.json(list);
+    } catch (e) {
+      console.error("Get provider requests error:", e);
+      res.status(500).json({ message: "Failed to fetch requests" });
+    }
+  });
+
+  // Admin: Approve provider request and apply to tenant moduleConfigs
+  app.post(
+    "/api/admin/provider-requests/:id/approve",
+    platformAdminMiddleware,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { tenantId } = req.body || {};
+        if (!tenantId) return res.status(400).json({ message: "tenantId required" });
+
+        // Load requests and find the log by id
+        const logs = await storage.getSystemLogs({ action: "provider_change_request", limit: 500 });
+        const log = logs.find((l: any) => l.id === id);
+        if (!log) return res.status(404).json({ message: "Request not found" });
+        const type = log.details?.provider;
+        const proposed = log.details?.proposed || {};
+        if (!type) return res.status(400).json({ message: "Invalid request payload" });
+
+        const tenant = await storage.getTenant(tenantId);
+        if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+        const moduleConfigs = (tenant.moduleConfigs as any) || {};
+        if (!moduleConfigs.auth) moduleConfigs.auth = { providers: [] };
+        if (!Array.isArray(moduleConfigs.auth.providers)) moduleConfigs.auth.providers = [];
+
+        // Upsert provider
+        const idx = moduleConfigs.auth.providers.findIndex((p: any) => p.type === type);
+        const config = { ...(proposed || {}) };
+        // Ensure callbackUrl defaults
+        if (!config.callbackUrl) {
+          const host = `${process.env.BASE_URL || ""}`;
+          if (type === "azure-ad") config.callbackUrl = `${host || ""}/api/auth/azure/callback`;
+          if (type === "auth0") config.callbackUrl = `${host || ""}/api/auth/auth0/callback`;
+          if (type === "saml") config.callbackUrl = `${host || ""}/api/auth/saml/callback`;
+        }
+
+        // Encrypt secrets
+        try {
+          const { encryptSecret } = await import("./utils/secret.js");
+          if (type === "azure-ad" && config.clientSecret)
+            config.clientSecret = encryptSecret(config.clientSecret);
+          if (type === "auth0" && config.clientSecret)
+            config.clientSecret = encryptSecret(config.clientSecret);
+        } catch {}
+
+        const provider = {
+          type,
+          name: type === "azure-ad" ? "Azure AD SSO" : type === "auth0" ? "Auth0" : "SAML SSO",
+          priority: 1,
+          config,
+          enabled: true,
+        };
+        if (idx >= 0) moduleConfigs.auth.providers[idx] = provider;
+        else moduleConfigs.auth.providers.push(provider);
+
+        // Ensure auth + provider module listed
+        const enabledModules = Array.from(
+          new Set([...((tenant.enabledModules as any[]) || []), "auth", type])
+        );
+        await storage.updateTenantModules(tenantId, enabledModules, moduleConfigs);
+
+        await storage.updateSystemLogDetails(id, { status: "approved", resolvedAt: new Date() });
+
+        res.json({ message: "Applied", provider: { type } });
+      } catch (e) {
+        console.error("Approve provider request error:", e);
+        res.status(500).json({ message: "Failed to apply request" });
+      }
+    }
+  );
+
+  // Admin: Dismiss provider request
+  app.post(
+    "/api/admin/provider-requests/:id/dismiss",
+    platformAdminMiddleware,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        await storage.updateSystemLogDetails(id, { status: "dismissed", resolvedAt: new Date() });
+        res.json({ message: "Dismissed" });
+      } catch (e) {
+        console.error("Dismiss provider request error:", e);
+        res.status(500).json({ message: "Failed to dismiss request" });
+      }
+    }
+  );
 
   // EMAIL API v2 - Enhanced Email Service
   // =============================================================================

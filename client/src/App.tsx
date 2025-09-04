@@ -26,6 +26,7 @@ import TenantSuccessPage from "@/pages/tenant-success";
 import RBACManagementPage from "@/pages/rbac-management";
 import RBACConfigPage from "@/pages/rbac-config";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
+import TenantAttentionPage from "@/pages/tenant-attention";
 import PlatformAdminLogin from "@/pages/platform-admin-login";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
@@ -63,6 +64,7 @@ function Router() {
               <Route path="/tenants/wizard" component={OnboardingWizard} />
               <Route path="/tenants/success" component={TenantSuccessPage} />
               <Route path="/tenants/:tenantId/rbac" component={RBACManagementPage} />
+              <Route path="/tenants/:tenantId/attention" component={TenantAttentionPage} />
               <Route path="/rbac-config" component={RBACConfigPage} />
               <Route path="/modules" component={ModuleManagementPage} />
               <Route path="/logs" component={LogsPage} />

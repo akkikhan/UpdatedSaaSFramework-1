@@ -5,16 +5,22 @@ import StatsCard from "@/components/ui/stats-card";
 import { useStats, useHealthStatus } from "@/hooks/use-stats";
 import { useRecentTenants } from "@/hooks/use-tenants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const { data: stats, isLoading: statsLoading } = useStats();
   const { data: recentTenants, isLoading: tenantsLoading } = useRecentTenants();
   const { data: healthStatus } = useHealthStatus();
   const { data: requests = [] } = useQuery({
     queryKey: ["/api/admin/module-requests"],
+    refetchInterval: 5000,
+  }) as { data: any[] };
+  const { data: providerRequests = [] } = useQuery({
+    queryKey: ["/api/admin/provider-requests"],
     refetchInterval: 5000,
   }) as { data: any[] };
   const { data: resolved = [] } = useQuery({
@@ -127,6 +133,24 @@ export default function AdminDashboard() {
                     <div>
                       <p className="font-medium text-slate-800">{tenant.name}</p>
                       <p className="text-sm text-slate-500">{tenant.adminEmail}</p>
+                      {(() => {
+                        const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
+                        const hasSSO = Array.isArray(providers)
+                          ? providers.some((p: any) =>
+                              ["azure-ad", "auth0", "saml"].includes(p?.type)
+                            )
+                          : false;
+                        const hasRBAC = (tenant.enabledModules || []).includes("rbac");
+                        const hasPending = (requests as any[]).some(
+                          (r: any) => r.tenantId === tenant.id
+                        );
+                        const needsAttention = hasPending || (hasRBAC && !hasSSO);
+                        return needsAttention ? (
+                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded mt-1 inline-block">
+                            Needs Attention
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                   <span
@@ -187,13 +211,15 @@ export default function AdminDashboard() {
                       variant="outline"
                       onClick={async () => {
                         try {
-                          await fetch(`/api/admin/module-requests/${r.id}/approve`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              tenantId: r.tenantId,
-                              moduleId: r.details?.moduleId,
-                            }),
+                          await apiRequest("POST", `/api/admin/module-requests/${r.id}/approve`, {
+                            tenantId: r.tenantId,
+                            moduleId: r.details?.moduleId,
+                          });
+                          queryClient.invalidateQueries({
+                            queryKey: ["/api/admin/module-requests"],
+                          });
+                          queryClient.invalidateQueries({
+                            queryKey: ["/api/admin/module-requests", "resolved"],
                           });
                         } catch (e) {
                           console.error(e);
@@ -207,13 +233,15 @@ export default function AdminDashboard() {
                       variant="ghost"
                       onClick={async () => {
                         try {
-                          await fetch(`/api/admin/module-requests/${r.id}/dismiss`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              tenantId: r.tenantId,
-                              moduleId: r.details?.moduleId,
-                            }),
+                          await apiRequest("POST", `/api/admin/module-requests/${r.id}/dismiss`, {
+                            tenantId: r.tenantId,
+                            moduleId: r.details?.moduleId,
+                          });
+                          queryClient.invalidateQueries({
+                            queryKey: ["/api/admin/module-requests"],
+                          });
+                          queryClient.invalidateQueries({
+                            queryKey: ["/api/admin/module-requests", "resolved"],
                           });
                         } catch (e) {
                           console.error(e);
@@ -250,6 +278,66 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Provider Requests */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Provider Requests</h3>
+          {providerRequests.length === 0 ? (
+            <div className="text-slate-500 text-sm">No pending provider requests</div>
+          ) : (
+            <div className="space-y-3 max-h-64 overflow-auto">
+              {providerRequests.map((r: any) => (
+                <div
+                  key={r.id}
+                  className="p-3 bg-slate-50 rounded-lg flex items-center justify-between"
+                >
+                  <div>
+                    <div className="font-medium text-slate-800">{r.tenantName || r.tenantId}</div>
+                    <div className="text-xs text-slate-600 mt-1">
+                      {r.details?.provider} provider change
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await apiRequest("POST", `/api/admin/provider-requests/${r.id}/approve`, {
+                            tenantId: r.tenantId,
+                          });
+                          queryClient.invalidateQueries({
+                            queryKey: ["/api/admin/provider-requests"],
+                          });
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        try {
+                          await apiRequest("POST", `/api/admin/provider-requests/${r.id}/dismiss`);
+                          queryClient.invalidateQueries({
+                            queryKey: ["/api/admin/provider-requests"],
+                          });
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

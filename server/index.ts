@@ -168,6 +168,14 @@ app.use((req, res, next) => {
       // DO NOT throw err here - it crashes the server!
     });
 
+    // Ensure /api/* never falls through to Vite's HTML catch-all in development
+    // Any unmatched API route will return JSON 404 instead of index.html
+    app.use("/api", (_req: Request, res: Response) => {
+      if (!res.headersSent) {
+        return res.status(404).json({ message: "Not found" });
+      }
+    });
+
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes

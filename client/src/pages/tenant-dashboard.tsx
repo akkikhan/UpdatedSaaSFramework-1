@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import {
   Table,
   TableBody,
   TableCell,
@@ -107,6 +113,7 @@ export default function TenantDashboard() {
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState<any>(null);
+  const [permissionExplain, setPermissionExplain] = useState<any | null>(null);
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -369,6 +376,21 @@ export default function TenantDashboard() {
     roles: tenantRoles || [],
   };
 
+  // Provider status (last validated/tested)
+  const { data: providerStatus = [] } = useQuery({
+    queryKey: ["/api/tenant", tenant?.id, "providers/status"],
+    enabled: !!tenant?.id,
+    queryFn: async () => {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const headers: any = { "Content-Type": "application/json", "x-tenant-id": tenant?.id || "" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/tenant/${tenant?.id}/auth/providers/status`, { headers });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  }) as { data: any[] };
+
   // Show banner if must change password
   const mustChange = (user as any)?.metadata?.mustChangePassword;
 
@@ -381,9 +403,17 @@ export default function TenantDashboard() {
   const isRbacEnabled = isModuleEnabled("rbac");
   const providers = ((tenantInfo.moduleConfigs as any)?.auth?.providers || []) as Array<any>;
   const providerTypes = new Set((providers || []).map((p: any) => p?.type));
-  const isAzureAdEnabled = providerTypes.has("azure-ad");
-  const isAuth0Enabled = providerTypes.has("auth0");
-  const isSamlEnabled = providerTypes.has("saml");
+  // Module activation (source of truth for enabling)
+  const isAzureAdModuleActive =
+    tenantInfo.enabledModules.includes("azure-ad") || providerTypes.has("azure-ad");
+  const isAuth0ModuleActive =
+    tenantInfo.enabledModules.includes("auth0") || providerTypes.has("auth0");
+  const isSamlModuleActive =
+    tenantInfo.enabledModules.includes("saml") || providerTypes.has("saml");
+  // Provider presence (configured)
+  const hasAzureAdProvider = providerTypes.has("azure-ad");
+  const hasAuth0Provider = providerTypes.has("auth0");
+  const hasSamlProvider = providerTypes.has("saml");
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -688,6 +718,98 @@ export default function TenantDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Permission check: Why allowed/denied */}
+                <div className="border rounded-md p-4 bg-slate-50">
+                  <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                      <Label className="text-xs text-slate-600">User</Label>
+                      <Select onValueChange={v => setSelectedUser({ id: v })}>
+                        <SelectTrigger className="w-56">
+                          <SelectValue placeholder="Select user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(tenantUsers as any[]).map((u: any) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600">Resource</Label>
+                      <Input placeholder="e.g., documents" id="perm-resource" />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600">Action</Label>
+                      <Input placeholder="e.g., read" id="perm-action" />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        const userId = (selectedUser as any)?.id;
+                        const resource = (
+                          document.getElementById("perm-resource") as HTMLInputElement
+                        )?.value?.trim();
+                        const action = (
+                          document.getElementById("perm-action") as HTMLInputElement
+                        )?.value?.trim();
+                        if (!userId || !resource || !action) {
+                          toast({
+                            title: "Missing fields",
+                            description: "Select user, resource and action",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        try {
+                          const res = await fetch("/api/v2/rbac/check-permission", {
+                            method: "POST",
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ userId, resource, action, explain: true }),
+                          });
+                          const data = await res.json();
+                          const details = data?.details;
+                          const allowed = data?.hasPermission;
+                          setPermissionExplain({ allowed, details });
+                        } catch (e: any) {
+                          toast({
+                            title: "Check failed",
+                            description: e?.message || "Try again",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Check Access
+                    </Button>
+                  </div>
+                  {permissionExplain && (
+                    <div className="mt-3 text-sm">
+                      <div
+                        className={permissionExplain.allowed ? "text-green-700" : "text-red-700"}
+                      >
+                        {permissionExplain.allowed ? "Allowed" : "Denied"} (
+                        {permissionExplain?.details?.evaluated})
+                      </div>
+                      {permissionExplain?.details?.matchedRoles?.length > 0 ? (
+                        <div className="mt-2">
+                          <span className="text-slate-600">Granted by roles:</span>
+                          <div className="flex gap-2 mt-1 flex-wrap">
+                            {permissionExplain.details.matchedRoles.map((r: any) => (
+                              <Badge key={r.id} variant="secondary" className="text-xs">
+                                {r.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-slate-600">No roles grant this permission.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {(tenantInfo.roles as any[]).length > 0 ? (
                   (tenantInfo.roles as any[]).map((role: any) => (
                     <Card key={role.id}>
@@ -804,10 +926,10 @@ export default function TenantDashboard() {
                             <SelectValue placeholder="Choose provider" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="azure-ad" disabled={!isAzureAdEnabled}>
+                            <SelectItem value="azure-ad" disabled={!isAzureAdModuleActive}>
                               Azure AD
                             </SelectItem>
-                            <SelectItem value="auth0" disabled={!isAuth0Enabled}>
+                            <SelectItem value="auth0" disabled={!isAuth0ModuleActive}>
                               Auth0
                             </SelectItem>
                             <SelectItem value="local">Local (JWT)</SelectItem>
@@ -865,7 +987,7 @@ export default function TenantDashboard() {
                               });
                             }
                           }}
-                          disabled={!isAzureAdEnabled}
+                          disabled={!isAzureAdModuleActive}
                         >
                           Test Azure SSO
                         </Button>
@@ -874,14 +996,19 @@ export default function TenantDashboard() {
                           variant="outline"
                           onClick={async () => {
                             try {
-                              const headers: any = { "Content-Type": "application/json" };
+                              const headers: any = {
+                                "Content-Type": "application/json",
+                                Accept: "application/json",
+                              };
                               const token =
                                 localStorage.getItem(`tenant_token_${orgId}`) ||
                                 localStorage.getItem("tenant_token") ||
                                 "";
                               if (token) headers.Authorization = `Bearer ${token}`;
+                              if (tenant?.id) headers["x-tenant-id"] = tenant.id;
+                              const base = window.location.origin;
                               const res = await fetch(
-                                `/api/tenant/${tenant?.id}/azure-ad/validate`,
+                                `${base}/api/tenant/${tenant?.id}/azure-ad/validate`,
                                 { headers }
                               );
                               const data = await res.json();
@@ -905,12 +1032,65 @@ export default function TenantDashboard() {
                               });
                             }
                           }}
-                          disabled={!isAzureAdEnabled}
+                          disabled={!isAzureAdModuleActive}
                         >
                           Validate Azure Config
                         </Button>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Authentication Providers (Accordion) */}
+                {isAuthEnabled && (
+                  <div className="p-4 border rounded-lg bg-white">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-medium">Authentication Providers</p>
+                      <span className="text-xs text-slate-500">
+                        Manage connection details (requests go to admin)
+                      </span>
+                    </div>
+                    <Accordion type="multiple" className="w-full">
+                      {(isAzureAdModuleActive || providerTypes.has("azure-ad")) && (
+                        <AccordionItem value="azure">
+                          <AccordionTrigger>Azure Active Directory</AccordionTrigger>
+                          <AccordionContent>
+                            <ProviderAzureCard
+                              orgId={orgId!}
+                              tenantId={tenant?.id}
+                              provider={(providers || []).find((p: any) => p.type === "azure-ad")}
+                              isEnabled={isAzureAdModuleActive}
+                            />
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+                      {(isAuth0ModuleActive || providerTypes.has("auth0")) && (
+                        <AccordionItem value="auth0">
+                          <AccordionTrigger>Auth0</AccordionTrigger>
+                          <AccordionContent>
+                            <ProviderAuth0Card
+                              orgId={orgId!}
+                              tenantId={tenant?.id}
+                              provider={(providers || []).find((p: any) => p.type === "auth0")}
+                              isEnabled={isAuth0ModuleActive}
+                            />
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+                      {(isSamlModuleActive || providerTypes.has("saml")) && (
+                        <AccordionItem value="saml">
+                          <AccordionTrigger>SAML</AccordionTrigger>
+                          <AccordionContent>
+                            <ProviderSamlCard
+                              orgId={orgId!}
+                              tenantId={tenant?.id}
+                              provider={(providers || []).find((p: any) => p.type === "saml")}
+                              isEnabled={isSamlModuleActive}
+                            />
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+                    </Accordion>
                   </div>
                 )}
                 {/* Display all available modules with their current status */}
@@ -1471,5 +1651,445 @@ function RoleModal({
         </form>
       </Form>
     </DialogContent>
+  );
+}
+
+// Provider Cards
+function ProviderAzureCard({
+  orgId,
+  tenantId,
+  provider,
+  isEnabled,
+}: {
+  orgId: string;
+  tenantId?: string;
+  provider?: any;
+  isEnabled: boolean;
+}) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    tenantId: provider?.config?.tenantId || "",
+    clientId: provider?.config?.clientId || "",
+    clientSecret: "", // never prefill secrets
+  });
+  const expectedRedirect = `${window.location.protocol}//${window.location.host}/api/auth/azure/callback`;
+
+  const submitRequest = async () => {
+    try {
+      const base = window.location.origin;
+      const headers: any = { "Content-Type": "application/json", Accept: "application/json" };
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      if (token) headers.Authorization = `Bearer ${token}`;
+      if (tenantId) headers["x-tenant-id"] = tenantId;
+      const res = await fetch(`${base}/api/tenant/${tenantId}/auth/providers/request`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          type: "azure-ad",
+          config: { ...form, callbackUrl: expectedRedirect },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Request failed");
+      toast({ title: "Submitted", description: "Provider change request sent to admin" });
+    } catch (e: any) {
+      toast({
+        title: "Failed",
+        description: e?.message || "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="border rounded-md p-3 mb-3">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="font-medium">Azure Active Directory</p>
+          <p className="text-xs text-slate-500">
+            Configure Azure AD app (single-tenant recommended)
+          </p>
+        </div>
+        <Badge variant={provider ? "default" : "secondary"}>
+          {provider ? "Configured" : "Not configured"}
+        </Badge>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div>
+          <Label className="text-xs">Tenant ID (GUID)</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.tenantId}
+            onChange={e => setForm({ ...form, tenantId: e.target.value })}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Client ID (Application ID)</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.clientId}
+            onChange={e => setForm({ ...form, clientId: e.target.value })}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Client Secret</Label>
+          <Input
+            disabled={!isEnabled}
+            type="password"
+            value={form.clientSecret}
+            onChange={e => setForm({ ...form, clientSecret: e.target.value })}
+            placeholder="••••••••"
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <Button
+          variant="outline"
+          disabled={!isEnabled}
+          onClick={async () => {
+            try {
+              const headers: any = {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              };
+              const token =
+                localStorage.getItem(`tenant_token_${orgId}`) ||
+                localStorage.getItem("tenant_token") ||
+                "";
+              if (token) headers.Authorization = `Bearer ${token}`;
+              if (tenantId) headers["x-tenant-id"] = tenantId;
+              const base = window.location.origin;
+              const res = await fetch(`${base}/api/tenant/${tenantId}/azure-ad/validate`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                  tenantId: form.tenantId,
+                  clientId: form.clientId,
+                  clientSecret: form.clientSecret,
+                }),
+              });
+              const data = await res.json();
+              if (res.ok && data?.valid)
+                toast({ title: "Azure config looks good", description: "You can try SSO now." });
+              else
+                toast({
+                  title: "Azure config invalid",
+                  description: data?.message || "Fix settings and try again",
+                  variant: "destructive",
+                });
+            } catch (e: any) {
+              toast({
+                title: "Validation failed",
+                description: e?.message || "Unknown error",
+                variant: "destructive",
+              });
+            }
+          }}
+        >
+          Validate
+        </Button>
+        <Button disabled={!isEnabled} onClick={submitRequest}>
+          Request Update
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            navigator.clipboard.writeText(expectedRedirect);
+            toast({ title: "Copied", description: "Redirect URI copied" });
+          }}
+        >
+          Copy Redirect URI
+        </Button>
+        {!isEnabled && (
+          <span className="text-xs text-slate-500">
+            Azure AD module is disabled. Request enable in the list below.
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProviderAuth0Card({
+  orgId,
+  tenantId,
+  provider,
+  isEnabled,
+}: {
+  orgId: string;
+  tenantId?: string;
+  provider?: any;
+  isEnabled: boolean;
+}) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    domain: provider?.config?.domain || "",
+    clientId: provider?.config?.clientId || "",
+    clientSecret: "",
+    audience: provider?.config?.audience || "",
+  });
+  const expectedRedirect = `${window.location.protocol}//${window.location.host}/api/auth/auth0/callback`;
+
+  const submitRequest = async () => {
+    try {
+      const res = await fetch(`/api/tenant/${tenantId}/auth/providers/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "auth0", config: { ...form, callbackUrl: expectedRedirect } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Request failed");
+      toast({ title: "Submitted", description: "Provider change request sent to admin" });
+    } catch (e: any) {
+      toast({
+        title: "Failed",
+        description: e?.message || "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="border rounded-md p-3 mb-3">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="font-medium">Auth0</p>
+          <p className="text-xs text-slate-500">Configure Auth0 application</p>
+        </div>
+        <Badge variant={provider ? "default" : "secondary"}>
+          {provider ? "Configured" : "Not configured"}
+        </Badge>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+        <div>
+          <Label className="text-xs">Domain</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.domain}
+            onChange={e => setForm({ ...form, domain: e.target.value })}
+            placeholder="your-tenant.auth0.com"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Client ID</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.clientId}
+            onChange={e => setForm({ ...form, clientId: e.target.value })}
+            placeholder="xxxxxxxx..."
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Client Secret</Label>
+          <Input
+            disabled={!isEnabled}
+            type="password"
+            value={form.clientSecret}
+            onChange={e => setForm({ ...form, clientSecret: e.target.value })}
+            placeholder="••••••••"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Audience (optional)</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.audience}
+            onChange={e => setForm({ ...form, audience: e.target.value })}
+            placeholder="https://api.yourapp.com"
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <Button
+          variant="outline"
+          disabled={!isEnabled}
+          onClick={async () => {
+            try {
+              const headers: any = { "Content-Type": "application/json" };
+              const token =
+                localStorage.getItem(`tenant_token_${orgId}`) ||
+                localStorage.getItem("tenant_token") ||
+                "";
+              if (token) headers.Authorization = `Bearer ${token}`;
+              const res = await fetch(`/api/tenant/${tenantId}/auth0/validate`, { headers });
+              const data = await res.json();
+              if (res.ok && data?.valid)
+                toast({
+                  title: "Auth0 config looks good",
+                  description: "You can test when applied.",
+                });
+              else
+                toast({
+                  title: "Auth0 config invalid",
+                  description: data?.message || "Fix settings and try again",
+                  variant: "destructive",
+                });
+            } catch (e: any) {
+              toast({
+                title: "Validation failed",
+                description: e?.message || "Unknown error",
+                variant: "destructive",
+              });
+            }
+          }}
+        >
+          Validate
+        </Button>
+        <Button disabled={!isEnabled} onClick={submitRequest}>
+          Request Update
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            navigator.clipboard.writeText(expectedRedirect);
+          }}
+        >
+          Copy Redirect URI
+        </Button>
+        {!isEnabled && (
+          <span className="text-xs text-slate-500">
+            Auth0 module is disabled. Request enable in the list below.
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProviderSamlCard({
+  orgId,
+  tenantId,
+  provider,
+  isEnabled,
+}: {
+  orgId: string;
+  tenantId?: string;
+  provider?: any;
+  isEnabled: boolean;
+}) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    entryPoint: provider?.config?.entryPoint || "",
+    issuer: provider?.config?.issuer || "",
+    cert: "",
+  });
+  const acsUrl = `${window.location.protocol}//${window.location.host}/api/auth/saml/callback`;
+
+  const submitRequest = async () => {
+    try {
+      const res = await fetch(`/api/tenant/${tenantId}/auth/providers/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "saml", config: { ...form, callbackUrl: acsUrl } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Request failed");
+      toast({ title: "Submitted", description: "Provider change request sent to admin" });
+    } catch (e: any) {
+      toast({
+        title: "Failed",
+        description: e?.message || "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="border rounded-md p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="font-medium">SAML</p>
+          <p className="text-xs text-slate-500">Enterprise SSO via SAML 2.0</p>
+        </div>
+        <Badge variant={provider ? "default" : "secondary"}>
+          {provider ? "Configured" : "Not configured"}
+        </Badge>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div>
+          <Label className="text-xs">Entry Point</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.entryPoint}
+            onChange={e => setForm({ ...form, entryPoint: e.target.value })}
+            placeholder="https://idp.example.com/sso"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Issuer</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.issuer}
+            onChange={e => setForm({ ...form, issuer: e.target.value })}
+            placeholder="urn:your-app"
+          />
+        </div>
+        <div className="md:col-span-3">
+          <Label className="text-xs">Certificate (PEM)</Label>
+          <Textarea
+            disabled={!isEnabled}
+            value={form.cert}
+            onChange={e => setForm({ ...form, cert: e.target.value })}
+            placeholder="-----BEGIN CERTIFICATE-----..."
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <Button
+          variant="outline"
+          disabled={!isEnabled}
+          onClick={async () => {
+            try {
+              const headers: any = { "Content-Type": "application/json" };
+              const token =
+                localStorage.getItem(`tenant_token_${orgId}`) ||
+                localStorage.getItem("tenant_token") ||
+                "";
+              if (token) headers.Authorization = `Bearer ${token}`;
+              const res = await fetch(`/api/tenant/${tenantId}/saml/validate`, { headers });
+              const data = await res.json();
+              if (res.ok && data?.valid)
+                toast({
+                  title: "SAML config looks good",
+                  description: "You can test when applied.",
+                });
+              else
+                toast({
+                  title: "SAML config invalid",
+                  description: data?.message || "Fix settings and try again",
+                  variant: "destructive",
+                });
+            } catch (e: any) {
+              toast({
+                title: "Validation failed",
+                description: e?.message || "Unknown error",
+                variant: "destructive",
+              });
+            }
+          }}
+        >
+          Validate
+        </Button>
+        <Button disabled={!isEnabled} onClick={submitRequest}>
+          Request Update
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            navigator.clipboard.writeText(acsUrl);
+          }}
+        >
+          Copy ACS URL
+        </Button>
+        {!isEnabled && (
+          <span className="text-xs text-slate-500">
+            SAML module is disabled. Request enable in the list below.
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
