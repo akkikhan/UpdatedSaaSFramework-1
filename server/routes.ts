@@ -30,17 +30,9 @@ const __dirname = path.dirname(__filename);
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public routes
 
-  // Tenant Registration Page
-  app.get("/register", (req, res) => {
-    const registrationPagePath = path.resolve(__dirname, "../client/tenant-registration.html");
-    res.sendFile(registrationPagePath);
-  });
-
-  // Platform Admin Login Page - Azure AD Integration
-  app.get("/admin/login", (req, res) => {
-    const loginPagePath = path.resolve(__dirname, "../client/platform-admin-login.html");
-    res.sendFile(loginPagePath);
-  });
+  // NOTE: Static HTML routes removed in favor of SPA routes
+  // - /admin/login handled by client router (PlatformAdminLogin page)
+  // - /tenants/wizard used for tenant onboarding
 
   // Admin redirect route
   app.get("/admin", (req, res) => {
@@ -518,6 +510,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(tenant);
     } catch (error) {
       console.error("Error fetching tenant by orgId:", error);
+      res.status(500).json({ message: "Failed to fetch tenant" });
+    }
+  });
+
+  // Get tenant by id (Platform Admin Only) - used by tenant portal view
+  app.get("/api/tenants/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const tenant = await storage.getTenant(id);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error fetching tenant by id:", error);
       res.status(500).json({ message: "Failed to fetch tenant" });
     }
   });
