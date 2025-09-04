@@ -10,6 +10,7 @@ import {
   CheckCircle,
   ArrowLeft,
   Copy,
+  ExternalLink,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -90,12 +91,13 @@ export default function TenantsPage() {
   };
 
   const filteredTenants =
-    tenants?.filter(
-      tenant =>
-        tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tenant.adminEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tenant.orgId.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || [];
+    tenants?.filter(tenant => {
+      const q = (searchQuery || "").toLowerCase();
+      const name = (tenant?.name || "").toLowerCase();
+      const email = (tenant?.adminEmail || "").toLowerCase();
+      const org = (tenant?.orgId || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || org.includes(q);
+    }) || [];
 
   const handleStatusChange = async (id: string, status: string) => {
     await updateTenantStatus.mutateAsync({ id, status });
@@ -493,7 +495,7 @@ export default function TenantsPage() {
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                             <span className="text-blue-600 font-semibold text-sm">
-                              {tenant.name.substring(0, 2).toUpperCase()}
+                              {(tenant.name || tenant.orgId || "--").substring(0, 2).toUpperCase()}
                             </span>
                           </div>
                           <div>
@@ -518,20 +520,38 @@ export default function TenantsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-sm text-slate-500">
-                        {format(new Date(tenant.createdAt), "MMM d, yyyy")}
+                        {tenant.createdAt ? format(new Date(tenant.createdAt), "MMM d, yyyy") : "—"}
                       </TableCell>
                       <TableCell className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="text-xs text-slate-500">
-                            Auth: {tenant.authApiKey.substring(0, 12)}...
+                            Auth:{" "}
+                            {tenant.authApiKey
+                              ? `${tenant.authApiKey.substring(0, 12)}...`
+                              : "not generated"}
                           </div>
                           <div className="text-xs text-slate-500">
-                            RBAC: {tenant.rbacApiKey.substring(0, 12)}...
+                            RBAC:{" "}
+                            {tenant.rbacApiKey
+                              ? `${tenant.rbacApiKey.substring(0, 12)}...`
+                              : "not generated"}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-slate-400 hover:text-slate-600"
+                            title="Open Tenant Portal"
+                            onClick={() =>
+                              tenant.orgId && window.open(`/tenant/${tenant.orgId}/login`, "_blank")
+                            }
+                            data-testid={`button-portal-${tenant.orgId}`}
+                          >
+                            <ExternalLink size={16} />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

@@ -591,7 +591,21 @@ ${npmInstallCommand}
             
             <p>Example integration:</p>
             <div class="code-block">
-${integrationExample}
+// Using our lightweight auth client so your app always calls our APIs
+import { startAzure, handleSuccessFromUrl, loginWithPassword, fetchWithAuth } from '@saas-framework/auth-client';
+
+// 1) Add a button for Azure AD SSO
+document.getElementById('btn-azure').addEventListener('click', () => startAzure('${tenant.orgId}'));
+
+// 2) On your /auth/success page, capture the token from URL once
+handleSuccessFromUrl(); // stores token in localStorage
+
+// 3) For local login (optional fallback)
+await loginWithPassword({ orgId: '${tenant.orgId}', email: 'user@example.com', password: '••••••••' });
+
+// 4) Call APIs with the token attached
+const res = await fetchWithAuth('/api/tenant/me');
+const me = await res.json();
             </div>
         </div>
         
