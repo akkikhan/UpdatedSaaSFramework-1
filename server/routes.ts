@@ -45,6 +45,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.redirect("/?admin=true");
   });
 
+  // SDK/Integration docs (static HTML)
+  app.get("/sdk", (req, res) => {
+    const file = path.resolve(__dirname, "../docs/sdk.html");
+    res.sendFile(file);
+  });
+
   // Health check
   app.get("/api/health", async (req, res) => {
     const emailConnected = await emailService.testConnection();
@@ -1225,7 +1231,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent("Authentication failed")}`;
+      // Surface Azure error details in the client for easier troubleshooting
+      const rawMsg = error instanceof Error ? error.message : String(error);
+      const codeMatch = rawMsg.match(/AADSTS\d+/i);
+      const code = codeMatch ? codeMatch[0] : "unknown";
+      const corrMatch = rawMsg.match(/Correlation ID:\s*([a-f0-9\-]+)/i);
+      const corrId = corrMatch ? corrMatch[1] : "";
+      const details = encodeURIComponent(rawMsg.slice(0, 800));
+      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent("Authentication failed")}&code=${encodeURIComponent(code)}&details=${details}&corr=${encodeURIComponent(corrId)}`;
       res.redirect(errorUrl);
     }
   });
