@@ -61,6 +61,28 @@ export default async function handler(req, res) {
 }
 */
 
+// File: pages/api/logging/event.js
+/*
+import { SaaSLogging } from '@saas-framework/logging';
+
+const logger = new SaaSLogging({
+  apiKey: process.env.SAAS_LOGGING_API_KEY, // logging_...
+  baseUrl: process.env.SAAS_API_BASE_URL || process.env.SAAS_AUTH_BASE_URL,
+});
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+  const { message = 'Hello from Next.js', category = 'demo' } = req.body || {};
+  try {
+    await logger.info(message, { category });
+    await logger.flush();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
+  }
+}
+*/
+
 /* ==== MIDDLEWARE ==== */
 
 // File: middleware.js (Next.js 12+ middleware)

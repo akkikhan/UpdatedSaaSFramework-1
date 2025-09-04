@@ -59,7 +59,7 @@ export default function LogsPage() {
   // Tenant Event Logs
   const [tenantEventFilters, setTenantEventFilters] = useState({
     tenantId: "",
-    level: "",
+    level: "all",
     category: "",
     limit: 50,
     offset: 0,
@@ -80,7 +80,8 @@ export default function LogsPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set("tenantId", tenantEventFilters.tenantId);
-      if (tenantEventFilters.level) params.set("level", tenantEventFilters.level);
+      if (tenantEventFilters.level && tenantEventFilters.level !== "all")
+        params.set("level", tenantEventFilters.level);
       if (tenantEventFilters.category) params.set("category", tenantEventFilters.category);
       params.set("limit", String(tenantEventFilters.limit));
       params.set("offset", String(tenantEventFilters.offset));
@@ -448,7 +449,7 @@ export default function LogsPage() {
                       <SelectValue placeholder="All" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All</SelectItem>
+                      <SelectItem value="all">All</SelectItem>
                       <SelectItem value="error">Error</SelectItem>
                       <SelectItem value="warning">Warning</SelectItem>
                       <SelectItem value="info">Info</SelectItem>

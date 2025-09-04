@@ -161,7 +161,7 @@ export default function TenantDashboard() {
       const t = tRes.ok ? await tRes.json() : null;
       if (!t) return null;
       const res = await fetch(`/api/tenant/${t.id}/rbac/settings`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
       });
       if (!res.ok) return null;
       return res.json();
@@ -180,10 +180,10 @@ export default function TenantDashboard() {
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
       const [tplRes, btRes] = await Promise.all([
         fetch(`/api/tenant/${t.id}/rbac/catalog/templates`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
         }),
         fetch(`/api/tenant/${t.id}/rbac/catalog/business-types`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
         }),
       ]);
       const templates = tplRes.ok ? await tplRes.json() : [];
@@ -452,20 +452,7 @@ export default function TenantDashboard() {
     roles: tenantRoles || [],
   };
 
-  // Provider status (last validated/tested)
-  const { data: providerStatus = [] } = useQuery({
-    queryKey: ["/api/tenant", tenant?.id, "providers/status"],
-    enabled: !!tenant?.id,
-    queryFn: async () => {
-      const token =
-        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
-      const headers: any = { "Content-Type": "application/json", "x-tenant-id": tenant?.id || "" };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`/api/tenant/${tenant?.id}/auth/providers/status`, { headers });
-      if (!res.ok) return [] as any[];
-      return res.json();
-    },
-  }) as { data: any[] };
+  // providerStatus is declared earlier (before conditional returns) to preserve hook order
 
   // Show banner if must change password
   const mustChange = (user as any)?.metadata?.mustChangePassword;
@@ -2340,7 +2327,7 @@ function LoggingViewerCard({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
-  const [level, setLevel] = useState<string>("");
+  const [level, setLevel] = useState<string>("all");
   const [category, setCategory] = useState<string>("");
 
   const fetchLogs = async () => {
@@ -2355,7 +2342,7 @@ function LoggingViewerCard({
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (level) params.set("level", level);
+      if (level && level !== "all") params.set("level", level);
       if (category) params.set("category", category);
       params.set("limit", "20");
       const res = await fetch(`/api/v2/logging/events?${params.toString()}`, {
@@ -2419,12 +2406,12 @@ function LoggingViewerCard({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
         <div>
           <Label className="text-xs">Level</Label>
-          <Select onValueChange={setLevel} defaultValue="">
+          <Select onValueChange={setLevel} defaultValue="all">
             <SelectTrigger>
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               <SelectItem value="error">Error</SelectItem>
               <SelectItem value="warning">Warning</SelectItem>
               <SelectItem value="info">Info</SelectItem>

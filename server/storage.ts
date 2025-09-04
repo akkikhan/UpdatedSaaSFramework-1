@@ -1385,12 +1385,20 @@ export class DatabaseStorage implements IStorage {
   async createLogEvent(event: {
     tenantId: string;
     eventType: string;
-    level: "info" | "warning" | "error";
+    level: "info" | "warning" | "error" | "debug";
     message: string;
     metadata?: any;
     userId?: string;
-  }): Promise<void> {
-    await ensureDb()
+  }): Promise<{
+    id: string;
+    tenantId: string;
+    eventType: string;
+    level: string;
+    message: any;
+    timestamp: Date;
+    userId?: string | null;
+  }> {
+    const [row] = await ensureDb()
       .insert(systemLogs)
       .values({
         tenantId: event.tenantId,
@@ -1403,7 +1411,26 @@ export class DatabaseStorage implements IStorage {
           message: event.message,
           metadata: event.metadata,
         },
+      })
+      .returning({
+        id: systemLogs.id,
+        tenantId: systemLogs.tenantId,
+        entityType: systemLogs.entityType,
+        action: systemLogs.action,
+        details: systemLogs.details,
+        timestamp: systemLogs.timestamp,
+        adminUserId: systemLogs.adminUserId,
       });
+
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      eventType: row.entityType,
+      level: row.action,
+      message: row.details,
+      timestamp: row.timestamp,
+      userId: row.adminUserId || null,
+    };
   }
 
   // Alias expected by routes.ts

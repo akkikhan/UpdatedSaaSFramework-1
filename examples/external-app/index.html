@@ -54,6 +54,32 @@
     </div>
 
     <div class="card">
+      <h3>Logging (v2)</h3>
+      <div class="row">
+        <label for="loggingKey">Logging API Key</label>
+        <input id="loggingKey" placeholder="logging_..." />
+        <button id="btnSaveLogCfg" class="ghost">Save</button>
+      </div>
+      <div class="row">
+        <button id="btnSendLog">Send Test Log</button>
+        <button id="btnFetchLogs" class="ghost">Fetch Recent Logs</button>
+        <button id="btnSdkLog" class="ghost">SDK: Send Log</button>
+        <button id="btnSdkFlush" class="ghost">SDK: Flush</button>
+      </div>
+      <div class="muted">Uses /api/v2/logging/events via X-API-Key</div>
+    </div>
+
+    <div class="card">
+      <h3>Logging (v2)</h3>
+      <div class="row">
+        <input id="logKey" placeholder="Logging API Key (logging_...)" style="min-width: 320px;" />
+        <button id="btnLogEvent">Send Test Event</button>
+        <button id="btnLogQuery" class="ghost">Query Recent</button>
+      </div>
+      <div class="muted">Uses @saas-framework/logging with X-API-Key to /api/v2/logging/*</div>
+    </div>
+
+    <div class="card">
       <h3>Status</h3>
       <pre id="out">Ready.</pre>
     </div>
@@ -61,4 +87,3 @@
     <script type="module" src="/src/main.ts"></script>
   </body>
   </html>
-

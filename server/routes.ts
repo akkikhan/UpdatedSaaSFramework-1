@@ -1041,6 +1041,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant self-service: auth providers status (basic readiness info for portal)
+  app.get("/api/tenant/:id/auth/providers/status", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const providers = (((tenant.moduleConfigs as any) || {}).auth || {}).providers || [];
+      const toStatus = (p: any) => {
+        const type = p?.type || "custom";
+        let configured = false;
+        try {
+          if (type === "azure-ad") {
+            configured = Boolean(
+              p?.config?.tenantId && p?.config?.clientId && p?.config?.clientSecret
+            );
+          } else if (type === "auth0") {
+            configured = Boolean(
+              p?.config?.domain && p?.config?.clientId && p?.config?.clientSecret
+            );
+          } else {
+            configured = true;
+          }
+        } catch {}
+        return {
+          type,
+          name: p?.name || type,
+          enabled: Boolean(p?.enabled),
+          configured,
+          lastCheckedAt: null,
+          lastError: null,
+        };
+      };
+
+      return res.json((Array.isArray(providers) ? providers : []).map(toStatus));
+    } catch (error) {
+      console.error("Auth providers status error:", error);
+      res.status(500).json({ message: "Failed to fetch providers status" });
+    }
+  });
+
   // Platform Admin: send a quick test log event for a tenant
   app.post("/api/admin/logging/test-event", platformAdminMiddleware, async (req, res) => {
     try {
@@ -1125,32 +1168,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating tenant RBAC settings:", error);
       res.status(400).json({ message: "Failed to update RBAC settings" });
-    }
-  });
-
-  // Tenant self-service: RBAC catalogs (templates, business types)
-  app.get("/api/tenant/:id/rbac/catalog/templates", tenantMiddleware, async (req, res) => {
-    try {
-      const { id } = req.params;
-      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
-      const templates = await storage.getPermissionTemplates();
-      // Return minimal shape
-      return res.json(templates.map(t => ({ id: (t as any).id, name: (t as any).name })));
-    } catch (e) {
-      console.error("Get RBAC templates error:", e);
-      res.status(500).json({ message: "Failed to fetch templates" });
-    }
-  });
-
-  app.get("/api/tenant/:id/rbac/catalog/business-types", tenantMiddleware, async (req, res) => {
-    try {
-      const { id } = req.params;
-      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
-      const items = await storage.getBusinessTypes();
-      return res.json(items.map(i => ({ id: (i as any).id, name: (i as any).name })));
-    } catch (e) {
-      console.error("Get RBAC business types error:", e);
-      res.status(500).json({ message: "Failed to fetch business types" });
     }
   });
 
@@ -2563,19 +2580,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Log Statistics
-  app.get("/api/v2/logging/stats", tenantMiddleware, async (req, res) => {
-    try {
-      const tenantId = req.tenantId;
-      const { period = "24h" } = req.query;
+  // Log Statistics (supports either API key or JWT)
+  app.get(
+    "/api/v2/logging/stats",
+    (req, res, next) => {
+      const hasApiKeyHeader = Boolean(req.headers["x-api-key"]);
+      const auth = (req.headers["authorization"] as string) || "";
+      const hasApiKeyAuth = auth && !auth.toLowerCase().startsWith("bearer ");
+      if (hasApiKeyHeader || hasApiKeyAuth) {
+        return (validateApiKey as any)(req, res, next);
+      }
+      return next();
+    },
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const tenantId = req.tenantId;
+        const { period = "24h" } = req.query;
 
-      const stats = await storage.getLogStatistics(tenantId, period as string);
-      res.json(stats);
-    } catch (error) {
-      console.error("Get log stats error:", error);
-      res.status(500).json({ message: "Failed to get log statistics" });
+        const stats = await storage.getLogStatistics(tenantId, period as string);
+        res.json(stats);
+      } catch (error) {
+        console.error("Get log stats error:", error);
+        res.status(500).json({ message: "Failed to get log statistics" });
+      }
     }
-  });
+  );
 
   // Alert Rules
   app.post("/api/v2/logging/alert-rules", tenantMiddleware, async (req, res) => {

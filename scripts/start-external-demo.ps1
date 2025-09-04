@@ -1,12 +1,22 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host "Building SDK packages (auth-client, auth)..."
+Write-Host "Building SDK packages (auth-client, auth, logging, rbac)..."
 Push-Location "$PSScriptRoot/../packages/auth-client"
 npm install | Out-Null
 npm run build | Out-Null
 Pop-Location
 
 Push-Location "$PSScriptRoot/../packages/auth"
+npm install | Out-Null
+npm run build | Out-Null
+Pop-Location
+
+Push-Location "$PSScriptRoot/../packages/logging"
+npm install | Out-Null
+npm run build | Out-Null
+Pop-Location
+
+Push-Location "$PSScriptRoot/../packages/rbac"
 npm install | Out-Null
 npm run build | Out-Null
 Pop-Location
@@ -27,4 +37,3 @@ Start-Process "http://localhost:5173"
 Write-Host "Platform PID: $($platform.Id)"
 Write-Host "External Demo PID: $($demo.Id)"
 Write-Host "Both windows were launched. Use Ctrl+C in those windows to stop."
-

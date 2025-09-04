@@ -17,8 +17,21 @@ declare global {
  */
 export async function validateApiKey(req: Request, res: Response, next: NextFunction) {
   try {
-    // Get API key from header
-    const apiKey = req.headers["x-api-key"] as string;
+    // Get API key from headers: support X-API-Key or Authorization: Bearer <key> | API-Key <key>
+    let apiKey = (req.headers["x-api-key"] as string) || "";
+    if (!apiKey) {
+      const authHeader = (req.headers["authorization"] as string) || "";
+      if (authHeader) {
+        const parts = authHeader.split(" ").filter(Boolean);
+        if (parts.length === 2) {
+          const scheme = parts[0].toLowerCase();
+          const token = parts[1];
+          if (scheme === "bearer" || scheme === "api-key") {
+            apiKey = token;
+          }
+        }
+      }
+    }
 
     if (!apiKey) {
       return res.status(401).json({
@@ -29,7 +42,8 @@ export async function validateApiKey(req: Request, res: Response, next: NextFunc
 
     // Determine which module this API key targets
     const isLoggingRoute =
-      (req.path || "").startsWith("/api/v2/logging/") || (req.path || "").startsWith("/logging/");
+      (req.path || "").startsWith("/api/v2/logging/") ||
+      (req.path || "").startsWith("/api/logging/");
 
     // Accept either dedicated logging key (preferred for logging routes) or auth key as fallback
     const looksLikeAuthKey = apiKey.startsWith("auth_");

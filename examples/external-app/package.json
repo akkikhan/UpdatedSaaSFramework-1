@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@saas-framework/auth": "file:../../packages/auth"
+    "@saas-framework/auth": "file:../../packages/auth",
+    "@saas-framework/logging": "file:../../packages/logging"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
