@@ -320,24 +320,25 @@ const testScenarios = [
 ];
 
 // Run comprehensive tests
-console.log('\n🧪 RUNNING COMPREHENSIVE CONFIGURATION TESTS:\n');
+async function runComprehensiveTests() {
+  console.log('\n🧪 RUNNING COMPREHENSIVE CONFIGURATION TESTS:\n');
 
-for (let i = 0; i < testScenarios.length; i++) {
-  const scenario = testScenarios[i];
-  console.log(`${i + 1}. ${scenario.title}`);
-  console.log('─'.repeat(60));
-  console.log(`📝 ${scenario.description}`);
-  console.log();
-  
-  try {
-    // Simulate the complete flow
-    console.log('🔍 Step 1: Validating configuration...');
-    await validateConfiguration(scenario.config);
-    console.log('✅ Configuration validation passed');
+  for (let i = 0; i < testScenarios.length; i++) {
+    const scenario = testScenarios[i];
+    console.log(`${i + 1}. ${scenario.title}`);
+    console.log('─'.repeat(60));
+    console.log(`📝 ${scenario.description}`);
+    console.log();
     
-    console.log('🔍 Step 2: Creating tenant...');
-    const tenant = await mockStorage.createTenant(scenario.config);
-    console.log('✅ Tenant created successfully');
+    try {
+      // Simulate the complete flow
+      console.log('🔍 Step 1: Validating configuration...');
+      await validateConfiguration(scenario.config);
+      console.log('✅ Configuration validation passed');
+      
+      console.log('🔍 Step 2: Creating tenant...');
+      const tenant = await mockStorage.createTenant(scenario.config);
+      console.log('✅ Tenant created successfully');
     
     console.log('🔍 Step 3: Analyzing configuration...');
     analyzeConfiguration(scenario.config);
@@ -358,6 +359,9 @@ for (let i = 0; i < testScenarios.length; i++) {
   console.log('═'.repeat(60));
   console.log();
 }
+
+// Run the tests
+runComprehensiveTests();
 
 // Mock validation function
 async function validateConfiguration(config) {
