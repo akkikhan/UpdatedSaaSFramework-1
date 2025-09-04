@@ -68,8 +68,25 @@ export class EmailService {
             pass: this.config.smtpPassword,
           }
         : undefined,
+      // Office365 typically requires STARTTLS on 587
+      requireTLS: this.config.smtpPort === 587,
       tls: { rejectUnauthorized: false },
     });
+
+    // Proactively verify SMTP connectivity on startup (non-blocking)
+    void this.transporter
+      .verify()
+      .then(() => {
+        console.log(
+          `📨 SMTP verify OK for ${this.config.smtpHost}:${this.config.smtpPort} as ${this.config.smtpUsername}`
+        );
+      })
+      .catch(err => {
+        console.warn(
+          `⚠️  SMTP verify failed for ${this.config.smtpHost}:${this.config.smtpPort} as ${this.config.smtpUsername}:`,
+          err?.message || err
+        );
+      });
   }
 
   private getSmtpSettings(email: string): { host: string; port: number; secure: boolean } {

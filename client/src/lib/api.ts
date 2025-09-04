@@ -87,4 +87,9 @@ export const api = {
     const response = await apiRequest("GET", "/api/health");
     return response.json();
   },
+
+  async sendTestEmail(to?: string): Promise<{ success: boolean; to: string }> {
+    const response = await apiRequest("POST", "/api/email/test", to ? { to } : {});
+    return response.json();
+  },
 };

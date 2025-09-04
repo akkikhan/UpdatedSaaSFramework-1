@@ -59,7 +59,13 @@ import {
 import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
 
-// Use shared schema for form validation - ensures frontend/backend compatibility
+// Use a relaxed schema for the wizard to allow provider "string[]" during form filling
+// We transform providers into the backend shape right before submit.
+const WIZARD_FORM_SCHEMA = TENANT_CREATION_SCHEMA.extend({
+  // Accept any shape for moduleConfigs while filling the form; we'll normalize on submit
+  moduleConfigs: z.any().optional(),
+});
+
 type FormData = TenantCreationData;
 
 const STEPS = [
@@ -118,7 +124,7 @@ export default function OnboardingWizard() {
   const createTenant = useCreateTenant();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(TENANT_CREATION_SCHEMA),
+    resolver: zodResolver(WIZARD_FORM_SCHEMA as any),
     defaultValues: {
       name: "",
       orgId: "",
@@ -165,7 +171,8 @@ export default function OnboardingWizard() {
       // Module configs transformation: keep keys aligned with shared schema
       const transformedModuleConfigs: any = {};
       Object.entries(data.moduleConfigs || {}).forEach(([key, value]) => {
-        const transformedKey = key; // already using shared keys (e.g., "auth", "rbac")
+        // Normalize internal form keys to shared schema keys
+        const transformedKey = key === "aiCopilot" ? ("ai-copilot" as const) : (key as string);
 
         if (transformedKey === "auth" && value && typeof value === "object") {
           const authConfig = value as any;
@@ -994,21 +1001,20 @@ export default function OnboardingWizard() {
                             </div>
                           </div>
 
-                          {watchedModules.includes("authentication") &&
-                            watchedAuthProviders?.length > 0 && (
-                              <div>
-                                <span className="text-sm text-slate-600">
-                                  Authentication Providers:
-                                </span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {watchedAuthProviders.map(provider => (
-                                    <Badge key={provider} variant="outline">
-                                      {provider.replace("-", " ").toUpperCase()}
-                                    </Badge>
-                                  ))}
-                                </div>
+                          {watchedModules.includes("auth") && watchedAuthProviders?.length > 0 && (
+                            <div>
+                              <span className="text-sm text-slate-600">
+                                Authentication Providers:
+                              </span>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {watchedAuthProviders.map(provider => (
+                                  <Badge key={provider} variant="outline">
+                                    {provider.replace("-", " ").toUpperCase()}
+                                  </Badge>
+                                ))}
                               </div>
-                            )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
