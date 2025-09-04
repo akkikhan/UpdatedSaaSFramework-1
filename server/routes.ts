@@ -1441,11 +1441,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // V2 API Refresh endpoint (sliding refresh)
   app.post("/api/v2/auth/refresh", async (req, res) => {
     try {
+      let oldToken: string | undefined;
       const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        oldToken = authHeader.split(" ")[1];
+      } else if (req.body?.token) {
+        oldToken = req.body.token;
+      }
+      if (!oldToken) {
         return res.status(400).json({ message: "No token provided" });
       }
-      const oldToken = authHeader.split(" ")[1];
       const newToken = await authService.refreshToken(oldToken);
       if (!newToken) return res.status(401).json({ message: "Invalid token" });
       res.json({ token: newToken });
@@ -2260,6 +2265,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Dismiss request error:", error);
       res.status(500).json({ message: "Failed to dismiss request" });
+    }
+  });
+
+  // Validate Azure AD configuration (Tenant self-check)
+  app.get("/api/tenant/:id/azure-ad/validate", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = moduleConfigs.auth;
+      if (!authConfig?.providers) {
+        return res.status(400).json({ valid: false, message: "Auth providers not configured" });
+      }
+
+      let azure = authConfig.providers.find((p: any) => p.type === "azure-ad");
+      if (!azure) {
+        return res.status(400).json({ valid: false, message: "Azure AD provider not found" });
+      }
+
+      // Decrypt secret if needed
+      try {
+        const { decryptSecret } = await import("./utils/secret.js");
+        if (azure?.config?.clientSecret) {
+          azure = {
+            ...azure,
+            config: { ...azure.config, clientSecret: decryptSecret(azure.config.clientSecret) },
+          };
+        }
+      } catch {}
+
+      const cfg = azure.config || {};
+      const errors: string[] = [];
+      const guid = /^[0-9a-fA-F-]{36}$/;
+      if (!cfg.tenantId || !guid.test(cfg.tenantId))
+        errors.push("tenantId must be a GUID from Azure AD");
+      if (!cfg.clientId || !guid.test(cfg.clientId))
+        errors.push("clientId must be a GUID (Application ID)");
+      if (!cfg.clientSecret) errors.push("clientSecret is required");
+
+      const expectedRedirect = `${req.protocol}://${req.get("host")}/api/auth/azure/callback`;
+      if (cfg.callbackUrl && cfg.callbackUrl !== expectedRedirect) {
+        errors.push(`callbackUrl should be ${expectedRedirect}`);
+      }
+
+      if (errors.length) return res.status(400).json({ valid: false, message: errors.join("; ") });
+
+      try {
+        const { AzureADService } = await import("./services/azure-ad.js");
+        const svc = new AzureADService({
+          tenantId: cfg.tenantId,
+          clientId: cfg.clientId,
+          clientSecret: cfg.clientSecret,
+          redirectUri: expectedRedirect,
+        });
+        const authUrl = await svc.getAuthorizationUrl(["User.Read"], tenant.id);
+        return res.json({ valid: true, authUrl, expectedRedirect });
+      } catch (e: any) {
+        return res
+          .status(400)
+          .json({ valid: false, message: e?.message || "Failed to init Azure" });
+      }
+    } catch (error) {
+      console.error("Azure validate error:", error);
+      res.status(500).json({ message: "Validation failed" });
     }
   });
 

@@ -499,26 +499,6 @@ export default function OnboardingWizard() {
 
                                 const handleToggle = () => {
                                   const currentValue = field.value || [];
-                                  // Enforce RBAC requires Auth: if selecting RBAC, auto-select Auth
-                                  if (
-                                    !isSelected &&
-                                    module.id === "rbac" &&
-                                    !currentValue.includes("auth")
-                                  ) {
-                                    const newValue = Array.from(
-                                      new Set([...currentValue, "auth", "rbac"])
-                                    );
-                                    field.onChange(newValue);
-                                    return;
-                                  }
-                                  // If trying to deselect Auth while RBAC is selected, block action
-                                  if (
-                                    isSelected &&
-                                    module.id === "auth" &&
-                                    currentValue.includes("rbac")
-                                  ) {
-                                    return; // do nothing; RBAC depends on Auth
-                                  }
                                   const newValue = isSelected
                                     ? currentValue.filter(v => v !== module.id)
                                     : [...currentValue, module.id];
@@ -560,14 +540,6 @@ export default function OnboardingWizard() {
                                         </div>
                                         <p className="text-sm text-slate-600 mt-1">
                                           {module.description}
-                                          {module.id === "rbac" && (
-                                            <>
-                                              {" "}
-                                              <span className="text-xs text-slate-500">
-                                                (requires Authentication)
-                                              </span>
-                                            </>
-                                          )}
                                         </p>
                                         {module.providers && (
                                           <div className="flex flex-wrap gap-2 mt-2">

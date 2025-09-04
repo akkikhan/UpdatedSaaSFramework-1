@@ -154,7 +154,7 @@ export default function TenantDashboard() {
 
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
-      const response = await fetch(`/rbac/roles/${roleId}`, {
+      const response = await fetch(`/api/v2/rbac/roles/${roleId}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
@@ -164,7 +164,7 @@ export default function TenantDashboard() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/rbac/roles", tenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v2/rbac/roles", tenant?.id] });
       toast({
         title: "Success",
         description: "Role deleted successfully",
@@ -298,12 +298,12 @@ export default function TenantDashboard() {
   }) as { data: any[] };
 
   const { data: tenantRoles = [] } = useQuery({
-    queryKey: ["/rbac/roles", tenant?.id],
+    queryKey: ["/api/v2/rbac/roles", tenant?.id],
     enabled: !!tenant?.id,
     queryFn: async () => {
       const token =
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
-      const res = await fetch(`/rbac/roles`, {
+      const res = await fetch(`/api/v2/rbac/roles`, {
         headers: { Authorization: `Bearer ${token}`, "x-tenant-id": tenant?.id || "" },
       });
       if (!res.ok) throw new Error("Failed to get roles");
@@ -680,7 +680,7 @@ export default function TenantDashboard() {
                       onSuccess={() => {
                         setShowAddRoleModal(false);
                         queryClient.invalidateQueries({
-                          queryKey: ["/rbac/roles", tenant?.id],
+                          queryKey: ["/api/v2/rbac/roles", tenant?.id],
                         });
                       }}
                     />
@@ -755,7 +755,7 @@ export default function TenantDashboard() {
                 onSuccess={() => {
                   setShowEditRoleModal(false);
                   setSelectedRole(null);
-                  queryClient.invalidateQueries({ queryKey: ["/rbac/roles", tenant?.id] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/v2/rbac/roles", tenant?.id] });
                 }}
               />
             </Dialog>
@@ -868,6 +868,46 @@ export default function TenantDashboard() {
                           disabled={!isAzureAdEnabled}
                         >
                           Test Azure SSO
+                        </Button>
+                        <Button
+                          className="ml-2"
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const headers: any = { "Content-Type": "application/json" };
+                              const token =
+                                localStorage.getItem(`tenant_token_${orgId}`) ||
+                                localStorage.getItem("tenant_token") ||
+                                "";
+                              if (token) headers.Authorization = `Bearer ${token}`;
+                              const res = await fetch(
+                                `/api/tenant/${tenant?.id}/azure-ad/validate`,
+                                { headers }
+                              );
+                              const data = await res.json();
+                              if (res.ok && data?.valid) {
+                                toast({
+                                  title: "Azure config looks good",
+                                  description: "You can try SSO now.",
+                                });
+                              } else {
+                                toast({
+                                  title: "Azure config invalid",
+                                  description: data?.message || "Fix settings and try again",
+                                  variant: "destructive",
+                                });
+                              }
+                            } catch (e: any) {
+                              toast({
+                                title: "Validation failed",
+                                description: e?.message || "Unknown error",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          disabled={!isAzureAdEnabled}
+                        >
+                          Validate Azure Config
                         </Button>
                       </div>
                     </div>
@@ -1306,7 +1346,7 @@ function RoleModal({
     mutationFn: async (data: RoleFormData) => {
       const token =
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
-      const url = role ? `/rbac/roles/${role.id}` : `/rbac/roles`;
+      const url = role ? `/api/v2/rbac/roles/${role.id}` : `/api/v2/rbac/roles`;
 
       const response = await fetch(url, {
         method: role ? "PUT" : "POST",

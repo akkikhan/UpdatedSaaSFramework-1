@@ -128,7 +128,11 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + this.jwtExpiryMinutes);
 
-    const newToken = jwt.sign(payload, this.getSignKey(), {
+    // Important: strip timing claims from verified token to avoid jsonwebtoken error
+    const { userId, tenantId, email, permissions } = payload as any;
+    const freshPayload: JWTPayload = { userId, tenantId, email, permissions: permissions || [] };
+
+    const newToken = jwt.sign(freshPayload, this.getSignKey(), {
       algorithm: this.jwtAlg,
       expiresIn: `${this.jwtExpiryMinutes}m`,
     });
