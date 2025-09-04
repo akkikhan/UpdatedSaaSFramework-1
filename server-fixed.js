@@ -87,7 +87,7 @@ app.use(express.static(join(__dirname, "client/dist")));
 // Test database connection
 async function testDatabaseConnection() {
   try {
-    const { drizzle } = await import("drizzle-orm/postgres-js");
+    // const { drizzle } = await import("drizzle-orm/postgres-js"); // Available for ORM operations
     const postgres = await import("postgres");
 
     if (!process.env.DATABASE_URL) {
@@ -96,7 +96,7 @@ async function testDatabaseConnection() {
     }
 
     const sql = postgres.default(process.env.DATABASE_URL);
-    const db = drizzle(sql);
+    // const db = drizzle(sql); // Available for database operations
 
     // Simple test query
     await sql`SELECT 1 as test`;

@@ -13,6 +13,7 @@ const TEST_TENANT = {
   enabledModules: ["auth", "rbac"],
 };
 
+/*
 async function registerTenant() {
   console.log("📝 Registering new tenant...");
 
@@ -39,6 +40,7 @@ async function registerTenant() {
     return null;
   }
 }
+*/
 
 async function testTenantLogin() {
   console.log("\n🔐 Testing tenant login...");

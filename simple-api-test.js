@@ -2,7 +2,7 @@
  * Simple API Key Authentication Test
  */
 
-const https = require("https");
+// const https = require("https"); // Available for HTTPS requests
 const http = require("http");
 
 const API_KEY = "auth_abc123def456ghi789jkl012"; // Demo tenant API key

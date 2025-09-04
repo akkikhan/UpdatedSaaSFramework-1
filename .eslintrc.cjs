@@ -32,6 +32,11 @@ module.exports = {
     // Ignore TypeScript files for basic validation
     '**/*.ts',
     '**/*.tsx',
+    // Ignore JSX files (React examples)
+    '**/*.jsx',
+    // Ignore example files
+    'packages/*/example*.js',
+    'packages/*/example*.jsx',
     // Include only JavaScript files for validation
     'client/src/**/*.js',
     'server/**/*.js',
