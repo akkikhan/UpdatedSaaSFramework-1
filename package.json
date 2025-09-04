@@ -25,18 +25,19 @@
     "docker:test": "docker-compose -f docker-compose.test.yml up --abort-on-container-exit",
     "docker:build": "docker build -t saas-framework .",
     "prepare": "husky",
-    "packages:build": "npm run packages:build:email && npm run packages:build:auth && npm run packages:build:logging && npm run packages:build:rbac",
+    "packages:build": "npm run packages:build:email && npm run packages:build:auth && npm run packages:build:logging && npm run packages:build:rbac && npm run packages:build:auth-client",
     "packages:build:email": "cd packages/email && npm run build",
     "packages:build:auth": "cd packages/auth && npm run build",
     "packages:build:logging": "cd packages/logging && npm run build",
     "packages:build:rbac": "cd packages/rbac && npm run build",
-    "packages:publish": "npm run packages:publish:email && npm run packages:publish:auth && npm run packages:publish:logging && npm run packages:publish:rbac",
+    "packages:publish": "npm run packages:publish:email && npm run packages:publish:auth && npm run packages:publish:logging && npm run packages:publish:rbac && npm run packages:publish:auth-client",
     "packages:publish:email": "cd packages/email && npm run publish-package",
     "packages:publish:auth": "cd packages/auth && npm run publish-package",
     "packages:publish:logging": "cd packages/logging && npm run publish-package",
     "packages:publish:rbac": "cd packages/rbac && npm run publish-package",
     "packages:verify": "npm run packages:build && echo 'All packages built successfully!'",
-    "publish:dry-run": "npm run packages:build && echo 'Dry run completed - packages ready for publishing'"
+    "publish:dry-run": "npm run packages:build && echo 'Dry run completed - packages ready for publishing'",
+    "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

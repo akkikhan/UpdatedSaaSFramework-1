@@ -5,17 +5,57 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Users, Shield, Key, Settings, Copy, Eye, EyeOff, Plus, Edit, Trash2, UserCheck } from "lucide-react";
+import {
+  Users,
+  Shield,
+  Key,
+  Settings,
+  Copy,
+  Eye,
+  EyeOff,
+  Plus,
+  Edit,
+  Trash2,
+  UserCheck,
+} from "lucide-react";
 import { useTenantAuth } from "@/hooks/use-tenant-auth";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
@@ -26,24 +66,33 @@ const userFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
-  status: z.enum(["active", "inactive"]).default("active")
+  status: z.enum(["active", "inactive"]).default("active"),
 });
 
 const roleFormSchema = z.object({
   name: z.string().min(1, "Role name is required"),
   description: z.string().optional(),
-  permissions: z.array(z.string()).min(1, "At least one permission is required")
+  permissions: z.array(z.string()).min(1, "At least one permission is required"),
 });
 
 type UserFormData = z.infer<typeof userFormSchema>;
 type RoleFormData = z.infer<typeof roleFormSchema>;
 
 const AVAILABLE_PERMISSIONS = [
-  "users.read", "users.create", "users.update", "users.delete",
-  "roles.read", "roles.create", "roles.update", "roles.delete",
-  "reports.read", "reports.create", "reports.export",
-  "settings.read", "settings.update",
-  "admin.full_access"
+  "users.read",
+  "users.create",
+  "users.update",
+  "users.delete",
+  "roles.read",
+  "roles.create",
+  "roles.update",
+  "roles.delete",
+  "reports.read",
+  "reports.create",
+  "reports.export",
+  "settings.read",
+  "settings.update",
+  "admin.full_access",
 ];
 
 export default function TenantDashboard() {
@@ -68,10 +117,10 @@ export default function TenantDashboard() {
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       const response = await fetch(`/api/tenants/${tenant?.id}/users/${userId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       if (!response.ok) {
-        throw new Error('Failed to delete user');
+        throw new Error("Failed to delete user");
       }
       return response.json();
     },
@@ -90,14 +139,14 @@ export default function TenantDashboard() {
       });
     },
   });
-  
+
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
       const response = await fetch(`/api/tenants/${tenant?.id}/roles/${roleId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       if (!response.ok) {
-        throw new Error('Failed to delete role');
+        throw new Error("Failed to delete role");
       }
       return response.json();
     },
@@ -118,13 +167,13 @@ export default function TenantDashboard() {
   });
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    if (confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       deleteUserMutation.mutate(userId);
     }
   };
 
   const handleDeleteRole = async (roleId: string) => {
-    if (confirm('Are you sure you want to delete this role? This action cannot be undone.')) {
+    if (confirm("Are you sure you want to delete this role? This action cannot be undone.")) {
       deleteRoleMutation.mutate(roleId);
     }
   };
@@ -151,7 +200,7 @@ export default function TenantDashboard() {
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-slate-800 mb-2">Access Denied</h2>
           <p className="text-slate-600 mb-4">Please log in to access the tenant portal</p>
-          <Button onClick={() => window.location.href = `/tenant/${orgId}/login`}>
+          <Button onClick={() => (window.location.href = `/tenant/${orgId}/login`)}>
             Go to Login
           </Button>
         </div>
@@ -164,19 +213,19 @@ export default function TenantDashboard() {
     queryKey: [`/api/tenants/by-org-id/${orgId}`],
     enabled: !!orgId,
     refetchInterval: 5000, // Poll every 5 seconds for module changes
-    refetchIntervalInBackground: true
+    refetchIntervalInBackground: true,
   }) as { data: any };
-  
+
   // Track previous enabled modules for real-time change detection
   const [previousModules, setPreviousModules] = useState<string[]>([]);
-  
+
   // Detect module changes and show notifications
   useEffect(() => {
     if (tenant?.enabledModules && previousModules.length > 0) {
       const currentModules = tenant.enabledModules as string[];
       const newlyEnabled = currentModules.filter(m => !previousModules.includes(m));
       const newlyDisabled = previousModules.filter(m => !currentModules.includes(m));
-      
+
       // Show notifications for module changes
       if (newlyEnabled.length > 0) {
         newlyEnabled.forEach(module => {
@@ -187,7 +236,7 @@ export default function TenantDashboard() {
           });
         });
       }
-      
+
       if (newlyDisabled.length > 0) {
         newlyDisabled.forEach(module => {
           toast({
@@ -199,25 +248,25 @@ export default function TenantDashboard() {
         });
       }
     }
-    
+
     // Update previous modules tracking
     if (tenant?.enabledModules) {
       setPreviousModules(tenant.enabledModules as string[]);
     }
   }, [tenant?.enabledModules, toast]);
-  
+
   const { data: tenantUsers = [] } = useQuery({
     queryKey: [`/api/tenants/${tenant?.id}/users`],
-    enabled: !!tenant?.id
+    enabled: !!tenant?.id,
   }) as { data: any[] };
-  
+
   const { data: tenantRoles = [] } = useQuery({
     queryKey: [`/api/tenants/${tenant?.id}/roles`],
-    enabled: !!tenant?.id
+    enabled: !!tenant?.id,
   }) as { data: any[] };
-  
+
   // Check if tenant is suspended and handle accordingly
-  if (tenant && tenant.status === 'suspended') {
+  if (tenant && tenant.status === "suspended") {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
@@ -226,16 +275,19 @@ export default function TenantDashboard() {
           </div>
           <h2 className="text-2xl font-semibold text-slate-800 mb-4">Account Suspended</h2>
           <p className="text-slate-600 mb-6">
-            Your organization's account has been suspended. Please contact your administrator for assistance.
+            Your organization's account has been suspended. Please contact your administrator for
+            assistance.
           </p>
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-red-700">
-              <strong>Organization:</strong> {tenant.name}<br />
-              <strong>Status:</strong> {tenant.status}<br />
+              <strong>Organization:</strong> {tenant.name}
+              <br />
+              <strong>Status:</strong> {tenant.status}
+              <br />
               <strong>Contact:</strong> {tenant.adminEmail}
             </p>
           </div>
-          <Button 
+          <Button
             onClick={() => {
               logout.mutate();
               window.location.href = `/tenant/${orgId}/login`;
@@ -248,7 +300,7 @@ export default function TenantDashboard() {
       </div>
     );
   }
-  
+
   if (!tenant) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -259,28 +311,28 @@ export default function TenantDashboard() {
       </div>
     );
   }
-  
+
   const tenantInfo = {
-    name: tenant.name || 'Unknown',
-    status: tenant.status || 'unknown',
-    authApiKey: tenant.authApiKey || '',
-    rbacApiKey: tenant.rbacApiKey || '',
-    enabledModules: (tenant.enabledModules as string[]) || ['auth', 'rbac'],
+    name: tenant.name || "Unknown",
+    status: tenant.status || "unknown",
+    authApiKey: tenant.authApiKey || "",
+    rbacApiKey: tenant.rbacApiKey || "",
+    enabledModules: (tenant.enabledModules as string[]) || ["auth", "rbac"],
     moduleConfigs: tenant.moduleConfigs || {},
     users: tenantUsers || [],
-    roles: tenantRoles || []
+    roles: tenantRoles || [],
   };
-  
+
   // Check if modules are enabled
   const isModuleEnabled = (moduleName: string) => {
     return tenantInfo.enabledModules.includes(moduleName);
   };
-  
-  const isAuthEnabled = isModuleEnabled('auth');
-  const isRbacEnabled = isModuleEnabled('rbac');
-  const isAzureAdEnabled = isModuleEnabled('azure-ad');
-  const isAuth0Enabled = isModuleEnabled('auth0');
-  const isSamlEnabled = isModuleEnabled('saml');
+
+  const isAuthEnabled = isModuleEnabled("auth");
+  const isRbacEnabled = isModuleEnabled("rbac");
+  const isAzureAdEnabled = isModuleEnabled("azure-ad");
+  const isAuth0Enabled = isModuleEnabled("auth0");
+  const isSamlEnabled = isModuleEnabled("saml");
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -298,18 +350,21 @@ export default function TenantDashboard() {
                 <h1 className="text-xl font-semibold text-slate-800">{tenantInfo.name}</h1>
                 <p className="text-sm text-slate-500">Tenant Portal</p>
               </div>
-              <Badge variant={tenantInfo.status === 'active' ? 'default' : 'secondary'}>
+              <Badge variant={tenantInfo.status === "active" ? "default" : "secondary"}>
                 {tenantInfo.status.charAt(0).toUpperCase() + tenantInfo.status.slice(1)}
               </Badge>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               {/* Real-time connection indicator */}
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Live connection - monitoring for module changes"></div>
+                <div
+                  className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+                  title="Live connection - monitoring for module changes"
+                ></div>
                 <span className="text-xs text-slate-500">Live</span>
               </div>
-              
+
               <div className="text-right">
                 <p className="text-sm font-medium text-slate-800">{user.email}</p>
                 <p className="text-xs text-slate-500">Administrator</p>
@@ -330,9 +385,7 @@ export default function TenantDashboard() {
             <TabsTrigger value="users" disabled={!isAuthEnabled}>
               Users {!isAuthEnabled && <span className="ml-1 text-xs opacity-60">(Disabled)</span>}
             </TabsTrigger>
-            {isRbacEnabled && (
-              <TabsTrigger value="roles">Roles</TabsTrigger>
-            )}
+            {isRbacEnabled && <TabsTrigger value="roles">Roles</TabsTrigger>}
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           </TabsList>
@@ -349,7 +402,7 @@ export default function TenantDashboard() {
                   <p className="text-xs text-slate-600">+0 from last week</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Roles</CardTitle>
@@ -360,7 +413,7 @@ export default function TenantDashboard() {
                   <p className="text-xs text-slate-600">System defined</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Modules</CardTitle>
@@ -368,7 +421,7 @@ export default function TenantDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{tenantInfo.enabledModules.length}</div>
-                  <p className="text-xs text-slate-600">{tenantInfo.enabledModules.join(', ')}</p>
+                  <p className="text-xs text-slate-600">{tenantInfo.enabledModules.join(", ")}</p>
                 </CardContent>
               </Card>
             </div>
@@ -382,21 +435,27 @@ export default function TenantDashboard() {
                   <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                   <div>
                     <p className="font-medium">1. Install SDKs</p>
-                    <p className="text-sm text-slate-600 mt-1">npm install @saas-framework/auth @saas-framework/rbac</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      npm install @saas-framework/auth @saas-framework/rbac
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                   <div>
                     <p className="font-medium">2. Configure API Keys</p>
-                    <p className="text-sm text-slate-600 mt-1">Use your Auth and RBAC API keys from the API Keys tab</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Use your Auth and RBAC API keys from the API Keys tab
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                   <div>
                     <p className="font-medium">3. Integrate Authentication</p>
-                    <p className="text-sm text-slate-600 mt-1">Start with user login and JWT token validation</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Start with user login and JWT token validation
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -415,7 +474,9 @@ export default function TenantDashboard() {
                 <CardContent>
                   <div className="text-center py-8">
                     <Users className="h-12 w-12 mx-auto text-slate-400 mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-700 mb-2">User Management Unavailable</h3>
+                    <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                      User Management Unavailable
+                    </h3>
                     <p className="text-slate-500 mb-4">
                       The Authentication module has been disabled by your platform administrator.
                       Contact your administrator to enable this feature.
@@ -438,89 +499,95 @@ export default function TenantDashboard() {
                           Add User
                         </Button>
                       </DialogTrigger>
-                      <UserModal 
-                        title="Add New User" 
+                      <UserModal
+                        title="Add New User"
                         tenantId={tenant?.id}
                         onSuccess={() => {
                           setShowAddUserModal(false);
-                          queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
+                          queryClient.invalidateQueries({
+                            queryKey: [`/api/tenants/${tenant?.id}/users`],
+                          });
                         }}
                       />
                     </Dialog>
                   </div>
                 </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(tenantInfo.users as any[]).length > 0 ? (tenantInfo.users as any[]).map((user: any) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                            {user.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowEditUserModal(true);
-                              }}
-                              data-testid={`button-edit-user-${user.id}`}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteUser(user.id)}
-                              data-testid={`button-delete-user-${user.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )) : (
+                <CardContent>
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                          No users found. Add users to get started.
-                        </TableCell>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
+                    </TableHeader>
+                    <TableBody>
+                      {(tenantInfo.users as any[]).length > 0 ? (
+                        (tenantInfo.users as any[]).map((user: any) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">
+                              {user.firstName} {user.lastName}
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={user.status === "active" ? "default" : "secondary"}>
+                                {user.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setShowEditUserModal(true);
+                                  }}
+                                  data-testid={`button-edit-user-${user.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  data-testid={`button-delete-user-${user.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                            No users found. Add users to get started.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
               </Card>
             )}
-            
+
             {/* Edit User Modal - Always available when auth is enabled */}
             {isAuthEnabled && (
               <Dialog open={showEditUserModal} onOpenChange={setShowEditUserModal}>
-                <UserModal 
-                  title="Edit User" 
+                <UserModal
+                  title="Edit User"
                   tenantId={tenant?.id}
                   user={selectedUser}
                   onSuccess={() => {
                     setShowEditUserModal(false);
                     setSelectedUser(null);
-                    queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/users`] });
+                    queryClient.invalidateQueries({
+                      queryKey: [`/api/tenants/${tenant?.id}/users`],
+                    });
                   }}
                 />
               </Dialog>
@@ -539,76 +606,82 @@ export default function TenantDashboard() {
                         Add Role
                       </Button>
                     </DialogTrigger>
-                    <RoleModal 
-                      title="Add New Role" 
+                    <RoleModal
+                      title="Add New Role"
                       tenantId={tenant?.id}
                       onSuccess={() => {
                         setShowAddRoleModal(false);
-                        queryClient.invalidateQueries({ queryKey: [`/api/tenants/${tenant?.id}/roles`] });
+                        queryClient.invalidateQueries({
+                          queryKey: [`/api/tenants/${tenant?.id}/roles`],
+                        });
                       }}
                     />
                   </Dialog>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {(tenantInfo.roles as any[]).length > 0 ? (tenantInfo.roles as any[]).map((role: any) => (
-                  <Card key={role.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-base">{role.name}</CardTitle>
-                          <p className="text-sm text-slate-600 mt-1">{role.description}</p>
-                          {role.isSystem && (
-                            <Badge variant="outline" className="text-xs mt-1">System Role</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRole(role);
-                              setShowEditRoleModal(true);
-                            }}
-                            data-testid={`button-edit-role-${role.id}`}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {!role.isSystem && (
-                            <Button 
-                              variant="ghost" 
+                {(tenantInfo.roles as any[]).length > 0 ? (
+                  (tenantInfo.roles as any[]).map((role: any) => (
+                    <Card key={role.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-base">{role.name}</CardTitle>
+                            <p className="text-sm text-slate-600 mt-1">{role.description}</p>
+                            {role.isSystem && (
+                              <Badge variant="outline" className="text-xs mt-1">
+                                System Role
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteRole(role.id)}
-                              data-testid={`button-delete-role-${role.id}`}
+                              onClick={() => {
+                                setSelectedRole(role);
+                                setShowEditRoleModal(true);
+                              }}
+                              data-testid={`button-edit-role-${role.id}`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          )}
+                            {!role.isSystem && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteRole(role.id)}
+                                data-testid={`button-delete-role-${role.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex flex-wrap gap-2">
-                        {role.permissions.map((permission: string) => (
-                          <Badge key={permission} variant="secondary" className="text-xs">
-                            {permission}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )) : (
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="flex flex-wrap gap-2">
+                          {role.permissions.map((permission: string) => (
+                            <Badge key={permission} variant="secondary" className="text-xs">
+                              {permission}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
                   <div className="text-center py-8 text-slate-500">
                     No custom roles found. Default system roles are used.
                   </div>
                 )}
               </CardContent>
             </Card>
-            
+
             {/* Edit Role Modal */}
             <Dialog open={showEditRoleModal} onOpenChange={setShowEditRoleModal}>
-              <RoleModal 
-                title="Edit Role" 
+              <RoleModal
+                title="Edit Role"
                 tenantId={tenant?.id}
                 role={selectedRole}
                 onSuccess={() => {
@@ -632,59 +705,200 @@ export default function TenantDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {isAuthEnabled && (
+                  <div className="p-4 border rounded-lg bg-white">
+                    <p className="text-sm font-medium mb-3">Auth Settings</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <div>
+                        <Label className="text-xs">Default Provider</Label>
+                        <Select
+                          onValueChange={async val => {
+                            await fetch(`/api/tenant/${tenant?.id}/auth/settings`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ defaultProvider: val }),
+                            });
+                            toast({ title: "Saved", description: "Default provider updated" });
+                          }}
+                          defaultValue={
+                            (tenantInfo.moduleConfigs as any)?.auth?.defaultProvider || "local"
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose provider" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="azure-ad" disabled={!isAzureAdEnabled}>
+                              Azure AD
+                            </SelectItem>
+                            <SelectItem value="auth0" disabled={!isAuth0Enabled}>
+                              Auth0
+                            </SelectItem>
+                            <SelectItem value="local">Local (JWT)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Enforce SSO Only</Label>
+                        <div className="mt-2">
+                          <Select
+                            onValueChange={async val => {
+                              const enforce = val === "true";
+                              await fetch(`/api/tenant/${tenant?.id}/auth/settings`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ allowFallback: !enforce }),
+                              });
+                              toast({
+                                title: "Saved",
+                                description: enforce
+                                  ? "SSO only enforced"
+                                  : "Fallback login allowed",
+                              });
+                            }}
+                            defaultValue={
+                              (tenantInfo.moduleConfigs as any)?.auth?.allowFallback === false
+                                ? "true"
+                                : "false"
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="false">No (Allow fallback)</SelectItem>
+                              <SelectItem value="true">Yes (SSO only)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          variant="outline"
+                          onClick={async () => {
+                            const res = await fetch(`/api/auth/azure/${orgId}`);
+                            if (res.ok) {
+                              const data = await res.json();
+                              if (data?.authUrl) window.open(data.authUrl, "_blank");
+                            } else {
+                              toast({
+                                title: "Azure SSO not ready",
+                                description: "Check provider configuration",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          disabled={!isAzureAdEnabled}
+                        >
+                          Test Azure SSO
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {/* Display all available modules with their current status */}
                 {[
-                  { id: 'auth', name: 'Core Authentication', description: 'Basic JWT authentication and user management', required: true },
-                  { id: 'rbac', name: 'Role-Based Access Control', description: 'Advanced role and permission management', required: true },
-                  { id: 'azure-ad', name: 'Azure Active Directory', description: 'Single sign-on with Microsoft Azure AD', required: false },
-                  { id: 'auth0', name: 'Auth0', description: 'Universal authentication with Auth0', required: false },
-                  { id: 'saml', name: 'SAML SSO', description: 'SAML-based single sign-on integration', required: false }
-                ].map((module) => {
+                  {
+                    id: "auth",
+                    name: "Core Authentication",
+                    description: "Basic JWT authentication and user management",
+                    required: true,
+                  },
+                  {
+                    id: "rbac",
+                    name: "Role-Based Access Control",
+                    description: "Advanced role and permission management",
+                    required: true,
+                  },
+                  {
+                    id: "azure-ad",
+                    name: "Azure Active Directory",
+                    description: "Single sign-on with Microsoft Azure AD",
+                    required: false,
+                  },
+                  {
+                    id: "auth0",
+                    name: "Auth0",
+                    description: "Universal authentication with Auth0",
+                    required: false,
+                  },
+                  {
+                    id: "saml",
+                    name: "SAML SSO",
+                    description: "SAML-based single sign-on integration",
+                    required: false,
+                  },
+                ].map(module => {
                   const isEnabled = tenantInfo.enabledModules.includes(module.id);
                   return (
-                    <Card key={module.id} className={`transition-all duration-500 ${isEnabled ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
+                    <Card
+                      key={module.id}
+                      className={`transition-all duration-500 ${isEnabled ? "border-green-200 bg-green-50" : "border-slate-200 bg-slate-50"}`}
+                    >
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <div className={`w-3 h-3 rounded-full ${isEnabled ? 'bg-green-500' : 'bg-slate-400'} transition-colors duration-500`}></div>
+                            <div
+                              className={`w-3 h-3 rounded-full ${isEnabled ? "bg-green-500" : "bg-slate-400"} transition-colors duration-500`}
+                            ></div>
                             <div>
                               <CardTitle className="text-base">{module.name}</CardTitle>
                               <p className="text-sm text-slate-600 mt-1">{module.description}</p>
                               {module.required && (
-                                <Badge variant="outline" className="text-xs mt-1">Required</Badge>
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  Required
+                                </Badge>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Badge variant={isEnabled ? "default" : "secondary"} className="transition-colors duration-500">
+                            <Badge
+                              variant={isEnabled ? "default" : "secondary"}
+                              className="transition-colors duration-500"
+                            >
                               {isEnabled ? "Active" : "Disabled"}
                             </Badge>
                             {!isEnabled && !module.required && (
-                              <span className="text-xs text-slate-500">Contact admin to enable</span>
+                              <span className="text-xs text-slate-500">
+                                Contact admin to enable
+                              </span>
                             )}
                           </div>
                         </div>
                       </CardHeader>
-                      {isEnabled && (module.id === 'azure-ad' || module.id === 'auth0') && (tenantInfo.moduleConfigs as any)[module.id] && (
-                        <CardContent className="pt-0">
-                          <div className="space-y-2 bg-white p-3 rounded-lg border border-green-200">
-                            <p className="text-sm font-medium text-slate-700">Configuration:</p>
-                            {module.id === 'azure-ad' && (
-                              <>
-                                <p className="text-xs text-slate-600">Tenant ID: {tenantInfo.moduleConfigs[module.id].tenantId}</p>
-                                <p className="text-xs text-slate-600">Client ID: {tenantInfo.moduleConfigs[module.id].clientId}</p>
-                                <p className="text-xs text-slate-600">Domain: {tenantInfo.moduleConfigs[module.id].domain}</p>
-                              </>
-                            )}
-                            {module.id === 'auth0' && (
-                              <>
-                                <p className="text-xs text-slate-600">Domain: {(tenantInfo.moduleConfigs as any)[module.id]?.domain}</p>
-                                <p className="text-xs text-slate-600">Client ID: {(tenantInfo.moduleConfigs as any)[module.id]?.clientId}</p>
-                              </>
-                            )}
-                          </div>
-                        </CardContent>
-                      )}
+                      {isEnabled &&
+                        (module.id === "azure-ad" || module.id === "auth0") &&
+                        (tenantInfo.moduleConfigs as any)[module.id] && (
+                          <CardContent className="pt-0">
+                            <div className="space-y-2 bg-white p-3 rounded-lg border border-green-200">
+                              <p className="text-sm font-medium text-slate-700">Configuration:</p>
+                              {module.id === "azure-ad" && (
+                                <>
+                                  <p className="text-xs text-slate-600">
+                                    Tenant ID: {tenantInfo.moduleConfigs[module.id].tenantId}
+                                  </p>
+                                  <p className="text-xs text-slate-600">
+                                    Client ID: {tenantInfo.moduleConfigs[module.id].clientId}
+                                  </p>
+                                  <p className="text-xs text-slate-600">
+                                    Domain: {tenantInfo.moduleConfigs[module.id].domain}
+                                  </p>
+                                </>
+                              )}
+                              {module.id === "auth0" && (
+                                <>
+                                  <p className="text-xs text-slate-600">
+                                    Domain: {(tenantInfo.moduleConfigs as any)[module.id]?.domain}
+                                  </p>
+                                  <p className="text-xs text-slate-600">
+                                    Client ID:{" "}
+                                    {(tenantInfo.moduleConfigs as any)[module.id]?.clientId}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </CardContent>
+                        )}
                     </Card>
                   );
                 })}
@@ -718,12 +932,12 @@ export default function TenantDashboard() {
                   <CardContent className="pt-0">
                     <div className="flex items-center space-x-2">
                       <code className="flex-1 bg-slate-100 px-3 py-2 rounded text-sm font-mono">
-                        {showApiKeys ? tenantInfo.authApiKey : '•'.repeat(32)}
+                        {showApiKeys ? tenantInfo.authApiKey : "•".repeat(32)}
                       </code>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => copyToClipboard(tenantInfo.authApiKey, 'Auth API Key')}
+                        onClick={() => copyToClipboard(tenantInfo.authApiKey, "Auth API Key")}
                         data-testid="button-copy-auth-key"
                       >
                         <Copy className="h-4 w-4" />
@@ -745,12 +959,12 @@ export default function TenantDashboard() {
                   <CardContent className="pt-0">
                     <div className="flex items-center space-x-2">
                       <code className="flex-1 bg-slate-100 px-3 py-2 rounded text-sm font-mono">
-                        {showApiKeys ? tenantInfo.rbacApiKey : '•'.repeat(32)}
+                        {showApiKeys ? tenantInfo.rbacApiKey : "•".repeat(32)}
                       </code>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => copyToClipboard(tenantInfo.rbacApiKey, 'RBAC API Key')}
+                        onClick={() => copyToClipboard(tenantInfo.rbacApiKey, "RBAC API Key")}
                         data-testid="button-copy-rbac-key"
                       >
                         <Copy className="h-4 w-4" />
@@ -771,16 +985,16 @@ export default function TenantDashboard() {
 }
 
 // UserModal Component
-function UserModal({ 
-  title, 
-  tenantId, 
-  user, 
-  onSuccess 
-}: { 
-  title: string; 
-  tenantId?: string; 
-  user?: any; 
-  onSuccess: () => void; 
+function UserModal({
+  title,
+  tenantId,
+  user,
+  onSuccess,
+}: {
+  title: string;
+  tenantId?: string;
+  user?: any;
+  onSuccess: () => void;
 }) {
   const { toast } = useToast();
   const form = useForm<UserFormData>({
@@ -790,35 +1004,35 @@ function UserModal({
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       password: "",
-      status: user?.status || "active"
-    }
+      status: user?.status || "active",
+    },
   });
 
   const mutation = useMutation({
     mutationFn: async (data: UserFormData) => {
-      const url = user 
+      const url = user
         ? `/api/tenants/${tenantId}/users/${user.id}`
         : `/api/tenants/${tenantId}/users`;
-      
+
       const response = await fetch(url, {
-        method: user ? 'PATCH' : 'POST',
+        method: user ? "PATCH" : "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save user');
+        throw new Error(errorData.message || "Failed to save user");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: `User ${user ? 'updated' : 'created'} successfully`,
+        description: `User ${user ? "updated" : "created"} successfully`,
       });
       onSuccess();
     },
@@ -840,7 +1054,7 @@ function UserModal({
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>
-          {user ? 'Update user information' : 'Add a new user to your organization.'}
+          {user ? "Update user information" : "Add a new user to your organization."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -873,7 +1087,7 @@ function UserModal({
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="email"
@@ -887,13 +1101,13 @@ function UserModal({
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{user ? 'New Password (optional)' : 'Password'}</FormLabel>
+                <FormLabel>{user ? "New Password (optional)" : "Password"}</FormLabel>
                 <FormControl>
                   <Input type="password" placeholder="Enter password" {...field} />
                 </FormControl>
@@ -901,7 +1115,7 @@ function UserModal({
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="status"
@@ -923,10 +1137,10 @@ function UserModal({
               </FormItem>
             )}
           />
-          
+
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving...' : (user ? 'Update User' : 'Create User')}
+              {mutation.isPending ? "Saving..." : user ? "Update User" : "Create User"}
             </Button>
           </DialogFooter>
         </form>
@@ -936,56 +1150,54 @@ function UserModal({
 }
 
 // RoleModal Component
-function RoleModal({ 
-  title, 
-  tenantId, 
-  role, 
-  onSuccess 
-}: { 
-  title: string; 
-  tenantId?: string; 
-  role?: any; 
-  onSuccess: () => void; 
+function RoleModal({
+  title,
+  tenantId,
+  role,
+  onSuccess,
+}: {
+  title: string;
+  tenantId?: string;
+  role?: any;
+  onSuccess: () => void;
 }) {
   const { toast } = useToast();
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
-    role?.permissions || []
-  );
-  
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role?.permissions || []);
+
   const form = useForm<RoleFormData>({
     resolver: zodResolver(roleFormSchema),
     defaultValues: {
       name: role?.name || "",
       description: role?.description || "",
-      permissions: role?.permissions || []
-    }
+      permissions: role?.permissions || [],
+    },
   });
 
   const mutation = useMutation({
     mutationFn: async (data: RoleFormData) => {
-      const url = role 
+      const url = role
         ? `/api/tenants/${tenantId}/roles/${role.id}`
         : `/api/tenants/${tenantId}/roles`;
-      
+
       const response = await fetch(url, {
-        method: role ? 'PATCH' : 'POST',
+        method: role ? "PATCH" : "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ ...data, permissions: selectedPermissions }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save role');
+        throw new Error(errorData.message || "Failed to save role");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: `Role ${role ? 'updated' : 'created'} successfully`,
+        description: `Role ${role ? "updated" : "created"} successfully`,
       });
       onSuccess();
     },
@@ -1011,10 +1223,8 @@ function RoleModal({
   };
 
   const togglePermission = (permission: string) => {
-    setSelectedPermissions(prev => 
-      prev.includes(permission)
-        ? prev.filter(p => p !== permission)
-        : [...prev, permission]
+    setSelectedPermissions(prev =>
+      prev.includes(permission) ? prev.filter(p => p !== permission) : [...prev, permission]
     );
   };
 
@@ -1023,7 +1233,9 @@ function RoleModal({
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>
-          {role ? 'Update role information and permissions' : 'Create a new role with specific permissions.'}
+          {role
+            ? "Update role information and permissions"
+            : "Create a new role with specific permissions."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -1041,7 +1253,7 @@ function RoleModal({
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="description"
@@ -1055,12 +1267,12 @@ function RoleModal({
               </FormItem>
             )}
           />
-          
+
           <div>
             <Label className="text-base font-semibold">Permissions</Label>
             <p className="text-sm text-slate-600 mb-3">Select the permissions for this role:</p>
             <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-              {AVAILABLE_PERMISSIONS.map((permission) => (
+              {AVAILABLE_PERMISSIONS.map(permission => (
                 <div key={permission} className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -1079,10 +1291,10 @@ function RoleModal({
               ))}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving...' : (role ? 'Update Role' : 'Create Role')}
+              {mutation.isPending ? "Saving..." : role ? "Update Role" : "Create Role"}
             </Button>
           </DialogFooter>
         </form>

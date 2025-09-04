@@ -35,7 +35,8 @@ export class EmailService {
     this.config = {
       smtpHost: process.env.SMTP_HOST || smtpSettings.host,
       smtpPort: parseInt(process.env.SMTP_PORT || "") || smtpSettings.port,
-      smtpUsername: fromEmail, // Use FROM_EMAIL as username for authentication
+      // Prefer explicit SMTP_USERNAME, fall back to FROM_EMAIL
+      smtpUsername: process.env.SMTP_USERNAME || fromEmail,
       smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || "",
       fromEmail: fromEmail,
       fromName: process.env.FROM_NAME || "SaaS Framework Platform",
@@ -67,10 +68,7 @@ export class EmailService {
             pass: this.config.smtpPassword,
           }
         : undefined,
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: "SSLv3",
-      },
+      tls: { rejectUnauthorized: false },
     });
   }
 

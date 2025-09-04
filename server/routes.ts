@@ -755,6 +755,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant self-service: update limited auth settings (allowFallback, defaultProvider)
+  app.patch("/api/tenant/:id/auth/settings", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      // Ensure the tenant in token matches path id
+      if (req.tenantId !== id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const { allowFallback, defaultProvider } = req.body as {
+        allowFallback?: boolean;
+        defaultProvider?: string;
+      };
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const currentConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = { ...(currentConfigs.auth || {}) };
+      if (typeof allowFallback === "boolean") authConfig.allowFallback = allowFallback;
+      if (typeof defaultProvider === "string") authConfig.defaultProvider = defaultProvider;
+
+      const newConfigs = { ...currentConfigs, auth: authConfig };
+      const enabledModules = (tenant.enabledModules as string[]) || ["auth", "rbac"];
+      await storage.updateTenantModules(id, enabledModules, newConfigs);
+      res.json({ message: "Auth settings updated", auth: authConfig });
+    } catch (error) {
+      console.error("Error updating tenant auth settings:", error);
+      res.status(500).json({ message: "Failed to update auth settings" });
+    }
+  });
+
   // Update tenant modules (PLATFORM ADMIN ONLY)
   app.patch("/api/tenants/:id/modules", platformAdminMiddleware, async (req, res) => {
     try {
