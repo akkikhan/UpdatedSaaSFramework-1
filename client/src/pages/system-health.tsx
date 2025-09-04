@@ -1,12 +1,56 @@
-import { BarChart3, Gauge, Server, AlertTriangle } from "lucide-react";
+import { BarChart3, Gauge, Server, AlertTriangle, Mail } from "lucide-react";
 import StatsCard from "@/components/ui/stats-card";
 import { useHealthStatus } from "@/hooks/use-stats";
+import { Button } from "@/components/ui/button";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
 
 export default function SystemHealthPage() {
   const { data: healthStatus } = useHealthStatus();
+  const { toast } = useToast();
+  const [recipient, setRecipient] = useState("");
+
+  const sendTestEmail = useMutation({
+    mutationFn: (to?: string) => api.sendTestEmail(to),
+    onSuccess: res => {
+      toast({ title: "Test email sent", description: `Sent to ${res.to}` });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Failed to send test email",
+        description: err?.message || "SMTP error",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="space-y-6">
+      {/* Quick Actions */}
+      <div className="flex items-center gap-3">
+        <Input
+          value={recipient}
+          onChange={e => setRecipient(e.target.value)}
+          placeholder="Send to… (optional)"
+          className="max-w-sm"
+          type="email"
+        />
+        <Button
+          type="button"
+          onClick={() => sendTestEmail.mutate(recipient || undefined)}
+          disabled={sendTestEmail.isPending}
+          className="flex items-center gap-2"
+        >
+          <Mail className="w-4 h-4" />
+          {sendTestEmail.isPending ? "Sending…" : "Send Test Email"}
+        </Button>
+        <span className="text-sm text-slate-500">
+          Sends to custom recipient or ADMIN_EMAIL if empty
+        </span>
+      </div>
       {/* System Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
@@ -85,21 +129,31 @@ export default function SystemHealthPage() {
             </div>
           </div>
 
-          <div className={`flex items-center justify-between p-4 border rounded-lg ${
-            healthStatus?.services.email ? "border-slate-200" : "border-amber-200 bg-amber-50"
-          }`}>
+          <div
+            className={`flex items-center justify-between p-4 border rounded-lg ${
+              healthStatus?.services.email ? "border-slate-200" : "border-amber-200 bg-amber-50"
+            }`}
+          >
             <div className="flex items-center space-x-4">
-              <div className={healthStatus?.services.email ? "system-status-operational" : "system-status-warning"}></div>
+              <div
+                className={
+                  healthStatus?.services.email
+                    ? "system-status-operational"
+                    : "system-status-warning"
+                }
+              ></div>
               <div>
                 <h4 className="font-medium text-slate-800">Notification API</h4>
                 <p className="text-sm text-slate-500">Port 7015 - Email service</p>
               </div>
             </div>
             <div className="text-right">
-              <span className={`font-medium text-sm ${
-                healthStatus?.services.email ? "text-green-600" : "text-amber-600"
-              }`}>
-                {healthStatus?.services.email ? "Operational" : "High Load"}
+              <span
+                className={`font-medium text-sm ${
+                  healthStatus?.services.email ? "text-green-600" : "text-amber-600"
+                }`}
+              >
+                {healthStatus?.services.email ? "Operational" : "Check Config"}
               </span>
               <p className="text-xs text-slate-500">97.2% uptime</p>
             </div>
@@ -107,16 +161,24 @@ export default function SystemHealthPage() {
 
           <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
             <div className="flex items-center space-x-4">
-              <div className={healthStatus?.services.database ? "system-status-operational" : "system-status-error"}></div>
+              <div
+                className={
+                  healthStatus?.services.database
+                    ? "system-status-operational"
+                    : "system-status-error"
+                }
+              ></div>
               <div>
                 <h4 className="font-medium text-slate-800">PostgreSQL Database</h4>
                 <p className="text-sm text-slate-500">Primary data storage</p>
               </div>
             </div>
             <div className="text-right">
-              <span className={`font-medium text-sm ${
-                healthStatus?.services.database ? "text-green-600" : "text-red-600"
-              }`}>
+              <span
+                className={`font-medium text-sm ${
+                  healthStatus?.services.database ? "text-green-600" : "text-red-600"
+                }`}
+              >
                 {healthStatus?.services.database ? "Operational" : "Error"}
               </span>
               <p className="text-xs text-slate-500">99.9% uptime</p>

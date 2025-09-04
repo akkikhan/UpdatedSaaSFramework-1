@@ -217,8 +217,8 @@ export class SaaSLogging {
       metadata,
     };
 
-    // Critical logs bypass batching and send immediately
-    await this.sendLogs([entry]);
+    // Critical logs bypass batching and send immediately (v2 single-event ingest)
+    await this.sendEvent(entry);
 
     if (this.config.enableConsole) {
       console.error("CRITICAL:", message, metadata);
@@ -266,20 +266,6 @@ export class SaaSLogging {
       category: "audit",
       audit: event,
     });
-
-    // Also send to dedicated audit endpoint
-    try {
-      await fetch(`${this.config.baseUrl}/api/logging/audit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify(event),
-      });
-    } catch (error) {
-      console.error("Failed to send audit event:", error);
-    }
   }
 
   /**
@@ -312,7 +298,11 @@ export class SaaSLogging {
     if (this.batchQueue.length > 0) {
       const logsToSend = [...this.batchQueue];
       this.batchQueue = [];
-      await this.sendLogs(logsToSend);
+      // v2 API doesn't support batch endpoint; send sequentially
+      for (const entry of logsToSend) {
+        // Fire-and-forget but await to preserve order
+        await this.sendEvent(entry);
+      }
     }
   }
 
@@ -321,20 +311,69 @@ export class SaaSLogging {
    */
   async searchLogs(query: LogQuery): Promise<LogSearchResult> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/api/logging/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify(query),
-      });
+      const params = new URLSearchParams();
+      if (query.level)
+        params.set(
+          "level",
+          Array.isArray(query.level) ? query.level.join(",") : String(query.level)
+        );
+      if (query.category) params.set("category", query.category);
+      if (query.startDate) params.set("startDate", query.startDate.toISOString());
+      if (query.endDate) params.set("endDate", query.endDate.toISOString());
+      if (query.limit) params.set("limit", String(query.limit));
+      if (query.offset) params.set("offset", String(query.offset));
+
+      const response = await fetch(
+        `${this.config.baseUrl}/api/v2/logging/events?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            "X-API-Key": this.config.apiKey,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Search failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      const rows = (await response.json()) as any[];
+      const normalized: LogEntry[] = (rows || []).map(row => {
+        const ts = row.timestamp || row.time || new Date().toISOString();
+        const details = row.message || row.details || {};
+        const lvlRaw = row.level || details.level || "";
+        const lvlStr = typeof lvlRaw === "string" ? String(lvlRaw).split(":")[0] : "info";
+        const cat =
+          row.eventType ||
+          details.category ||
+          (typeof lvlRaw === "string" ? String(lvlRaw).split(":")[1] : "");
+        const toEnum = (s: string): LogLevel => {
+          const m: Record<string, LogLevel> = {
+            debug: LogLevel.DEBUG,
+            info: LogLevel.INFO,
+            warning: LogLevel.WARN,
+            warn: LogLevel.WARN,
+            error: LogLevel.ERROR,
+          } as any;
+          return m[s?.toLowerCase?.()] || LogLevel.INFO;
+        };
+        return {
+          id: row.id,
+          timestamp: new Date(ts),
+          level: toEnum(lvlStr),
+          category: cat || "application",
+          message: details.message || details || "",
+          metadata: details.metadata || {},
+          userId: row.userId,
+        } as LogEntry;
+      });
+      return {
+        logs: normalized,
+        total: normalized.length,
+        page: 1,
+        limit: query.limit || normalized.length || 0,
+        hasMore: false,
+      };
     } catch (error) {
       console.error("Log search failed:", error);
       throw error;
@@ -344,22 +383,25 @@ export class SaaSLogging {
   /**
    * Get logging statistics
    */
-  async getLogStats(timeRange: TimeRange): Promise<LogStats> {
+  async getLogStats(timeRangeOrPeriod?: TimeRange | string): Promise<LogStats> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/api/logging/stats`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify(timeRange),
-      });
+      // v2 uses GET /api/v2/logging/stats?period=24h
+      const period = typeof timeRangeOrPeriod === "string" ? timeRangeOrPeriod : "24h";
+      const response = await fetch(
+        `${this.config.baseUrl}/api/v2/logging/stats?period=${encodeURIComponent(period)}`,
+        {
+          method: "GET",
+          headers: {
+            "X-API-Key": this.config.apiKey,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Stats failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as LogStats;
     } catch (error) {
       console.error("Log stats failed:", error);
       throw error;
@@ -369,13 +411,13 @@ export class SaaSLogging {
   /**
    * Create a new alert rule
    */
-  async createAlert(alertRule: Omit<AlertRule, "id">): Promise<Alert> {
+  async createAlertRule(alertRule: Omit<AlertRule, "id">): Promise<any> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/api/logging/alerts`, {
+      const response = await fetch(`${this.config.baseUrl}/api/v2/logging/alert-rules`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.apiKey}`,
+          "X-API-Key": this.config.apiKey,
         },
         body: JSON.stringify(alertRule),
       });
@@ -392,24 +434,24 @@ export class SaaSLogging {
   }
 
   /**
-   * Get active alerts
+   * Get alert rules (v2)
    */
-  async getActiveAlerts(): Promise<Alert[]> {
+  async getAlertRules(): Promise<any[]> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/api/logging/alerts/active`, {
+      const response = await fetch(`${this.config.baseUrl}/api/v2/logging/alert-rules`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${this.config.apiKey}`,
+          "X-API-Key": this.config.apiKey,
         },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to get alerts: ${response.statusText}`);
+        throw new Error(`Failed to get alert rules: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as any[];
     } catch (error) {
-      console.error("Get alerts failed:", error);
+      console.error("Get alert rules failed:", error);
       return [];
     }
   }
@@ -443,28 +485,48 @@ export class SaaSLogging {
   }
 
   /**
-   * Send logs to the API
+   * Send a single log event via v2 API
    */
-  private async sendLogs(logs: LogEntry[]): Promise<void> {
+  private async sendEvent(entry: LogEntry): Promise<void> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/api/logging/batch`, {
+      // Normalize level names to server-supported set
+      const levelMap: Record<string, string> = {
+        [LogLevel.DEBUG]: "debug",
+        [LogLevel.INFO]: "info",
+        [LogLevel.WARN]: "warning",
+        [LogLevel.ERROR]: "error",
+        [LogLevel.CRITICAL]: "error",
+      } as any;
+      const level = levelMap[entry.level] || String(entry.level || "info");
+      const body = {
+        level,
+        message: entry.message,
+        category: entry.category || (entry.metadata?.category as string) || "application",
+        metadata: {
+          ...(entry.metadata || {}),
+          ...(entry.level === LogLevel.CRITICAL ? { critical: true } : {}),
+        },
+        userId: entry.userId,
+      } as any;
+
+      const response = await fetch(`${this.config.baseUrl}/api/v2/logging/events`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.apiKey}`,
+          "X-API-Key": this.config.apiKey,
         },
-        body: JSON.stringify({ logs }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
-        console.error("Failed to send logs:", response.statusText);
-        // Re-queue failed logs for retry
-        this.batchQueue.unshift(...logs);
+        console.error("Failed to send log event:", response.statusText);
+        // Re-queue failed entry for retry
+        this.batchQueue.unshift(entry);
       }
     } catch (error) {
-      console.error("Error sending logs:", error);
-      // Re-queue failed logs for retry
-      this.batchQueue.unshift(...logs);
+      console.error("Error sending log event:", error);
+      // Re-queue failed entry for retry
+      this.batchQueue.unshift(entry);
     }
   }
 

@@ -3,13 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +49,7 @@ import {
   CreditCard,
   GraduationCap,
   Landmark,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -105,31 +99,59 @@ const PERMISSION_TEMPLATES = {
       { key: "role.update", description: "Edit roles", category: "Role Management" },
       { key: "role.delete", description: "Delete roles", category: "Role Management" },
       { key: "audit.read", description: "View audit logs", category: "Audit & Compliance" },
-      { key: "system.config", description: "System configuration", category: "System Administration" },
-      { key: "integration.manage", description: "Manage integrations", category: "System Administration" },
+      {
+        key: "system.config",
+        description: "System configuration",
+        category: "System Administration",
+      },
+      {
+        key: "integration.manage",
+        description: "Manage integrations",
+        category: "System Administration",
+      },
       { key: "report.generate", description: "Generate reports", category: "Reporting" },
       { key: "security.manage", description: "Security settings", category: "Security" },
-    ]
+    ],
   },
   healthcare: {
     standard: [
-      { key: "patient.create", description: "Create patient records", category: "Patient Management" },
+      {
+        key: "patient.create",
+        description: "Create patient records",
+        category: "Patient Management",
+      },
       { key: "patient.read", description: "View patient records", category: "Patient Management" },
-      { key: "patient.update", description: "Update patient records", category: "Patient Management" },
+      {
+        key: "patient.update",
+        description: "Update patient records",
+        category: "Patient Management",
+      },
       { key: "appointment.create", description: "Schedule appointments", category: "Scheduling" },
       { key: "appointment.read", description: "View appointments", category: "Scheduling" },
-      { key: "medical.record.read", description: "Access medical records", category: "Medical Records" },
-    ]
+      {
+        key: "medical.record.read",
+        description: "Access medical records",
+        category: "Medical Records",
+      },
+    ],
   },
   finance: {
     standard: [
       { key: "account.create", description: "Create accounts", category: "Account Management" },
       { key: "account.read", description: "View accounts", category: "Account Management" },
-      { key: "transaction.create", description: "Create transactions", category: "Transaction Management" },
-      { key: "transaction.read", description: "View transactions", category: "Transaction Management" },
+      {
+        key: "transaction.create",
+        description: "Create transactions",
+        category: "Transaction Management",
+      },
+      {
+        key: "transaction.read",
+        description: "View transactions",
+        category: "Transaction Management",
+      },
       { key: "compliance.read", description: "Access compliance data", category: "Compliance" },
-    ]
-  }
+    ],
+  },
 };
 
 // Default roles by business type
@@ -137,29 +159,57 @@ const DEFAULT_ROLES = {
   general: {
     standard: [
       { name: "Admin", description: "Full system access", permissions: ["*"] },
-      { name: "Manager", description: "Management-level access", permissions: ["user.read", "role.read"] },
+      {
+        name: "Manager",
+        description: "Management-level access",
+        permissions: ["user.read", "role.read"],
+      },
       { name: "User", description: "Basic user access", permissions: ["user.read"] },
-    ]
+    ],
   },
   healthcare: {
     standard: [
-      { name: "Doctor", description: "Full patient access", permissions: ["patient.*", "medical.record.*", "appointment.*"] },
-      { name: "Nurse", description: "Patient care access", permissions: ["patient.read", "patient.update", "appointment.read"] },
-      { name: "Receptionist", description: "Appointment management", permissions: ["appointment.*", "patient.read"] },
-    ]
+      {
+        name: "Doctor",
+        description: "Full patient access",
+        permissions: ["patient.*", "medical.record.*", "appointment.*"],
+      },
+      {
+        name: "Nurse",
+        description: "Patient care access",
+        permissions: ["patient.read", "patient.update", "appointment.read"],
+      },
+      {
+        name: "Receptionist",
+        description: "Appointment management",
+        permissions: ["appointment.*", "patient.read"],
+      },
+    ],
   },
   finance: {
     standard: [
-      { name: "Financial Manager", description: "Full financial access", permissions: ["account.*", "transaction.*", "compliance.read"] },
-      { name: "Accountant", description: "Transaction management", permissions: ["account.read", "transaction.*"] },
-      { name: "Auditor", description: "Read-only access", permissions: ["account.read", "transaction.read", "compliance.read"] },
-    ]
-  }
+      {
+        name: "Financial Manager",
+        description: "Full financial access",
+        permissions: ["account.*", "transaction.*", "compliance.read"],
+      },
+      {
+        name: "Accountant",
+        description: "Transaction management",
+        permissions: ["account.read", "transaction.*"],
+      },
+      {
+        name: "Auditor",
+        description: "Read-only access",
+        permissions: ["account.read", "transaction.read", "compliance.read"],
+      },
+    ],
+  },
 };
 
 export default function RBACManagementPage() {
   const { tenantId } = useParams();
-  const [activeSection, setActiveSection] = useState('configuration');
+  const [activeSection, setActiveSection] = useState("configuration");
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
@@ -210,7 +260,7 @@ export default function RBACManagementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to create role');
+      if (!response.ok) throw new Error("Failed to create role");
       return response.json();
     },
     onSuccess: () => {
@@ -222,11 +272,31 @@ export default function RBACManagementPage() {
   });
 
   const businessTypeInfo = {
-    general: { icon: Building2, label: "General Business", description: "Standard business operations" },
-    healthcare: { icon: FileText, label: "Healthcare", description: "Healthcare providers and medical facilities" },
-    finance: { icon: CreditCard, label: "Finance", description: "Financial institutions and services" },
-    education: { icon: GraduationCap, label: "Education", description: "Schools and educational institutions" },
-    government: { icon: Landmark, label: "Government", description: "Government agencies and public sector" },
+    general: {
+      icon: Building2,
+      label: "General Business",
+      description: "Standard business operations",
+    },
+    healthcare: {
+      icon: FileText,
+      label: "Healthcare",
+      description: "Healthcare providers and medical facilities",
+    },
+    finance: {
+      icon: CreditCard,
+      label: "Finance",
+      description: "Financial institutions and services",
+    },
+    education: {
+      icon: GraduationCap,
+      label: "Education",
+      description: "Schools and educational institutions",
+    },
+    government: {
+      icon: Landmark,
+      label: "Government",
+      description: "Government agencies and public sector",
+    },
   };
 
   const renderConfiguration = () => (
@@ -248,34 +318,35 @@ export default function RBACManagementPage() {
               {
                 value: "standard",
                 label: "Standard",
-                description: "Basic set of permissions for general use cases. Includes core user management, role assignment, and essential business operations.",
+                description:
+                  "Basic set of permissions for general use cases. Includes core user management, role assignment, and essential business operations.",
                 permissions: "8-12 permissions",
                 recommended: true,
               },
               {
                 value: "enterprise",
                 label: "Enterprise",
-                description: "Advanced permissions with audit trails, compliance features, and system administration capabilities.",
+                description:
+                  "Advanced permissions with audit trails, compliance features, and system administration capabilities.",
                 permissions: "15+ permissions",
                 recommended: false,
               },
               {
                 value: "custom",
                 label: "Custom",
-                description: "Build your own permission set from scratch based on your specific requirements.",
+                description:
+                  "Build your own permission set from scratch based on your specific requirements.",
                 permissions: "Unlimited",
                 recommended: false,
               },
-            ].map((template) => (
+            ].map(template => (
               <Card
                 key={template.value}
                 className="relative cursor-pointer hover:shadow-md transition-shadow"
               >
                 <CardContent className="p-4">
                   {template.recommended && (
-                    <Badge className="absolute -top-2 -right-2 bg-blue-500">
-                      Recommended
-                    </Badge>
+                    <Badge className="absolute -top-2 -right-2 bg-blue-500">Recommended</Badge>
                   )}
                   <div className="flex items-center gap-2 mb-2">
                     <Shield className="h-5 w-5 text-blue-500" />
@@ -294,16 +365,14 @@ export default function RBACManagementPage() {
         <div>
           <h3 className="text-lg font-semibold mb-4">Business Type</h3>
           <p className="text-sm text-slate-600 mb-4">
-            Choose your business type to get industry-specific role templates and permission sets that match your operational needs.
+            Choose your business type to get industry-specific role templates and permission sets
+            that match your operational needs.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(businessTypeInfo).map(([type, info]) => {
               const Icon = info.icon;
               return (
-                <Card
-                  key={type}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                >
+                <Card key={type} className="cursor-pointer hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-2">
                       <Icon className="h-5 w-5 text-blue-500" />
@@ -323,10 +392,12 @@ export default function RBACManagementPage() {
             <div>
               <h4 className="font-semibold text-blue-900">Current Configuration</h4>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Permission Template:</strong> Standard - Provides essential user management and role-based permissions suitable for most applications.
+                <strong>Permission Template:</strong> Standard - Provides essential user management
+                and role-based permissions suitable for most applications.
               </p>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Business Type:</strong> General - Standard business operations with Admin, Manager, and User roles.
+                <strong>Business Type:</strong> General - Standard business operations with Admin,
+                Manager, and User roles.
               </p>
             </div>
           </div>
@@ -344,7 +415,9 @@ export default function RBACManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold">Roles Management</h2>
-          <p className="text-sm text-slate-600">Create and manage user roles with specific permissions</p>
+          <p className="text-sm text-slate-600">
+            Create and manage user roles with specific permissions
+          </p>
         </div>
         <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
           <DialogTrigger asChild>
@@ -389,7 +462,11 @@ export default function RBACManagementPage() {
                   )}
                 />
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsRoleDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button type="button">Create Role</Button>
@@ -453,8 +530,12 @@ export default function RBACManagementPage() {
       {/* Permission Categories */}
       <div className="space-y-4">
         {Object.entries({
-          "User Management": PERMISSION_TEMPLATES.general.standard.filter(p => p.category === "User Management"),
-          "Role Management": PERMISSION_TEMPLATES.general.standard.filter(p => p.category === "Role Management"),
+          "User Management": PERMISSION_TEMPLATES.general.standard.filter(
+            p => p.category === "User Management"
+          ),
+          "Role Management": PERMISSION_TEMPLATES.general.standard.filter(
+            p => p.category === "Role Management"
+          ),
         }).map(([category, perms]) => (
           <Card key={category}>
             <CardHeader className="pb-4">
@@ -466,7 +547,10 @@ export default function RBACManagementPage() {
             <CardContent>
               <div className="grid gap-3">
                 {perms.map((permission, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div>
                       <div className="font-medium text-sm">{permission.key}</div>
                       <div className="text-xs text-slate-600">{permission.description}</div>
@@ -475,7 +559,11 @@ export default function RBACManagementPage() {
                       <Button variant="outline" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -496,9 +584,7 @@ export default function RBACManagementPage() {
           <Users className="h-5 w-5" />
           User Role Assignments
         </CardTitle>
-        <CardDescription>
-          Assign roles to users and manage their permissions
-        </CardDescription>
+        <CardDescription>Assign roles to users and manage their permissions</CardDescription>
       </CardHeader>
       <CardContent className="p-8 text-center">
         <Users className="h-12 w-12 mx-auto mb-4 text-slate-400" />
@@ -520,39 +606,47 @@ export default function RBACManagementPage() {
             <Shield className="h-6 w-6 text-blue-500" />
             <span className="font-semibold text-slate-800">RBAC Manager</span>
           </div>
-          
+
           <nav className="space-y-2">
             <button
-              onClick={() => setActiveSection('configuration')}
+              onClick={() => setActiveSection("configuration")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'configuration' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "configuration"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Settings className="h-4 w-4" />
               Configuration
             </button>
             <button
-              onClick={() => setActiveSection('roles')}
+              onClick={() => setActiveSection("roles")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'roles' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "roles"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Users className="h-4 w-4" />
               Roles
             </button>
             <button
-              onClick={() => setActiveSection('permissions')}
+              onClick={() => setActiveSection("permissions")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'permissions' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "permissions"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Key className="h-4 w-4" />
               Permissions
             </button>
             <button
-              onClick={() => setActiveSection('assignments')}
+              onClick={() => setActiveSection("assignments")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'assignments' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "assignments"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Users className="h-4 w-4" />
@@ -570,20 +664,22 @@ export default function RBACManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-slate-800">RBAC Management</h1>
-                <p className="text-sm text-slate-600">Roles, permissions and access control for {(tenant as any)?.name || 'this tenant'}</p>
+                <p className="text-sm text-slate-600">
+                  Roles, permissions and access control for {(tenant as any)?.name || "this tenant"}
+                </p>
               </div>
-              <Link href={`/tenants/${tenantId}/portal`}>
-                <Button variant="outline">← Back to Portal</Button>
+              <Link href={`/tenants`}>
+                <Button variant="outline">← Back to Tenants</Button>
               </Link>
             </div>
           </div>
         </div>
 
         <div className="flex-1 p-6">
-          {activeSection === 'configuration' && renderConfiguration()}
-          {activeSection === 'roles' && renderRoles()}
-          {activeSection === 'permissions' && renderPermissions()}
-          {activeSection === 'assignments' && renderAssignments()}
+          {activeSection === "configuration" && renderConfiguration()}
+          {activeSection === "roles" && renderRoles()}
+          {activeSection === "permissions" && renderPermissions()}
+          {activeSection === "assignments" && renderAssignments()}
         </div>
       </div>
     </div>

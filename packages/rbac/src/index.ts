@@ -208,7 +208,7 @@ export class SaaSRBAC {
         };
       }
 
-      const decision: AccessDecision = await response.json();
+      const decision: AccessDecision = (await response.json()) as AccessDecision;
 
       // Cache positive results
       if (decision.allowed && this.config.cacheEnabled) {
@@ -281,7 +281,10 @@ export class SaaSRBAC {
         });
 
         if (response.ok) {
-          const batchResults: Record<string, AccessDecision> = await response.json();
+          const batchResults: Record<string, AccessDecision> = (await response.json()) as Record<
+            string,
+            AccessDecision
+          >;
           Object.assign(results, batchResults);
 
           // Cache results
@@ -340,7 +343,7 @@ export class SaaSRBAC {
         return [];
       }
 
-      return await response.json();
+      return (await response.json()) as Role[];
     } catch (error) {
       return [];
     }
@@ -362,7 +365,7 @@ export class SaaSRBAC {
         return [];
       }
 
-      return await response.json();
+      return (await response.json()) as Permission[];
     } catch (error) {
       return [];
     }
@@ -395,7 +398,7 @@ export class SaaSRBAC {
       throw new Error(error.message || "Role assignment failed");
     }
 
-    const userRole: UserRole = await response.json();
+    const userRole: UserRole = (await response.json()) as UserRole;
 
     // Clear permission cache for this user
     this.clearUserCache(userId);

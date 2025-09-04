@@ -3,8 +3,8 @@
   "compilerOptions": {
     "noImplicitAny": false,
     "strictNullChecks": false,
-    "strict": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["server/**/*"],
   "exclude": ["tests/**/*"]

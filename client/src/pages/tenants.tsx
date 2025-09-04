@@ -10,6 +10,7 @@ import {
   CheckCircle,
   ArrowLeft,
   Copy,
+  ExternalLink,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -66,6 +69,19 @@ export default function TenantsPage() {
   const { data: tenants, isLoading } = useTenants();
   const updateTenantStatus = useUpdateTenantStatus();
   const resendEmail = useResendOnboardingEmail();
+  const queryClient = useQueryClient();
+
+  // Pending module requests for inline indicator badges
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ["/api/admin/module-requests"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/module-requests");
+      return res.json();
+    },
+    refetchInterval: 5000,
+  }) as unknown as {
+    data: Array<{ id: string; tenantId: string; details?: { moduleId?: string; action?: string } }>;
+  };
 
   const form = useForm<EditFormData>({
     resolver: zodResolver(editFormSchema),
@@ -90,12 +106,13 @@ export default function TenantsPage() {
   };
 
   const filteredTenants =
-    tenants?.filter(
-      tenant =>
-        tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tenant.adminEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tenant.orgId.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || [];
+    tenants?.filter(tenant => {
+      const q = (searchQuery || "").toLowerCase();
+      const name = (tenant?.name || "").toLowerCase();
+      const email = (tenant?.adminEmail || "").toLowerCase();
+      const org = (tenant?.orgId || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || org.includes(q);
+    }) || [];
 
   const handleStatusChange = async (id: string, status: string) => {
     await updateTenantStatus.mutateAsync({ id, status });
@@ -103,6 +120,44 @@ export default function TenantsPage() {
 
   const handleResendEmail = async (id: string) => {
     await resendEmail.mutateAsync(id);
+  };
+
+  const handleEnableRBAC = async (tenant: Tenant) => {
+    try {
+      const current = Array.isArray(tenant.enabledModules) ? tenant.enabledModules : [];
+      const next = Array.from(new Set([...(current || []), "auth", "rbac"]));
+      await apiRequest("PATCH", `/api/tenants/${tenant.id}/modules`, {
+        enabledModules: next,
+        moduleConfigs: tenant.moduleConfigs || {},
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
+      toast({ title: "RBAC Enabled", description: `${tenant.name}: RBAC has been enabled.` });
+    } catch (e: any) {
+      toast({
+        title: "Failed to enable RBAC",
+        description: e?.message || "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisableRBAC = async (tenant: Tenant) => {
+    try {
+      const current = Array.isArray(tenant.enabledModules) ? tenant.enabledModules : [];
+      const next = current.filter(m => m !== "rbac");
+      await apiRequest("PATCH", `/api/tenants/${tenant.id}/modules`, {
+        enabledModules: next,
+        moduleConfigs: tenant.moduleConfigs || {},
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
+      toast({ title: "RBAC Disabled", description: `${tenant.name}: RBAC has been disabled.` });
+    } catch (e: any) {
+      toast({
+        title: "Failed to disable RBAC",
+        description: e?.message || "Please try again",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewTenant = (tenant: Tenant) => {
@@ -271,6 +326,61 @@ export default function TenantsPage() {
             </CardContent>
           </Card>
 
+          {/* Logging Settings (read-only) */}
+          {Array.isArray(selectedTenant.enabledModules) &&
+            selectedTenant.enabledModules.includes("logging") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Logging Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Levels</label>
+                    <p className="text-slate-900">
+                      {Array.isArray((selectedTenant.moduleConfigs as any)?.logging?.levels)
+                        ? ((selectedTenant.moduleConfigs as any).logging.levels as string[]).join(
+                            ", "
+                          )
+                        : "error, warning, info"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Destinations</label>
+                    <p className="text-slate-900">
+                      {Array.isArray((selectedTenant.moduleConfigs as any)?.logging?.destinations)
+                        ? (
+                            (selectedTenant.moduleConfigs as any).logging.destinations as string[]
+                          ).join(", ")
+                        : "—"}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-700">Retention (days)</label>
+                      <p className="text-slate-900">
+                        {typeof (selectedTenant.moduleConfigs as any)?.logging?.retentionDays ===
+                        "number"
+                          ? (selectedTenant.moduleConfigs as any).logging.retentionDays
+                          : 30}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-700">PII Redaction</label>
+                      <p className="text-slate-900">
+                        {(selectedTenant.moduleConfigs as any)?.logging?.redactionEnabled
+                          ? "Enabled"
+                          : "Disabled"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Edit Logging settings in Platform Module Management or in Tenant Portal →
+                    Modules.
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           {/* Actions */}
           <Card>
             <CardHeader>
@@ -349,12 +459,14 @@ export default function TenantsPage() {
                 />
 
                 <div>
-                  <FormLabel>Organization ID</FormLabel>
+                  <FormLabel htmlFor="org-id-input">Organization ID</FormLabel>
                   <Input
+                    id="org-id-input"
                     value={selectedTenant.orgId}
                     disabled
                     className="bg-slate-100"
                     data-testid="input-edit-org-id"
+                    aria-label="Organization ID"
                   />
                 </div>
 
@@ -444,6 +556,7 @@ export default function TenantsPage() {
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2"
                   data-testid="input-search-tenants"
+                  aria-label="Search tenants"
                 />
                 <Search className="absolute left-3 top-3 text-slate-400" size={16} />
               </div>
@@ -474,6 +587,7 @@ export default function TenantsPage() {
                   <TableHead className="px-6 py-3">Tenant</TableHead>
                   <TableHead className="px-6 py-3">Status</TableHead>
                   <TableHead className="px-6 py-3">Created</TableHead>
+                  <TableHead className="px-6 py-3">Modules</TableHead>
                   <TableHead className="px-6 py-3">API Keys</TableHead>
                   <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                 </TableRow>
@@ -490,7 +604,7 @@ export default function TenantsPage() {
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                             <span className="text-blue-600 font-semibold text-sm">
-                              {tenant.name.substring(0, 2).toUpperCase()}
+                              {(tenant.name || tenant.orgId || "--").substring(0, 2).toUpperCase()}
                             </span>
                           </div>
                           <div>
@@ -515,20 +629,139 @@ export default function TenantsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-sm text-slate-500">
-                        {format(new Date(tenant.createdAt), "MMM d, yyyy")}
+                        {tenant.createdAt ? format(new Date(tenant.createdAt), "MMM d, yyyy") : "—"}
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          {/* Pending requests */}
+                          {pendingRequests
+                            .filter((r: any) => r.tenantId === tenant.id)
+                            .map((r: any) => (
+                              <span
+                                key={r.id}
+                                className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
+                                title={`Pending: ${r.details?.action || ""} ${r.details?.moduleId || ""}`}
+                              >
+                                Pending: {r.details?.moduleId || "module"} {r.details?.action || ""}
+                              </span>
+                            ))}
+
+                          {(tenant.enabledModules || []).map(m => (
+                            <span
+                              key={m}
+                              className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded"
+                            >
+                              {m.toUpperCase()}
+                            </span>
+                          ))}
+
+                          {/* RBAC quick actions */}
+                          {!(tenant.enabledModules || []).includes("rbac") ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleEnableRBAC(tenant)}
+                              title="Enable RBAC for this tenant"
+                            >
+                              Enable RBAC
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDisableRBAC(tenant)}
+                              title="Disable RBAC for this tenant"
+                            >
+                              Disable RBAC
+                            </Button>
+                          )}
+
+                          {/* Azure AD configuration hint when RBAC present but no SSO */}
+                          {(() => {
+                            const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
+                            const hasSSO = Array.isArray(providers)
+                              ? providers.some((p: any) =>
+                                  ["azure-ad", "auth0", "saml"].includes(p?.type)
+                                )
+                              : false;
+                            const hasRBAC = (tenant.enabledModules || []).includes("rbac");
+                            if (hasRBAC && !hasSSO) {
+                              return (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setLocation(`/modules?tenantId=${tenant.id}`)}
+                                  title="Configure Azure AD for this tenant"
+                                  data-testid={`button-configure-azure-${tenant.orgId}`}
+                                >
+                                  Configure Azure AD
+                                </Button>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="text-xs text-slate-500">
-                            Auth: {tenant.authApiKey.substring(0, 12)}...
+                            Auth:{" "}
+                            {tenant.authApiKey
+                              ? `${tenant.authApiKey.substring(0, 12)}...`
+                              : "not generated"}
                           </div>
                           <div className="text-xs text-slate-500">
-                            RBAC: {tenant.rbacApiKey.substring(0, 12)}...
+                            RBAC:{" "}
+                            {tenant.rbacApiKey
+                              ? `${tenant.rbacApiKey.substring(0, 12)}...`
+                              : "not generated"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Logging:{" "}
+                            {(tenant as any).loggingApiKey
+                              ? `${(tenant as any).loggingApiKey.substring(0, 12)}...`
+                              : "not generated"}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end space-x-2">
+                          {(() => {
+                            const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
+                            const hasSSO = Array.isArray(providers)
+                              ? providers.some((p: any) =>
+                                  ["azure-ad", "auth0", "saml"].includes(p?.type)
+                                )
+                              : false;
+                            const hasRBAC = (tenant.enabledModules || []).includes("rbac");
+                            const hasPending = (pendingRequests as any[]).some(
+                              (r: any) => r.tenantId === tenant.id
+                            );
+                            const needsAttention = hasPending || (hasRBAC && !hasSSO);
+                            return (
+                              <Button
+                                variant={needsAttention ? "secondary" : "ghost"}
+                                size="sm"
+                                onClick={() => setLocation(`/tenants/${tenant.id}/attention`)}
+                                title="Manage tenant modules"
+                                data-testid={`button-manage-${tenant.orgId}`}
+                              >
+                                {needsAttention ? "Needs Attention" : "Manage"}
+                              </Button>
+                            );
+                          })()}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-slate-400 hover:text-slate-600"
+                            title="Open Tenant Portal"
+                            onClick={() =>
+                              tenant.orgId && window.open(`/tenant/${tenant.orgId}/login`, "_blank")
+                            }
+                            data-testid={`button-portal-${tenant.orgId}`}
+                          >
+                            <ExternalLink size={16} />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

@@ -12,7 +12,7 @@ export interface Tenant {
   orgId: string;
   name: string;
   adminEmail: string;
-  status: 'pending' | 'active' | 'suspended';
+  status: "pending" | "active" | "suspended";
   authApiKey: string;
   rbacApiKey: string;
   enabledModules: string[];
@@ -33,31 +33,45 @@ export interface CreateTenantData {
 export const api = {
   // Tenant operations
   async getTenants(): Promise<Tenant[]> {
-    const response = await apiRequest('GET', '/api/tenants');
+    const response = await apiRequest("GET", "/api/tenants");
     return response.json();
   },
 
   async createTenant(data: CreateTenantData): Promise<Tenant> {
-    const response = await apiRequest('POST', '/api/tenants', data);
+    const response = await apiRequest("POST", "/api/tenants", data);
     return response.json();
   },
 
   async updateTenantStatus(id: string, status: string): Promise<void> {
-    await apiRequest('PATCH', `/api/tenants/${id}/status`, { status });
+    await apiRequest("PATCH", `/api/tenants/${id}/status`, { status });
   },
 
   async resendOnboardingEmail(id: string): Promise<void> {
-    await apiRequest('POST', `/api/tenants/${id}/resend-email`);
+    await apiRequest("POST", `/api/tenants/${id}/resend-email`);
+  },
+
+  async updateTenantModules(
+    id: string,
+    payload: { enabledModules?: string[]; moduleConfigs?: Record<string, any> }
+  ): Promise<void> {
+    await apiRequest("PATCH", `/api/tenants/${id}/modules`, payload);
+  },
+
+  async configureTenantAzureAD(
+    id: string,
+    payload: { tenantId: string; clientId: string; clientSecret: string; callbackUrl?: string }
+  ): Promise<void> {
+    await apiRequest("POST", `/api/tenants/${id}/azure-ad/config`, payload);
   },
 
   // Statistics
   async getStats(): Promise<TenantStats> {
-    const response = await apiRequest('GET', '/api/stats');
+    const response = await apiRequest("GET", "/api/stats");
     return response.json();
   },
 
   async getRecentTenants(limit: number = 5): Promise<Tenant[]> {
-    const response = await apiRequest('GET', `/api/tenants/recent?limit=${limit}`);
+    const response = await apiRequest("GET", `/api/tenants/recent?limit=${limit}`);
     return response.json();
   },
 
@@ -70,7 +84,12 @@ export const api = {
     };
     timestamp: string;
   }> {
-    const response = await apiRequest('GET', '/api/health');
+    const response = await apiRequest("GET", "/api/health");
     return response.json();
-  }
+  },
+
+  async sendTestEmail(to?: string): Promise<{ success: boolean; to: string }> {
+    const response = await apiRequest("POST", "/api/email/test", to ? { to } : {});
+    return response.json();
+  },
 };

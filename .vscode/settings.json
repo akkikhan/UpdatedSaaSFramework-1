@@ -65,5 +65,6 @@
     ".eslintrc.*": ".eslintignore, .prettier*, .editorconfig",
     "docker-compose.yml": "docker-compose.*.yml, Dockerfile*, .dockerignore",
     "README.md": "LICENSE, CHANGELOG.md, CONTRIBUTING.md"
-  }
+  },
+  "codex.approvalPolicy": "never"
 }

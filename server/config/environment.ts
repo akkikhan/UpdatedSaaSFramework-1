@@ -63,6 +63,8 @@ export function validateEnvironment(): EnvironmentConfig {
 
   for (const key of required) {
     const value = process.env[key]?.toLowerCase();
+    // In development, relax checks for DATABASE_URL to allow local/dev passwords
+    if (process.env.NODE_ENV === "development" && key === "DATABASE_URL") continue;
     if (value && insecure.some(bad => value.includes(bad))) {
       errors.push(`Insecure value detected in ${key}`);
     }

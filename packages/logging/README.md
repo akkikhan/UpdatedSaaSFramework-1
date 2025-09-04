@@ -26,22 +26,20 @@ npm install @saas-framework/logging
 import { SaaSLogging } from "@saas-framework/logging";
 
 const logger = new SaaSLogging({
-  apiKey: "your-api-key",
-  baseUrl: "https://api.yoursaas.com",
+  // Use your tenant's Logging API key
+  apiKey: "logging_...",
+  // Your platform API base URL
+  baseUrl: "http://localhost:5000",
   tenantId: "tenant-123",
   batchSize: 100,
   flushInterval: 5000,
 });
 
-// Simple logging
-await logger.log({
-  level: "info",
-  message: "User logged in successfully",
+// Simple logging (v2 routes, X-API-Key)
+await logger.info("User logged in successfully", {
   userId: "user-123",
-  metadata: {
-    ipAddress: "192.168.1.1",
-    userAgent: "Chrome/91.0",
-  },
+  ipAddress: "192.168.1.1",
+  userAgent: "Chrome/91.0",
 });
 ```
 
@@ -49,13 +47,12 @@ await logger.log({
 
 ```typescript
 const config = {
-  apiKey: string;           // API key for authentication
+  apiKey: string;           // Logging API key (sent as X-API-Key)
   baseUrl: string;          // Base URL for the SaaS API
   tenantId: string;         // Tenant identifier
   batchSize?: number;       // Batch size for bulk operations (default: 100)
   flushInterval?: number;   // Auto-flush interval in ms (default: 5000)
-  enableCompression?: boolean; // Enable log compression (default: true)
-  retryAttempts?: number;   // Retry attempts for failed requests (default: 3)
+  enableConsole?: boolean;  // Echo logs to console (default: false)
 };
 ```
 
@@ -75,18 +72,14 @@ await logger.critical("Critical system issue", { service: "payment" });
 ### Structured Logging
 
 ```typescript
-await logger.log({
-  level: "info",
-  message: "Payment processed successfully",
+await logger.info("Payment processed successfully", {
   category: "payment",
   userId: "user-123",
   transactionId: "txn-456",
   amount: 99.99,
   currency: "USD",
-  metadata: {
-    paymentMethod: "credit_card",
-    provider: "stripe",
-  },
+  paymentMethod: "credit_card",
+  provider: "stripe",
 });
 ```
 
@@ -116,18 +109,9 @@ await logger.logBatch(logEntries);
 ### Recording Audit Events
 
 ```typescript
-await logger.audit({
-  eventType: "user_login",
+await logger.logSecurityEvent("admin_login", undefined, {
   userId: "user-123",
-  resource: "authentication",
-  action: "login",
-  result: "success",
   ipAddress: "192.168.1.1",
-  userAgent: "Chrome/91.0",
-  metadata: {
-    loginMethod: "email_password",
-    mfaUsed: true,
-  },
 });
 ```
 
@@ -151,38 +135,30 @@ await logger.auditDataAccess({
 ### Basic Search
 
 ```typescript
-const results = await logger.search({
-  query: "payment failed",
-  timeRange: {
-    start: new Date("2024-01-01"),
-    end: new Date("2024-01-31"),
-  },
-  levels: ["error", "critical"],
+const results = await logger.searchLogs({
+  category: "payment",
+  level: ["error", "critical"],
   limit: 100,
 });
-
 console.log(`Found ${results.total} log entries`);
-results.logs.forEach(log => {
-  console.log(`${log.timestamp}: ${log.message}`);
-});
 ```
 
 ### Advanced Filtering
 
 ```typescript
-const results = await logger.search({
-  filters: {
-    userId: "user-123",
-    category: "payment",
-    "metadata.provider": "stripe",
-  },
-  timeRange: {
-    start: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
-    end: new Date(),
-  },
-  sortBy: "timestamp",
-  sortOrder: "desc",
+const results = await logger.searchLogs({
+  category: "payment",
+  startDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
+  endDate: new Date(),
+  limit: 100,
 });
+```
+
+### Stats (v2)
+
+```typescript
+const stats = await logger.getLogStats("24h"); // or "7d", "30d"
+console.log(stats);
 ```
 
 ## Alert Management
@@ -239,62 +215,11 @@ await logger.resolveAlert({
 });
 ```
 
-## Performance Analytics
+## Roadmap
 
-### Request Performance Tracking
-
-```typescript
-await logger.logPerformance({
-  operation: "api_request",
-  path: "/api/users",
-  method: "GET",
-  duration: 150, // milliseconds
-  statusCode: 200,
-  userId: "user-123",
-  metadata: {
-    cacheHit: false,
-    dbQueryCount: 3,
-    dbQueryTime: 45,
-  },
-});
-```
-
-### Performance Metrics
-
-```typescript
-const metrics = await logger.getPerformanceMetrics({
-  timeRange: {
-    start: new Date(Date.now() - 60 * 60 * 1000), // Last hour
-    end: new Date(),
-  },
-  groupBy: "endpoint",
-  metrics: ["avg_duration", "request_count", "error_rate"],
-});
-
-console.log("Performance metrics:", metrics);
-```
-
-## Real-time Monitoring
-
-### WebSocket Integration
-
-```typescript
-// Enable real-time log streaming
-const logStream = logger.createLogStream({
-  filters: {
-    level: ["error", "critical"],
-    category: "payment",
-  },
-});
-
-logStream.on("log", logEntry => {
-  console.log("Real-time log:", logEntry);
-});
-
-logStream.on("alert", alert => {
-  console.log("Real-time alert:", alert);
-});
-```
+- Real-time streaming via WebSocket/SSE for error and alert events
+- Performance metrics aggregation endpoints and client helpers
+- Managed alert channels and templates
 
 ## Error Handling
 
