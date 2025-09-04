@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "p4MwBGBwgKIyK11gnfqgaoUiBTcJ0VlmBsaISiX2Dmg=",
+  "Source": "ClaimsDemo",
+  "BasePath": "_content/ClaimsDemo",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
