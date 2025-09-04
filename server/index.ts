@@ -57,10 +57,12 @@ app.use(
   })
 );
 
-// Rate Limiting - General API Protection
+// Rate Limiting - General API Protection (can be bypassed in development)
+const rateLimitBypass =
+  process.env.RATE_LIMIT_BYPASS === "true" || process.env.NODE_ENV === "development";
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: rateLimitBypass ? 100000 : 100, // Very high in dev/bypass
   message: {
     error: "Too many requests from this IP, please try again later.",
     retryAfter: "15 minutes",
@@ -69,10 +71,10 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Stricter Rate Limiting for Authentication Routes
+// Stricter Rate Limiting for Authentication Routes (relaxed in development)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 auth attempts per windowMs
+  max: rateLimitBypass ? 100000 : 5, // Relax in dev/bypass
   message: {
     error: "Too many authentication attempts, please try again later.",
     retryAfter: "15 minutes",
@@ -89,6 +91,7 @@ const speedLimiter = slowDown({
 });
 
 // Apply rate limiting to all API routes
+// Apply rate limiters (relaxed or effectively disabled if RATE_LIMIT_BYPASS=true)
 app.use("/api", generalLimiter);
 app.use("/api", speedLimiter);
 
@@ -96,7 +99,13 @@ app.use("/api", speedLimiter);
 app.use("/api/auth", authLimiter);
 app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
-app.use("/api/platform/auth", authLimiter); // Added Azure AD platform auth protection
+app.use("/api/platform/auth", authLimiter); // Azure AD platform auth protection
+
+if (rateLimitBypass) {
+  console.log(
+    "Rate limiting relaxed (development/bypass). Set RATE_LIMIT_BYPASS=false for strict limits."
+  );
+}
 
 app.use(express.json({ limit: "10mb" })); // Limit payload size
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));

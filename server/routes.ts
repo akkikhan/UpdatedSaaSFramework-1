@@ -1095,7 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Logged successful Azure AD login");
 
       // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/success?token=${appToken}&tenant=${tenant.orgId}`;
+      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-success?token=${appToken}&tenant=${tenant.orgId}`;
 
       console.log(`Redirecting to success page: ${redirectUrl}`);
 
@@ -1127,7 +1127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/error?error=${encodeURIComponent("Authentication failed")}`;
+      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent("Authentication failed")}`;
       res.redirect(errorUrl);
     }
   });

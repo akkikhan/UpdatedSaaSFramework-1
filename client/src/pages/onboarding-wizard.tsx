@@ -92,6 +92,25 @@ const STEPS = [
 // Use shared module definitions - ensures consistency with backend
 const MODULES = Object.values(MODULES_INFO);
 
+// Map string icon names from MODULES_INFO to actual Lucide components
+const ICONS: Record<string, React.ComponentType<any>> = {
+  Lock,
+  Shield,
+  FileText,
+  Bell,
+  Bot,
+  Users,
+  Activity,
+  Globe,
+  Zap,
+  Key,
+  Cloud,
+  Database,
+  Building2,
+  Settings,
+  CheckCircle,
+};
+
 export default function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [, setLocation] = useLocation();
@@ -451,7 +470,10 @@ export default function OnboardingWizard() {
                           <FormItem>
                             <div className="space-y-4">
                               {MODULES.map(module => {
-                                const Icon = module.icon;
+                                const Icon =
+                                  typeof module.icon === "string"
+                                    ? ICONS[module.icon] || Settings
+                                    : (module.icon as any);
                                 const isSelected = field.value?.includes(module.id) || false;
 
                                 const handleToggle = () => {
@@ -1029,16 +1051,6 @@ export default function OnboardingWizard() {
               </Button>
             ) : (
               <div className="flex items-center gap-3">
-                {/* Extra affordance to go back to Modules and tweak selections ("Back & Mix") */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentStep(1)}
-                  className="flex items-center gap-2"
-                >
-                  Back & Mix
-                </Button>
-
                 <Button
                   type="submit"
                   disabled={createTenant.isPending}

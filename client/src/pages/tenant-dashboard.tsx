@@ -454,7 +454,15 @@ export default function TenantDashboard() {
                   <div>
                     <p className="font-medium">3. Integrate Authentication</p>
                     <p className="text-sm text-slate-600 mt-1">
-                      Start with user login and JWT token validation
+                      Start with Azure AD SSO (or local JWT fallback) using our SDK.
+                      <a
+                        href="https://github.com/akkikhan/UpdatedSaaSFramework-1/tree/tenant-portal-enhancement/packages/auth-client#readme"
+                        className="text-blue-600 font-medium ml-2"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Auth SDK Guide →
+                      </a>
                     </p>
                   </div>
                 </div>

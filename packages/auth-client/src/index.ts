@@ -1,4 +1,4 @@
-let tokenKey = "tenantToken";
+let tokenKey = "tenant_token";
 
 export function setTokenStorageKey(key: string) {
   tokenKey = key;

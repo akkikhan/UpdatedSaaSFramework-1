@@ -33,6 +33,9 @@ function Router() {
       {/* Authentication Result Pages */}
       <Route path="/auth-success" component={AuthSuccessPage} />
       <Route path="/auth-error" component={AuthErrorPage} />
+      {/* Backward-compatible aliases used by server redirects */}
+      <Route path="/auth/success" component={AuthSuccessPage} />
+      <Route path="/auth/error" component={AuthErrorPage} />
 
       {/* Admin Login Page - MUST come before protected routes */}
       <Route path="/admin/login" component={PlatformAdminLogin} />
