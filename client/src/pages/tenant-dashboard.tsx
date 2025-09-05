@@ -107,6 +107,8 @@ export default function TenantDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showApiKeys, setShowApiKeys] = useState(false);
+  const [manageRolesUser, setManageRolesUser] = useState<any | null>(null);
+  const [showQuickstart, setShowQuickstart] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
@@ -478,6 +480,24 @@ export default function TenantDashboard() {
   const hasAzureAdProvider = providerTypes.has("azure-ad");
   const hasAuth0Provider = providerTypes.has("auth0");
   const hasSamlProvider = providerTypes.has("saml");
+  const roleDerivedPermissions: string[] = Array.from(
+    new Set(
+      ((tenantRoles as any[]) || []).flatMap((r: any) =>
+        Array.isArray(r?.permissions) ? r.permissions : []
+      )
+    )
+  );
+  const customPermissions: string[] = Array.isArray((rbacSettings as any)?.customPermissions)
+    ? ((rbacSettings as any).customPermissions as string[])
+    : [];
+  const availablePermissions: string[] = Array.from(
+    new Set([
+      ...(AVAILABLE_PERMISSIONS as string[]),
+      ...roleDerivedPermissions,
+      ...customPermissions,
+    ])
+  );
+  availablePermissions.sort();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -580,6 +600,12 @@ export default function TenantDashboard() {
                   <p className="text-xs text-slate-600">{tenantInfo.enabledModules.join(", ")}</p>
                 </CardContent>
               </Card>
+            </div>
+
+            <div className="flex justify-end mb-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowQuickstart(true)}>
+                Open Quick Start
+              </Button>
             </div>
 
             <Card>
@@ -754,6 +780,41 @@ export default function TenantDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            <Dialog open={showQuickstart} onOpenChange={setShowQuickstart}>
+              <DialogContent className="sm:max-w-[720px]">
+                <DialogHeader>
+                  <DialogTitle>Quick Start</DialogTitle>
+                  <DialogDescription>Auth, RBAC and Logging — essential snippets</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div className="p-4 rounded border bg-slate-50">
+                    <p className="font-medium mb-1">Authentication</p>
+                    <p className="mb-1">Install SDK</p>
+                    <code>npm i @saas-framework/auth-client</code>
+                    <p className="mt-2">
+                      Start SSO: <code>startAzure(orgId)</code> or use{" "}
+                      <code>loginWithPassword</code>, then <code>handleSuccessFromUrl()</code>.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded border bg-slate-50">
+                    <p className="font-medium mb-1">RBAC</p>
+                    <p className="mb-1">Check permission</p>
+                    <code>POST /api/v2/rbac/check-permission {"{ userId, resource, action }"}</code>
+                    <p className="mt-2">Create roles here and assign in Users → Manage Roles.</p>
+                  </div>
+                  <div className="p-4 rounded border bg-slate-50">
+                    <p className="font-medium mb-1">Logging</p>
+                    <p className="mb-1">Send event (requires Logging API key)</p>
+                    <code>POST /api/v2/logging/events</code>
+                    <p className="mt-2">
+                      Headers: <code>x-api-key</code>. Body:{" "}
+                      <code>level, category, message, metadata</code>.
+                    </p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="users">
@@ -1126,6 +1187,7 @@ export default function TenantDashboard() {
                     <RoleModal
                       title="Add New Role"
                       tenantId={tenant?.id}
+                      availablePermissions={availablePermissions}
                       onSuccess={() => {
                         setShowAddRoleModal(false);
                         queryClient.invalidateQueries({
@@ -1293,8 +1355,8 @@ export default function TenantDashboard() {
                 title="Edit Role"
                 tenantId={tenant?.id}
                 role={selectedRole}
+                availablePermissions={availablePermissions}
                 onSuccess={() => {
-                  setShowEditRoleModal(false);
                   setSelectedRole(null);
                   queryClient.invalidateQueries({ queryKey: ["/api/v2/rbac/roles", tenant?.id] });
                 }}
@@ -2019,11 +2081,13 @@ function RoleModal({
   title,
   tenantId,
   role,
+  availablePermissions,
   onSuccess,
 }: {
   title: string;
   tenantId?: string;
   role?: any;
+  availablePermissions?: string[];
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
@@ -2139,7 +2203,10 @@ function RoleModal({
             <Label className="text-base font-semibold">Permissions</Label>
             <p className="text-sm text-slate-600 mb-3">Select the permissions for this role:</p>
             <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-              {AVAILABLE_PERMISSIONS.map(permission => (
+              {(availablePermissions && availablePermissions.length
+                ? availablePermissions
+                : AVAILABLE_PERMISSIONS
+              ).map(permission => (
                 <div key={permission} className="flex items-center space-x-2">
                   <input
                     type="checkbox"
