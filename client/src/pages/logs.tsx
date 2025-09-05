@@ -5,8 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Filter, Download, Clock, Mail, Settings, User } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RefreshCw, Filter, Download, Clock, Mail, Settings, User, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 interface SystemLog {
@@ -40,14 +46,49 @@ export default function LogsPage() {
     tenantId: "",
     action: "",
     limit: 50,
-    offset: 0
+    offset: 0,
   });
 
   const [emailFilters, setEmailFilters] = useState({
     tenantId: "",
     status: "",
     limit: 50,
-    offset: 0
+    offset: 0,
+  });
+
+  // Tenant Event Logs
+  const [tenantEventFilters, setTenantEventFilters] = useState({
+    tenantId: "",
+    level: "all",
+    category: "",
+    limit: 50,
+    offset: 0,
+  });
+
+  const tenantsQuery = useQuery({
+    queryKey: ["/api/tenants"],
+    queryFn: async () => {
+      const res = await fetch(`/api/tenants`);
+      if (!res.ok) throw new Error("Failed to fetch tenants");
+      return res.json() as Promise<Array<{ id: string; name: string; orgId: string }>>;
+    },
+  });
+
+  const tenantEventsQuery = useQuery({
+    queryKey: ["/api/admin/logging/events", tenantEventFilters],
+    enabled: !!tenantEventFilters.tenantId,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("tenantId", tenantEventFilters.tenantId);
+      if (tenantEventFilters.level && tenantEventFilters.level !== "all")
+        params.set("level", tenantEventFilters.level);
+      if (tenantEventFilters.category) params.set("category", tenantEventFilters.category);
+      params.set("limit", String(tenantEventFilters.limit));
+      params.set("offset", String(tenantEventFilters.offset));
+      const res = await fetch(`/api/admin/logging/events?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch tenant logs");
+      return res.json() as Promise<Array<any>>;
+    },
   });
 
   // System logs query
@@ -59,11 +100,11 @@ export default function LogsPage() {
       if (systemFilters.action) params.append("action", systemFilters.action);
       params.append("limit", systemFilters.limit.toString());
       params.append("offset", systemFilters.offset.toString());
-      
+
       const response = await fetch(`/api/logs/system?${params}`);
       if (!response.ok) throw new Error("Failed to fetch system logs");
       return response.json() as Promise<SystemLog[]>;
-    }
+    },
   });
 
   // Email logs query
@@ -75,20 +116,20 @@ export default function LogsPage() {
       if (emailFilters.status) params.append("status", emailFilters.status);
       params.append("limit", emailFilters.limit.toString());
       params.append("offset", emailFilters.offset.toString());
-      
+
       const response = await fetch(`/api/logs/email?${params}`);
       if (!response.ok) throw new Error("Failed to fetch email logs");
       return response.json() as Promise<EmailLog[]>;
-    }
+    },
   });
 
   const getActionIcon = (action: string) => {
     switch (action) {
-      case 'modules_updated':
+      case "modules_updated":
         return <Settings className="h-4 w-4" />;
-      case 'tenant_created':
+      case "tenant_created":
         return <User className="h-4 w-4" />;
-      case 'tenant_status_updated':
+      case "tenant_status_updated":
         return <Settings className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
@@ -97,27 +138,27 @@ export default function LogsPage() {
 
   const getActionColor = (action: string) => {
     switch (action) {
-      case 'modules_updated':
-        return 'bg-blue-100 text-blue-800';
-      case 'tenant_created':
-        return 'bg-green-100 text-green-800';
-      case 'tenant_status_updated':
-        return 'bg-yellow-100 text-yellow-800';
+      case "modules_updated":
+        return "bg-blue-100 text-blue-800";
+      case "tenant_created":
+        return "bg-green-100 text-green-800";
+      case "tenant_status_updated":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'sent':
-        return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+      case "sent":
+        return "bg-green-100 text-green-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -129,7 +170,7 @@ export default function LogsPage() {
       </div>
 
       <Tabs defaultValue="system" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="system" data-testid="tab-system-logs">
             <Settings className="h-4 w-4 mr-2" />
             System Logs
@@ -137,6 +178,10 @@ export default function LogsPage() {
           <TabsTrigger value="email" data-testid="tab-email-logs">
             <Mail className="h-4 w-4 mr-2" />
             Email Logs
+          </TabsTrigger>
+          <TabsTrigger value="tenant-events" data-testid="tab-tenant-events">
+            <FileText className="h-4 w-4 mr-2" />
+            Tenant Events
           </TabsTrigger>
         </TabsList>
 
@@ -156,7 +201,9 @@ export default function LogsPage() {
                     disabled={systemLogsQuery.isLoading}
                     data-testid="button-refresh-system"
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${systemLogsQuery.isLoading ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                      className={`h-4 w-4 mr-2 ${systemLogsQuery.isLoading ? "animate-spin" : ""}`}
+                    />
                     Refresh
                   </Button>
                 </div>
@@ -169,11 +216,14 @@ export default function LogsPage() {
                 <Input
                   placeholder="Filter by tenant ID..."
                   value={systemFilters.tenantId}
-                  onChange={(e) => setSystemFilters(prev => ({ ...prev, tenantId: e.target.value }))}
+                  onChange={e => setSystemFilters(prev => ({ ...prev, tenantId: e.target.value }))}
                   className="max-w-xs"
                   data-testid="input-system-tenant-filter"
                 />
-                <Select value={systemFilters.action} onValueChange={(value) => setSystemFilters(prev => ({ ...prev, action: value }))}>
+                <Select
+                  value={systemFilters.action}
+                  onValueChange={value => setSystemFilters(prev => ({ ...prev, action: value }))}
+                >
                   <SelectTrigger className="max-w-xs" data-testid="select-system-action-filter">
                     <SelectValue placeholder="Filter by action..." />
                   </SelectTrigger>
@@ -193,8 +243,12 @@ export default function LogsPage() {
                 ) : systemLogsQuery.data?.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">No system logs found</div>
                 ) : (
-                  systemLogsQuery.data?.map((log) => (
-                    <Card key={log.id} className="border-l-4 border-l-blue-400" data-testid={`system-log-${log.id}`}>
+                  systemLogsQuery.data?.map(log => (
+                    <Card
+                      key={log.id}
+                      className="border-l-4 border-l-blue-400"
+                      data-testid={`system-log-${log.id}`}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3">
@@ -204,14 +258,14 @@ export default function LogsPage() {
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-xs">
-                                  {log.action.replace('_', ' ').toUpperCase()}
+                                  {log.action.replace("_", " ").toUpperCase()}
                                 </Badge>
                                 <Badge variant="secondary" className="text-xs">
                                   {log.entityType}
                                 </Badge>
                               </div>
                               <p className="text-sm text-slate-800">
-                                <span className="font-medium">{log.tenantName || 'System'}</span>
+                                <span className="font-medium">{log.tenantName || "System"}</span>
                                 {log.details && Object.keys(log.details).length > 0 && (
                                   <span className="text-slate-600 ml-2">
                                     {JSON.stringify(log.details, null, 0)}
@@ -220,10 +274,8 @@ export default function LogsPage() {
                               </p>
                               <div className="flex items-center gap-2 text-xs text-slate-500">
                                 <Clock className="h-3 w-3" />
-                                {format(new Date(log.timestamp), 'MMM d, yyyy h:mm a')}
-                                {log.ipAddress && (
-                                  <span className="ml-2">IP: {log.ipAddress}</span>
-                                )}
+                                {format(new Date(log.timestamp), "MMM d, yyyy h:mm a")}
+                                {log.ipAddress && <span className="ml-2">IP: {log.ipAddress}</span>}
                               </div>
                             </div>
                           </div>
@@ -253,7 +305,9 @@ export default function LogsPage() {
                     disabled={emailLogsQuery.isLoading}
                     data-testid="button-refresh-email"
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${emailLogsQuery.isLoading ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                      className={`h-4 w-4 mr-2 ${emailLogsQuery.isLoading ? "animate-spin" : ""}`}
+                    />
                     Refresh
                   </Button>
                 </div>
@@ -266,11 +320,14 @@ export default function LogsPage() {
                 <Input
                   placeholder="Filter by tenant ID..."
                   value={emailFilters.tenantId}
-                  onChange={(e) => setEmailFilters(prev => ({ ...prev, tenantId: e.target.value }))}
+                  onChange={e => setEmailFilters(prev => ({ ...prev, tenantId: e.target.value }))}
                   className="max-w-xs"
                   data-testid="input-email-tenant-filter"
                 />
-                <Select value={emailFilters.status} onValueChange={(value) => setEmailFilters(prev => ({ ...prev, status: value }))}>
+                <Select
+                  value={emailFilters.status}
+                  onValueChange={value => setEmailFilters(prev => ({ ...prev, status: value }))}
+                >
                   <SelectTrigger className="max-w-xs" data-testid="select-email-status-filter">
                     <SelectValue placeholder="Filter by status..." />
                   </SelectTrigger>
@@ -290,8 +347,12 @@ export default function LogsPage() {
                 ) : emailLogsQuery.data?.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">No email logs found</div>
                 ) : (
-                  emailLogsQuery.data?.map((log) => (
-                    <Card key={log.id} className="border-l-4 border-l-indigo-400" data-testid={`email-log-${log.id}`}>
+                  emailLogsQuery.data?.map(log => (
+                    <Card
+                      key={log.id}
+                      className="border-l-4 border-l-indigo-400"
+                      data-testid={`email-log-${log.id}`}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3">
@@ -316,7 +377,7 @@ export default function LogsPage() {
                               </p>
                               <div className="flex items-center gap-2 text-xs text-slate-500">
                                 <Clock className="h-3 w-3" />
-                                {format(new Date(log.sentAt), 'MMM d, yyyy h:mm a')}
+                                {format(new Date(log.sentAt), "MMM d, yyyy h:mm a")}
                               </div>
                               {log.errorMessage && (
                                 <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
@@ -330,6 +391,143 @@ export default function LogsPage() {
                     </Card>
                   ))
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tenant-events" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Tenant Event Logs
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => tenantEventsQuery.refetch()}
+                    disabled={tenantEventsQuery.isLoading}
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 mr-2 ${tenantEventsQuery.isLoading ? "animate-spin" : ""}`}
+                    />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg items-end">
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Tenant</label>
+                  <Select
+                    value={tenantEventFilters.tenantId}
+                    onValueChange={v => setTenantEventFilters(prev => ({ ...prev, tenantId: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select tenant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(tenantsQuery.data || []).map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name} ({t.orgId})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Level</label>
+                  <Select
+                    value={tenantEventFilters.level}
+                    onValueChange={v => setTenantEventFilters(prev => ({ ...prev, level: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="error">Error</SelectItem>
+                      <SelectItem value="warning">Warning</SelectItem>
+                      <SelectItem value="info">Info</SelectItem>
+                      <SelectItem value="debug">Debug</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Category</label>
+                  <Input
+                    placeholder="e.g., application"
+                    value={tenantEventFilters.category}
+                    onChange={e =>
+                      setTenantEventFilters(prev => ({ ...prev, category: e.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <Button onClick={() => tenantEventsQuery.refetch()} className="w-full">
+                    Apply
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-auto border rounded-md">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="text-left p-2">Time</th>
+                      <th className="text-left p-2">Level</th>
+                      <th className="text-left p-2">Category</th>
+                      <th className="text-left p-2">Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tenantEventsQuery.isLoading ? (
+                      <tr>
+                        <td colSpan={4} className="p-3 text-center text-slate-500">
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : (tenantEventsQuery.data || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-3 text-center text-slate-500">
+                          No events
+                        </td>
+                      </tr>
+                    ) : (
+                      (tenantEventsQuery.data || []).map((row: any) => (
+                        <tr key={row.id || row.timestamp} className="border-t">
+                          <td className="p-2 whitespace-nowrap">
+                            {new Date(row.timestamp || row.time || Date.now()).toLocaleString()}
+                          </td>
+                          <td className="p-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {(row.level && String(row.level).split(":")[0]) ||
+                                row.message?.level ||
+                                "info"}
+                            </Badge>
+                          </td>
+                          <td className="p-2">
+                            {row.eventType || row.message?.category || "application"}
+                          </td>
+                          <td className="p-2">
+                            {row.message?.message ? (
+                              row.message.message
+                            ) : typeof row.message === "string" ? (
+                              row.message
+                            ) : (
+                              <code className="text-xs bg-slate-50 border px-1 py-0.5 rounded">
+                                {JSON.stringify(row.message)}
+                              </code>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>

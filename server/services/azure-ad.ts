@@ -49,7 +49,6 @@ export class AzureADService {
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         authority: `https://login.microsoftonline.com/${config.tenantId}`,
-        knownAuthorities: [`https://login.microsoftonline.com/${config.tenantId}`],
       },
       system: {
         loggerOptions: {
@@ -94,7 +93,7 @@ export class AzureADService {
       // Generate PKCE parameters
       const { challenge, verifier } = await this.cryptoProvider.generatePkceCodes();
 
-      const authCodeUrlParameters = {
+      const authCodeUrlParameters: any = {
         scopes,
         redirectUri:
           this.config.redirectUri ||
@@ -105,8 +104,14 @@ export class AzureADService {
         state: tenantId
           ? JSON.stringify({ tenantId, codeVerifier: verifier })
           : JSON.stringify({ codeVerifier: verifier }),
-        prompt: "consent", // Force consent to ensure we get refresh token
       };
+
+      // Default to select_account for better UX; allow forcing consent via env
+      if (process.env.AZURE_FORCE_CONSENT === "true") {
+        authCodeUrlParameters.prompt = "consent";
+      } else {
+        authCodeUrlParameters.prompt = "select_account";
+      }
 
       const authUrl = await this.msalApp.getAuthCodeUrl(authCodeUrlParameters);
       return authUrl;
@@ -129,7 +134,8 @@ export class AzureADService {
       // Parse state to get code verifier
       let stateData;
       try {
-        stateData = JSON.parse(state);
+        const decodedState = decodeURIComponent(state);
+        stateData = JSON.parse(decodedState);
       } catch {
         throw new Error("Invalid state parameter");
       }
@@ -149,6 +155,10 @@ export class AzureADService {
         codeVerifier: stateData.codeVerifier,
       };
 
+      console.log(
+        "[PlatformAdmin][AzureAD] acquireTokenByCode with redirectUri:",
+        tokenRequest.redirectUri
+      );
       const response = await this.msalApp.acquireTokenByCode(tokenRequest);
 
       if (!response) {
@@ -472,6 +482,24 @@ export class AzureADService {
    */
   static validateConfig(config: AzureADConfig): boolean {
     return !!(config.tenantId && config.clientId && config.clientSecret);
+  }
+
+  /**
+   * Verify client credentials by acquiring an application token
+   */
+  async verifyClientCredentials(): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const result = await this.msalApp.acquireTokenByClientCredential({
+        scopes: ["https://graph.microsoft.com/.default"],
+      });
+      if (!result || !result.accessToken) {
+        return { ok: false, message: "No access token returned" };
+      }
+      return { ok: true };
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      return { ok: false, message: msg };
+    }
   }
 
   /**

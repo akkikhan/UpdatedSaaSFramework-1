@@ -1,6 +1,14 @@
 // Next.js Full-Stack Integration Example
 
-// pages/api/auth/login.js
+/*
+ * This file contains multiple example components and API routes for Next.js integration.
+ * Each section is commented and can be copied to appropriate files in your Next.js project.
+ */
+
+/* ==== API ROUTES ==== */
+
+// File: pages/api/auth/login.js
+/*
 import { SaaSAuth } from '@saas-framework/auth';
 
 const auth = new SaaSAuth({
@@ -34,8 +42,10 @@ export default async function handler(req, res) {
     });
   }
 }
+*/
 
-// pages/api/auth/logout.js
+// File: pages/api/auth/logout.js
+/*
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -49,8 +59,34 @@ export default async function handler(req, res) {
   
   res.json({ success: true });
 }
+*/
 
-// middleware.js (Next.js 12+ middleware)
+// File: pages/api/logging/event.js
+/*
+import { SaaSLogging } from '@saas-framework/logging';
+
+const logger = new SaaSLogging({
+  apiKey: process.env.SAAS_LOGGING_API_KEY, // logging_...
+  baseUrl: process.env.SAAS_API_BASE_URL || process.env.SAAS_AUTH_BASE_URL,
+});
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+  const { message = 'Hello from Next.js', category = 'demo' } = req.body || {};
+  try {
+    await logger.info(message, { category });
+    await logger.flush();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
+  }
+}
+*/
+
+/* ==== MIDDLEWARE ==== */
+
+// File: middleware.js (Next.js 12+ middleware)
+/*
 import { NextResponse } from 'next/server';
 import { SaaSAuth } from '@saas-framework/auth';
 
@@ -84,8 +120,12 @@ export async function middleware(request) {
 export const config = {
   matcher: '/dashboard/:path*'
 };
+*/
 
-// hooks/useAuth.js
+/* ==== HOOKS AND CONTEXT ==== */
+
+// File: hooks/useAuth.js
+/*
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
@@ -157,8 +197,12 @@ export const useAuth = () => {
   }
   return context;
 };
+*/
 
-// pages/login.js
+/* ==== PAGE COMPONENTS ==== */
+
+// File: pages/login.js
+/*
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -201,8 +245,10 @@ export default function Login() {
     </div>
   );
 }
+*/
 
-// pages/dashboard.js
+// File: pages/dashboard.js
+/*
 import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
@@ -216,3 +262,4 @@ export default function Dashboard() {
     </div>
   );
 }
+*/

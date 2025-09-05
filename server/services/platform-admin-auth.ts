@@ -25,7 +25,7 @@ export class PlatformAdminAuthService {
       }
 
       // Verify password
-      const isValidPassword = await bcrypt.compare(password, admin.passwordHash);
+      const isValidPassword = await bcrypt.compare(password, admin.passwordHash || "");
 
       if (!isValidPassword) {
         return null;

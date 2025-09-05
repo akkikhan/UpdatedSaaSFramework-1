@@ -180,7 +180,7 @@ export class SaaSAuth {
         throw new Error(error.message || "Login failed");
       }
 
-      const session: AuthSession = await response.json();
+      const session = (await response.json()) as AuthSession;
 
       // Store session locally
       this.activeSessions.set(session.sessionId, session);
@@ -237,7 +237,7 @@ export class SaaSAuth {
       throw new Error(error.message || "Azure AD login failed");
     }
 
-    const session: AuthSession = await response.json();
+    const session = (await response.json()) as AuthSession;
     this.activeSessions.set(session.sessionId, session);
 
     return session;
@@ -298,7 +298,7 @@ export class SaaSAuth {
       throw new Error(error.message || "Auth0 login failed");
     }
 
-    const session: AuthSession = await response.json();
+    const session = (await response.json()) as AuthSession;
     this.activeSessions.set(session.sessionId, session);
 
     return session;

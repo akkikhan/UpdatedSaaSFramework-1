@@ -1,0 +1,28 @@
+@use '@angular/material' as mat;
+
+// Brand palette (adjust as needed)
+$primary: mat.define-palette(mat.$indigo-palette, 500);
+$accent:  mat.define-palette(mat.$blue-palette, 500);
+$warn:    mat.define-palette(mat.$red-palette, 600);
+
+$theme: mat.define-light-theme((
+  color: (
+    primary: $primary,
+    accent: $accent,
+    warn: $warn,
+  ),
+  typography: mat.define-typography-config(),
+  density: 0,
+));
+
+// Core + all component themes
+@include mat.core();
+@include mat.all-component-themes($theme);
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, system-ui, -apple-system, Segoe UI, Arial, sans-serif; background:#f8fafc; }
+
+.muted { color: #64748b; }
+
+.snackbar-success { background: #16a34a !important; color: white; }
+.snackbar-error { background: #dc2626 !important; color: white; }

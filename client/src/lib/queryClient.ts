@@ -1,7 +1,25 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Helper function to handle logout and redirect
+function handleUnauthorized() {
+  // Clear all authentication data
+  localStorage.removeItem("platformAdminToken");
+  localStorage.removeItem("tenantToken");
+  localStorage.removeItem("currentTenant");
+
+  // Redirect to platform admin login page
+  window.location.href = "/admin/login";
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    // Check if it's a 401 Unauthorized error
+    if (res.status === 401) {
+      console.log("Session expired - redirecting to login");
+      handleUnauthorized();
+      return; // Stop execution to prevent error display
+    }
+
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
@@ -31,7 +49,7 @@ export async function apiRequest(
   return res;
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
+type UnauthorizedBehavior = "returnNull" | "throw" | "redirect";
 export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
@@ -47,8 +65,13 @@ export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryF
       headers,
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      } else if (unauthorizedBehavior === "redirect") {
+        handleUnauthorized();
+        return null;
+      }
     }
 
     await throwIfResNotOk(res);
@@ -58,7 +81,7 @@ export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryF
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: "redirect" }), // Changed from "throw" to "redirect"
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
@@ -66,6 +89,16 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
+      onError: (error: any) => {
+        // Handle 401 errors in mutations as well
+        if (error.message && error.message.startsWith("401:")) {
+          console.log("Mutation failed with 401 - redirecting to login");
+          handleUnauthorized();
+        }
+      },
     },
   },
 });
+
+// Export the handleUnauthorized function for manual use
+export { handleUnauthorized };

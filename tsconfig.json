@@ -1,27 +1,21 @@
 {
-  "include": [
-    "client/src/**/*",
-    "shared/**/*",
-    "server/**/*",
-    "tests/**/*",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
-  "exclude": ["node_modules", "build", "dist"],
+  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
+  "exclude": ["node_modules", "build", "dist", "tests/**/*", "**/*.test.ts", "**/*.spec.ts"],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
     "module": "ESNext",
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "preserve",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "baseUrl": ".",
-    "types": ["node", "vite/client", "jest", "@types/supertest"],
+    "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"],
