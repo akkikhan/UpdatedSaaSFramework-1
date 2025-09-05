@@ -1623,10 +1623,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error details:", error);
 
       // Log failed login attempt
+      let errorTenantOrgId: string | undefined;
       if (req.query.state) {
         try {
           const stateData = JSON.parse(decodeURIComponent(req.query.state as string));
           if (stateData.tenantId) {
+            // Try to resolve tenant orgId for better client UX
+            try {
+              const t = await storage.getTenant(stateData.tenantId);
+              errorTenantOrgId = t?.orgId;
+            } catch {}
             await storage.logSystemActivity({
               tenantId: stateData.tenantId,
               action: "azure_ad_login_failed",
@@ -1652,7 +1658,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const corrMatch = rawMsg.match(/Correlation ID:\s*([a-f0-9\-]+)/i);
       const corrId = corrMatch ? corrMatch[1] : "";
       const details = encodeURIComponent(rawMsg.slice(0, 800));
-      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent("Authentication failed")}&code=${encodeURIComponent(code)}&details=${details}&corr=${encodeURIComponent(corrId)}`;
+      const tenantParam = errorTenantOrgId ? `&tenant=${encodeURIComponent(errorTenantOrgId)}` : "";
+      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent(
+        "Authentication failed"
+      )}&code=${encodeURIComponent(code)}&details=${details}&corr=${encodeURIComponent(corrId)}${tenantParam}`;
       res.redirect(errorUrl);
     }
   });

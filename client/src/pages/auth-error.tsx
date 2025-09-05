@@ -9,12 +9,15 @@ export default function AuthErrorPage() {
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
   const [details, setDetails] = useState<string | null>(null);
+  const [tenantOrg, setTenantOrg] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     setError(urlParams.get("error"));
     setCode(urlParams.get("code"));
     setDetails(urlParams.get("details"));
+    // Server now includes tenant orgId as `tenant` when available
+    setTenantOrg(urlParams.get("tenant"));
   }, []);
 
   const getErrorMessage = (error: string | null) => {
@@ -82,7 +85,18 @@ export default function AuthErrorPage() {
                 <ArrowLeft className="h-4 w-4" />
                 Try Again
               </Button>
-              <Button variant="outline" onClick={() => setLocation("/admin")} className="flex-1">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (tenantOrg) {
+                    setLocation(`/tenant/${tenantOrg}/dashboard`);
+                  } else {
+                    // Fallback: go to tenant portal root if org unknown
+                    setLocation("/");
+                  }
+                }}
+                className="flex-1"
+              >
                 Back to Dashboard
               </Button>
             </div>

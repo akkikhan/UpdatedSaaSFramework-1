@@ -13,7 +13,8 @@
             "outputPath": "dist/claims-angular",
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "tsConfig": "tsconfig.app.json"
+            "tsConfig": "tsconfig.app.json",
+            "styles": ["src/styles.scss"]
           }
         },
         "serve": {
