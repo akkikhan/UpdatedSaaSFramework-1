@@ -587,6 +587,7 @@ export default function TenantsPage() {
                   <TableHead className="px-6 py-3">Tenant</TableHead>
                   <TableHead className="px-6 py-3">Status</TableHead>
                   <TableHead className="px-6 py-3">Created</TableHead>
+                  <TableHead className="px-6 py-3">Modules</TableHead>
                   <TableHead className="px-6 py-3">API Keys</TableHead>
                   <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                 </TableRow>
@@ -610,13 +611,6 @@ export default function TenantsPage() {
                             <p className="font-medium text-slate-800">{tenant.name}</p>
                             <p className="text-sm text-slate-500">{tenant.orgId}</p>
                             <p className="text-sm text-slate-500">{tenant.adminEmail}</p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {(tenant.enabledModules || []).map((m) => (
-                                <span key={m} className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                                  {m.toUpperCase()}
-                                </span>
-                              ))}
-                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -637,22 +631,97 @@ export default function TenantsPage() {
                       <TableCell className="px-6 py-4 text-sm text-slate-500">
                         {tenant.createdAt ? format(new Date(tenant.createdAt), "MMM d, yyyy") : "—"}
                       </TableCell>
-                      
                       <TableCell className="px-6 py-4">
-                        <div className="space-y-1 text-xs text-slate-600">
+                        <div className="flex flex-wrap gap-2">
+                          {/* Pending requests */}
+                          {pendingRequests
+                            .filter((r: any) => r.tenantId === tenant.id)
+                            .map((r: any) => (
+                              <span
+                                key={r.id}
+                                className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
+                                title={`Pending: ${r.details?.action || ""} ${r.details?.moduleId || ""}`}
+                              >
+                                Pending: {r.details?.moduleId || "module"} {r.details?.action || ""}
+                              </span>
+                            ))}
+
+                          {(tenant.enabledModules || []).map(m => (
+                            <span
+                              key={m}
+                              className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded"
+                            >
+                              {m.toUpperCase()}
+                            </span>
+                          ))}
+
+                          {/* RBAC quick actions */}
+                          {!(tenant.enabledModules || []).includes("rbac") ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleEnableRBAC(tenant)}
+                              title="Enable RBAC for this tenant"
+                            >
+                              Enable RBAC
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDisableRBAC(tenant)}
+                              title="Disable RBAC for this tenant"
+                            >
+                              Disable RBAC
+                            </Button>
+                          )}
+
+                          {/* Azure AD configuration hint when RBAC present but no SSO */}
                           {(() => {
-                            const mods = tenant.enabledModules || [];
-                            const hasAuth = mods.includes("auth") || mods.includes("authentication");
-                            const hasRBAC = mods.includes("rbac");
-                            const hasLogging = mods.includes("logging");
-                            return (
-                              <>
-                                <div>Auth: {tenant.authApiKey || hasAuth ? "generated" : "—"}</div>
-                                <div>RBAC: {tenant.rbacApiKey || hasRBAC ? "generated" : "—"}</div>
-                                <div>Logging: {(tenant as any).loggingApiKey || hasLogging ? "generated" : "—"}</div>
-                              </>
-                            );
+                            const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
+                            const hasSSO = Array.isArray(providers)
+                              ? providers.some((p: any) =>
+                                  ["azure-ad", "auth0", "saml"].includes(p?.type)
+                                )
+                              : false;
+                            const hasRBAC = (tenant.enabledModules || []).includes("rbac");
+                            if (hasRBAC && !hasSSO) {
+                              return (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setLocation(`/modules?tenantId=${tenant.id}`)}
+                                  title="Configure Azure AD for this tenant"
+                                  data-testid={`button-configure-azure-${tenant.orgId}`}
+                                >
+                                  Configure Azure AD
+                                </Button>
+                              );
+                            }
+                            return null;
                           })()}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="space-y-1">
+                          <div className="text-xs text-slate-500">
+                            Auth:{" "}
+                            {tenant.authApiKey
+                              ? `${tenant.authApiKey.substring(0, 12)}...`
+                              : "not generated"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            RBAC:{" "}
+                            {tenant.rbacApiKey
+                              ? `${tenant.rbacApiKey.substring(0, 12)}...`
+                              : "not generated"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Logging:{" "}
+                            {(tenant as any).loggingApiKey
+                              ? `${(tenant as any).loggingApiKey.substring(0, 12)}...`
+                              : "not generated"}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
@@ -740,11 +809,12 @@ export default function TenantsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              title="Manage Tenant"
-                              onClick={() => setLocation(`/tenants/${tenant.id}/attention`)}
-                              data-testid={`button-manage-pending-${tenant.orgId}`}
+                              className="text-red-400 hover:text-red-600"
+                              title="Delete"
+                              onClick={() => handleDeleteTenant(tenant)}
+                              data-testid={`button-delete-${tenant.orgId}`}
                             >
-                              Manage
+                              <Trash size={16} />
                             </Button>
                           ) : (
                             <Button

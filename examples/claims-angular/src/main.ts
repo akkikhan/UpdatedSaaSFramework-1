@@ -17,33 +17,27 @@ export const routes: Routes = [
     loadComponent: () => import("./pages/login.component").then(m => m.LoginComponent),
   },
   {
-    path: "",
-    component: AppComponent,
-    children: [
-      {
-        path: "dashboard",
-        canActivate: [canActivate],
-        loadComponent: () => import("./pages/dashboard.component").then(m => m.DashboardComponent),
-      },
-      {
-        path: "claims",
-        canActivate: [canActivate],
-        loadComponent: () => import("./pages/claims.component").then(m => m.ClaimsComponent),
-      },
-      {
-        path: "logs",
-        canActivate: [canActivate],
-        loadComponent: () => import("./pages/logs.component").then(m => m.LogsComponent),
-      },
-      {
-        path: "profile",
-        canActivate: [canActivate],
-        loadComponent: () => import("./pages/profile.component").then(m => m.ProfileComponent),
-      },
-      { path: "", pathMatch: "full", redirectTo: "dashboard" },
-    ],
+    path: "dashboard",
+    canActivate: [canActivate],
+    loadComponent: () => import("./pages/dashboard.component").then(m => m.DashboardComponent),
   },
-  { path: "**", redirectTo: "" },
+  {
+    path: "claims",
+    canActivate: [canActivate],
+    loadComponent: () => import("./pages/claims.component").then(m => m.ClaimsComponent),
+  },
+  {
+    path: "logs",
+    canActivate: [canActivate],
+    loadComponent: () => import("./pages/logs.component").then(m => m.LogsComponent),
+  },
+  {
+    path: "profile",
+    canActivate: [canActivate],
+    loadComponent: () => import("./pages/profile.component").then(m => m.ProfileComponent),
+  },
+  { path: "", pathMatch: "full", redirectTo: "dashboard" },
+  { path: "**", redirectTo: "dashboard" },
 ];
 
 bootstrapApplication(AppComponent, {

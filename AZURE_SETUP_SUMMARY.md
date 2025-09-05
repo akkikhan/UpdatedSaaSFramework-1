@@ -124,17 +124,6 @@ If you encounter issues:
   - Endpoint: `POST /api/tenant/:id/azure-ad/validate`
   - Sends form overrides from the provider card (no save required).
 
-### Verify vs Validate vs Try SSO (Important)
-
-- Verify Secret: Uses exactly what you typed in the UI for this one call (not stored). If you paste the correct Secret Value, it succeeds even if your saved config is wrong.
-- Validate: Only generates an authorization URL to confirm IDs/redirect format. It does not test the secret with Microsoft, so it can say “You can try SSO now” while a bad saved secret still exists.
-- Try SSO: Uses the saved provider configuration from the database. If the stored secret is wrong (e.g., Secret ID instead of Secret Value, an old/rotated secret, or never saved), the Azure callback fails with AADSTS7000215 (Invalid client secret provided).
-
-How to fix:
-- Use the Secret Value: In Azure Portal → App registrations → Certificates & secrets → create a new secret and copy the Secret Value (not the Secret ID). Paste that into the Tenant Portal’s Azure card.
-- Save it: Submit/approve the change so it’s persisted to the tenant’s provider config. Try SSO again.
-- Double‑check Redirect URI: Must exactly match `{ORIGIN}/api/auth/azure/callback`.
-
 ### Secret Decryption Guard
 
 If the platform `JWT_SECRET` changes after storing provider secrets, Azure

@@ -12,7 +12,7 @@ export default function SDKIntegrationPage() {
           management.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="border border-slate-200 rounded-lg p-4">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -65,25 +65,6 @@ export default function SDKIntegrationPage() {
               View Documentation <ExternalLink className="ml-1" size={14} />
             </Button>
           </div>
-
-          <div className="border border-slate-200 rounded-lg p-4">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                <span className="text-amber-700 font-semibold text-sm">LOG</span>
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-800">Logging API</h4>
-                <p className="text-sm text-slate-500">/api/v2/logging</p>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mb-4">Send structured logs and events to the platform.</p>
-            <div className="bg-slate-50 rounded-lg p-3 mb-4">
-              <code className="text-sm text-slate-800">X-API-Key: logging_your-tenant-key</code>
-            </div>
-            <a className="inline-flex items-center text-blue-600 hover:text-blue-500 text-sm font-medium" href="/base-code/api-specifications/API_ENDPOINTS.md" target="_blank" rel="noreferrer">
-              API Reference <ExternalLink className="ml-1" size={14} />
-            </a>
-          </div>
         </div>
       </div>
 
@@ -132,47 +113,6 @@ const canCreate = await rbac.hasPermission(userId, 'user.create');
 
 // Express middleware
 app.use(rbac.middleware(['user.read']));`}</code>
-              </pre>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-medium text-slate-800 mb-3">Logging: Send Event</h4>
-            <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
-              <pre className="text-sm text-slate-300">
-                <code>{`// Vanilla fetch example
-await fetch('/api/v2/logging/events', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-API-Key': 'logging_your-tenant-key',
-  },
-  body: JSON.stringify({
-    level: 'info',
-    message: 'User updated profile',
-    context: { userId: 'u_123', section: 'profile' },
-  }),
-});`}</code>
-              </pre>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-medium text-slate-800 mb-3">Notifications: Send Email</h4>
-            <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
-              <pre className="text-sm text-slate-300">
-                <code>{`await fetch('/api/v2/notifications/email', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-API-Key': 'notify_your-tenant-key',
-  },
-  body: JSON.stringify({
-    to: 'user@tenant.com',
-    templateId: 'welcome_email',
-    variables: { name: 'Jane' },
-  }),
-});`}</code>
               </pre>
             </div>
           </div>

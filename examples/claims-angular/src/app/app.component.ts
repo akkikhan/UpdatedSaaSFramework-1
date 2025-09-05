@@ -1,13 +1,15 @@
-import { Component } from "@angular/core";
-import { RouterOutlet, RouterLink } from "@angular/router";
+import { Component, OnInit } from "@angular/core";
+import { RouterOutlet, RouterLink, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { MatSidenavModule } from "@angular/material/sidenav";
 import { MatToolbarModule } from "@angular/material/toolbar";
 import { MatListModule } from "@angular/material/list";
 import { MatIconModule } from "@angular/material/icon";
 import { MatButtonModule } from "@angular/material/button";
-import { MatBadgeModule } from "@angular/material/badge";
 import { MatMenuModule } from "@angular/material/menu";
+import { getToken, clearToken } from "@saas-framework/auth-client";
+import { Router } from "@angular/router";
+import { filter } from "rxjs/operators";
 
 @Component({
   selector: "app-root",
@@ -21,501 +23,268 @@ import { MatMenuModule } from "@angular/material/menu";
     MatListModule,
     MatIconModule,
     MatButtonModule,
-    MatBadgeModule,
     MatMenuModule,
   ],
   template: `
-    <div class="app-container">
-      <!-- Modern Sidebar -->
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="brand-section">
-            <div class="brand-icon">
-              <mat-icon>account_balance</mat-icon>
-            </div>
-            <div class="brand-info">
-              <h2 class="brand-title">Claims Portal</h2>
-              <p class="brand-subtitle">Enterprise Management</p>
-            </div>
-          </div>
+    <!-- Show navigation layout only when logged in -->
+    <mat-sidenav-container *ngIf="isLoggedIn" class="app-container">
+      <mat-sidenav mode="side" opened class="app-sidenav">
+        <div class="sidenav-header">
+          <mat-icon class="brand-icon">business</mat-icon>
+          <h3 class="brand-title">Claims Portal</h3>
+          <p class="brand-subtitle">Enterprise Management</p>
         </div>
 
-        <nav class="sidebar-nav">
-          <div class="nav-section">
-            <span class="nav-section-title">Main</span>
-            <a class="nav-item" routerLink="/dashboard" routerLinkActive="active">
-              <div class="nav-item-icon">
-                <mat-icon>dashboard</mat-icon>
-              </div>
-              <span class="nav-item-text">Dashboard</span>
-              <div class="nav-item-indicator"></div>
-            </a>
+        <mat-nav-list class="navigation-list">
+          <h4 class="nav-section-title">MAIN</h4>
+          <a mat-list-item routerLink="/dashboard" class="nav-item">
+            <mat-icon class="nav-icon">dashboard</mat-icon>
+            <span class="nav-text">Dashboard</span>
+          </a>
+          <a mat-list-item routerLink="/claims" class="nav-item">
+            <mat-icon class="nav-icon">assignment</mat-icon>
+            <span class="nav-text">Claims</span>
+            <span class="nav-badge">2</span>
+          </a>
 
-            <a class="nav-item" routerLink="/claims" routerLinkActive="active">
-              <div class="nav-item-icon">
-                <mat-icon>assignment</mat-icon>
-              </div>
-              <span class="nav-item-text">Claims</span>
-              <div class="nav-item-badge">
-                <span class="badge-count">12</span>
-              </div>
-              <div class="nav-item-indicator"></div>
-            </a>
+          <h4 class="nav-section-title">ACCOUNT</h4>
+          <a mat-list-item routerLink="/logs" class="nav-item">
+            <mat-icon class="nav-icon">list_alt</mat-icon>
+            <span class="nav-text">Activity Logs</span>
+          </a>
+          <a mat-list-item routerLink="/profile" class="nav-item">
+            <mat-icon class="nav-icon">person</mat-icon>
+            <span class="nav-text">Profile</span>
+          </a>
+        </mat-nav-list>
+      </mat-sidenav>
 
-            <a class="nav-item" routerLink="/logs" routerLinkActive="active">
-              <div class="nav-item-icon">
-                <mat-icon>list_alt</mat-icon>
-              </div>
-              <span class="nav-item-text">Activity Logs</span>
-              <div class="nav-item-indicator"></div>
-            </a>
+      <mat-sidenav-content class="app-content">
+        <mat-toolbar class="app-toolbar">
+          <div class="toolbar-left">
+            <span class="toolbar-title">Azure AD • RBAC • Logging</span>
           </div>
-
-          <div class="nav-section">
-            <span class="nav-section-title">Account</span>
-            <a class="nav-item" routerLink="/profile" routerLinkActive="active">
-              <div class="nav-item-icon">
-                <mat-icon>person</mat-icon>
-              </div>
-              <span class="nav-item-text">Profile</span>
-              <div class="nav-item-indicator"></div>
-            </a>
-          </div>
-        </nav>
-
-        <div class="sidebar-footer">
-          <div class="user-profile-mini">
-            <div class="user-avatar">
+          <div class="toolbar-right">
+            <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-menu-btn">
               <mat-icon>account_circle</mat-icon>
-            </div>
-            <div class="user-info">
-              <span class="user-name">John Doe</span>
-              <span class="user-role">Administrator</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Main Content Area -->
-      <main class="main-content">
-        <!-- Modern Header -->
-        <header class="app-header">
-          <div class="header-left">
-            <div class="breadcrumb">
-              <span class="breadcrumb-item">Azure AD</span>
-              <mat-icon class="breadcrumb-separator">chevron_right</mat-icon>
-              <span class="breadcrumb-item">RBAC</span>
-              <mat-icon class="breadcrumb-separator">chevron_right</mat-icon>
-              <span class="breadcrumb-item active">Logging</span>
-            </div>
-          </div>
-
-          <div class="header-right">
-            <button class="header-action-btn" mat-icon-button>
-              <mat-icon matBadge="3" matBadgeColor="warn" matBadgeSize="small"
-                >notifications</mat-icon
-              >
-            </button>
-
-            <button class="header-action-btn" mat-icon-button>
-              <mat-icon>search</mat-icon>
-            </button>
-
-            <button class="user-menu-btn" mat-button [matMenuTriggerFor]="userMenu">
-              <div class="user-menu-avatar">
-                <mat-icon>account_circle</mat-icon>
-              </div>
-              <span class="user-menu-text">Account</span>
-              <mat-icon class="user-menu-arrow">expand_more</mat-icon>
             </button>
 
             <mat-menu #userMenu="matMenu" class="user-dropdown">
-              <a mat-menu-item routerLink="/profile">
+              <button mat-menu-item routerLink="/profile">
                 <mat-icon>person</mat-icon>
-                <span>Profile Settings</span>
-              </a>
-              <a mat-menu-item routerLink="/login">
+                <span>Profile</span>
+              </button>
+              <button mat-menu-item (click)="logout()">
                 <mat-icon>logout</mat-icon>
-                <span>Sign Out</span>
-              </a>
+                <span>Logout</span>
+              </button>
             </mat-menu>
           </div>
-        </header>
+        </mat-toolbar>
 
-        <!-- Content Area -->
-        <div class="content-wrapper">
-          <div class="content-container">
-            <router-outlet></router-outlet>
-          </div>
+        <div class="main-content">
+          <router-outlet></router-outlet>
         </div>
-      </main>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
+
+    <!-- Show login page without navigation when not logged in -->
+    <div *ngIf="!isLoggedIn" class="login-container">
+      <router-outlet></router-outlet>
     </div>
   `,
   styles: [
     `
       .app-container {
-        display: flex;
         height: 100vh;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: #f8fafc;
       }
 
-      /* Modern Sidebar Styles */
-      .sidebar {
+      .app-sidenav {
         width: 280px;
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.95) 0%,
-          rgba(255, 255, 255, 0.9) 100%
-        );
-        -webkit-backdrop-filter: blur(20px);
-        backdrop-filter: blur(20px);
-        border-right: 1px solid rgba(255, 255, 255, 0.2);
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        background: #244866;
+        border: none;
       }
 
-      .sidebar-header {
-        padding: 2rem 1.5rem 1rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-      }
-
-      .brand-section {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
+      .sidenav-header {
+        padding: 24px 20px;
+        background: linear-gradient(135deg, #244866 0%, #1e3a5f 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+        color: white;
       }
 
       .brand-icon {
-        width: 48px;
-        height: 48px;
-        background: var(--gradient-primary);
-        border-radius: var(--radius-lg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        box-shadow: var(--shadow-md);
-      }
-
-      .brand-icon mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-      }
-
-      .brand-info {
-        flex: 1;
-      }
-
-      .brand-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin: 0 0 0.25rem 0;
-        color: var(--color-gray-800);
-      }
-
-      .brand-subtitle {
-        font-size: 0.75rem;
-        color: var(--color-gray-500);
-        margin: 0;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      /* Navigation Styles */
-      .sidebar-nav {
-        flex: 1;
-        padding: 1rem 0;
-        overflow-y: auto;
-      }
-
-      .nav-section {
-        margin-bottom: 2rem;
-      }
-
-      .nav-section-title {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--color-gray-400);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        padding: 0 1.5rem 0.75rem;
-        display: block;
-      }
-
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        margin: 0 0.75rem;
-        border-radius: var(--radius-lg);
-        color: var(--color-gray-600);
-        text-decoration: none;
-        transition: all 0.2s ease;
-        position: relative;
-        gap: 0.75rem;
-      }
-
-      .nav-item:hover {
-        background: rgba(59, 130, 246, 0.08);
-        color: var(--color-gray-800);
-        transform: translateX(4px);
-      }
-
-      .nav-item.active {
-        background: linear-gradient(
-          135deg,
-          rgba(59, 130, 246, 0.15) 0%,
-          rgba(147, 197, 253, 0.15) 100%
-        );
-        color: #1d4ed8;
-        font-weight: 500;
-      }
-
-      .nav-item.active .nav-item-indicator {
-        opacity: 1;
-        transform: translateX(0);
-      }
-
-      .nav-item-icon {
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .nav-item-icon mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-
-      .nav-item-text {
-        flex: 1;
-        font-size: 0.875rem;
-      }
-
-      .nav-item-badge {
-        margin-left: auto;
-      }
-
-      .badge-count {
-        background: var(--gradient-primary);
-        color: white;
-        font-size: 0.75rem;
-        font-weight: 600;
-        padding: 0.25rem 0.5rem;
-        border-radius: 9999px;
-        min-width: 1.25rem;
-        text-align: center;
-        box-shadow: var(--shadow-sm);
-      }
-
-      .nav-item-indicator {
-        position: absolute;
-        right: 0;
-        top: 50%;
-        transform: translateY(-50%) translateX(10px);
-        width: 3px;
-        height: 20px;
-        background: var(--gradient-primary);
-        border-radius: 2px;
-        opacity: 0;
-        transition: all 0.2s ease;
-      }
-
-      /* Sidebar Footer */
-      .sidebar-footer {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-      }
-
-      .user-profile-mini {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.5rem;
-        border-radius: var(--radius-md);
-      }
-
-      .user-avatar {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--color-gray-500);
-      }
-
-      .user-avatar mat-icon {
         font-size: 32px;
         width: 32px;
         height: 32px;
+        color: #60a5fa;
+        margin-bottom: 8px;
       }
 
-      .user-info {
-        display: flex;
-        flex-direction: column;
+      .brand-title {
+        margin: 8px 0 4px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: white;
       }
 
-      .user-name {
-        font-size: 0.875rem;
+      .brand-subtitle {
+        margin: 0;
+        font-size: 12px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .navigation-list {
+        padding: 16px 0;
+      }
+
+      .nav-section-title {
+        padding: 16px 20px 8px;
+        margin: 0;
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .nav-item {
+        height: 48px !important;
+        color: white !important;
+        margin: 2px 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        position: relative;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+      }
+
+      .nav-item.mdc-list-item--activated {
+        background: rgba(96, 165, 250, 0.15) !important;
+        color: #60a5fa !important;
+      }
+
+      .nav-icon {
+        color: inherit;
+        margin-right: 16px;
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
+      }
+
+      .nav-text {
+        font-size: 14px;
         font-weight: 500;
-        color: var(--color-gray-700);
+        color: inherit;
       }
 
-      .user-role {
-        font-size: 0.75rem;
-        color: var(--color-gray-500);
-      }
-
-      /* Main Content Styles */
-      .main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-      }
-
-      /* Modern Header */
-      .app-header {
-        background: rgba(255, 255, 255, 0.95);
-        -webkit-backdrop-filter: blur(20px);
-        backdrop-filter: blur(20px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 1rem 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        position: sticky;
-        top: 0;
-        z-index: 10;
-      }
-
-      .header-left {
-        display: flex;
-        align-items: center;
-      }
-
-      .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-
-      .breadcrumb-item {
-        font-size: 0.875rem;
-        color: var(--color-gray-600);
-        font-weight: 500;
-      }
-
-      .breadcrumb-item.active {
-        color: var(--color-gray-900);
+      .nav-badge {
+        margin-left: auto;
+        background: #ef4444;
+        color: white;
+        border-radius: 10px;
+        padding: 2px 8px;
+        font-size: 11px;
         font-weight: 600;
       }
 
-      .breadcrumb-separator {
-        font-size: 16px;
-        color: var(--color-gray-400);
+      .app-toolbar {
+        background: white;
+        color: #1e293b;
+        border-bottom: 1px solid #e2e8f0;
+        height: 64px;
+        padding: 0 24px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
       }
 
-      .header-right {
+      .toolbar-left {
+        flex: 1;
+      }
+
+      .toolbar-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: #64748b;
+      }
+
+      .toolbar-right {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 12px;
       }
 
-      .header-action-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: var(--radius-md);
-        color: var(--color-gray-600);
-        transition: all 0.2s ease;
-      }
-
-      .header-action-btn:hover {
-        background: rgba(59, 130, 246, 0.08);
-        color: #1d4ed8;
+      .login-btn {
+        color: #244866;
       }
 
       .user-menu-btn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border-radius: var(--radius-md);
-        color: var(--color-gray-700);
-        font-weight: 500;
-        transition: all 0.2s ease;
+        color: #244866;
       }
 
-      .user-menu-btn:hover {
-        background: rgba(59, 130, 246, 0.08);
+      .user-dropdown {
+        margin-top: 8px;
       }
 
-      .user-menu-avatar {
-        color: var(--color-gray-600);
-      }
-
-      .user-menu-text {
-        font-size: 0.875rem;
-      }
-
-      .user-menu-arrow {
-        font-size: 18px;
-        color: var(--color-gray-500);
-      }
-
-      /* Content Area */
-      .content-wrapper {
-        flex: 1;
-        overflow-y: auto;
-        padding: 2rem;
-      }
-
-      .content-container {
+      .main-content {
+        padding: 24px;
+        background: #f8fafc;
+        min-height: calc(100vh - 64px);
         max-width: 1400px;
         margin: 0 auto;
         width: 100%;
       }
 
-      /* Custom scrollbar for sidebar */
-      .sidebar-nav::-webkit-scrollbar {
-        width: 4px;
-      }
-
-      .sidebar-nav::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      .sidebar-nav::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.1);
-        border-radius: 2px;
-      }
-
-      /* Responsive adjustments */
-      @media (max-width: 768px) {
-        .sidebar {
-          width: 240px;
-        }
-
-        .content-wrapper {
-          padding: 1rem;
-        }
-
-        .app-header {
-          padding: 1rem;
-        }
-
-        .breadcrumb {
-          display: none;
-        }
+      .login-container {
+        height: 100vh;
+        width: 100vw;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
     `,
   ],
 })
-export class AppComponent {}
+export class AppComponent implements OnInit {
+  isLoggedIn = false;
+
+  constructor(private router: Router) {}
+
+  ngOnInit() {
+    this.checkAuthStatus();
+
+    // Listen to router events to check auth status on navigation
+    this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
+      this.checkAuthStatus();
+    });
+  }
+
+  checkAuthStatus() {
+    const token = getToken();
+    const wasLoggedIn = this.isLoggedIn;
+    this.isLoggedIn = !!token;
+
+    // Handle authentication state changes
+    if (!token) {
+      // No token - redirect to login if not already there
+      if (this.router.url !== "/login") {
+        this.router.navigate(["/login"]);
+      }
+    } else if (this.router.url === "/login" || this.router.url === "/") {
+      // Has token - redirect from login to dashboard if needed
+      this.router.navigate(["/dashboard"]);
+    }
+  }
+
+  logout() {
+    clearToken();
+    this.isLoggedIn = false;
+    this.router.navigate(["/login"]);
+  }
+}

@@ -1371,22 +1371,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Sanitize & normalize inputs (align with validate/verify endpoints)
-      const sanitizeGuid = (v: any) => String(v ?? "").trim().replace(/[{}]/g, "");
-      const GUID_CANON = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-
-      const tenantIdVal = sanitizeGuid(tenantId);
-      const clientIdVal = sanitizeGuid(clientId);
-      const clientSecretVal = String(clientSecret ?? "").trim();
-
-      const errors: string[] = [];
-      if (!tenantIdVal || !GUID_CANON.test(tenantIdVal))
-        errors.push("tenantId must be a GUID from Azure AD (format: 8-4-4-4-12)");
-      if (!clientIdVal || !GUID_CANON.test(clientIdVal))
-        errors.push("clientId must be a GUID (Application ID) (format: 8-4-4-4-12)");
-      if (!clientSecretVal) errors.push("clientSecret is required");
-      if (errors.length) return res.status(400).json({ message: errors.join("; ") });
-
       // Get current tenant configuration
       const tenant = await storage.getTenant(id);
       if (!tenant) {
@@ -1408,11 +1392,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Add new Azure AD provider
-      // Encrypt secret before storing (use TRIMMED value to avoid mismatch in SSO)
-      let encryptedSecret: string | undefined = clientSecretVal;
+      // Encrypt secret before storing
+      let encryptedSecret: string | undefined = clientSecret;
       try {
         const { encryptSecret } = await import("./utils/secret.js");
-        encryptedSecret = encryptSecret(clientSecretVal);
+        encryptedSecret = encryptSecret(clientSecret);
       } catch {}
 
       moduleConfigs.auth.providers.push({
@@ -1420,8 +1404,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: "Azure AD SSO",
         priority: 1,
         config: {
-          tenantId: tenantIdVal,
-          clientId: clientIdVal,
+          tenantId,
+          clientId,
           clientSecret: encryptedSecret,
           callbackUrl:
             callbackUrl ||
@@ -1976,9 +1960,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password, firstName, lastName, role } = req.body;
       const tenantId = req.tenantId!; // Set by tenantMiddleware
 
-      // Relax validation: only email and password are required. Name is optional.
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+      if (!email || !password || !firstName) {
+        return res.status(400).json({ message: "Email, password, and firstName are required" });
       }
 
       const hashedPassword = await authService.hashPassword(password);
@@ -1986,8 +1969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenantId,
         email,
         passwordHash: hashedPassword,
-        // Default names if not provided to maintain compatibility with storage schema
-        firstName: firstName || (typeof email === "string" ? String(email).split("@")[0] : ""),
+        firstName,
         lastName: lastName || "",
         status: "active",
       });
