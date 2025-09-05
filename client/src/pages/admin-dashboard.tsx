@@ -1,4 +1,4 @@
-import { Building, CheckCircle, Clock, Mail, Plus, Bell } from "lucide-react";
+import { Building, CheckCircle, Clock, Mail, Bell } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import StatsCard from "@/components/ui/stats-card";
@@ -7,6 +7,16 @@ import { useRecentTenants } from "@/hooks/use-tenants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -35,10 +45,11 @@ export default function AdminDashboard() {
     },
     refetchInterval: 10000,
   }) as { data: any[] };
+  const { toast } = useToast();
 
   return (
     <div>
-      {/* Add Tenant Button - positioned absolutely for header */}
+      {/* Header Controls - Notifications only */}
       <div className="fixed top-4 right-6 z-10 flex items-center gap-3">
         <div className="relative">
           <Button variant="outline" onClick={() => (window.location.hash = "#module-requests")}>
@@ -50,14 +61,6 @@ export default function AdminDashboard() {
             </span>
           )}
         </div>
-        <Button
-          onClick={() => setLocation("/tenants/wizard")}
-          className="btn-primary flex items-center space-x-2"
-          data-testid="button-add-tenant"
-        >
-          <Plus size={16} />
-          <span>Add Tenant</span>
-        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -104,92 +107,76 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Tenants */}
-        <div
-          id="module-requests"
-          className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
-        >
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Recent Tenants</h3>
-          <div className="space-y-4">
-            {tenantsLoading ? (
-              <>
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-              </>
-            ) : recentTenants && recentTenants.length > 0 ? (
-              recentTenants.map(tenant => (
-                <div
-                  key={tenant.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                  data-testid={`tenant-item-${tenant.orgId}`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold text-sm">
-                        {tenant.name.substring(0, 2).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-800">{tenant.name}</p>
-                      <p className="text-sm text-slate-500">{tenant.adminEmail}</p>
-                      {(() => {
-                        const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
-                        const hasSSO = Array.isArray(providers)
-                          ? providers.some((p: any) =>
-                              ["azure-ad", "auth0", "saml"].includes(p?.type)
-                            )
-                          : false;
-                        const hasRBAC = (tenant.enabledModules || []).includes("rbac");
-                        const hasPending = (requests as any[]).some(
-                          (r: any) => r.tenantId === tenant.id
-                        );
-                        const needsAttention = hasPending || (hasRBAC && !hasSSO);
-                        return needsAttention ? (
-                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded mt-1 inline-block">
-                            Needs Attention
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
-                  </div>
-                  <span
-                    className={`status-badge ${
-                      tenant.status === "active"
-                        ? "status-active"
-                        : tenant.status === "pending"
-                          ? "status-pending"
-                          : "status-suspended"
-                    }`}
-                    data-testid={`status-${tenant.orgId}`}
-                  >
-                    {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-slate-500">
-                No tenants found. Create your first tenant to get started.
-              </div>
+        {/* Recent Tenants - Modern Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800">Recent Tenants</h3>
+            {recentTenants && recentTenants.length > 0 && (
+              <Button
+                variant="ghost"
+                className="text-blue-600 hover:text-blue-500"
+                onClick={() => (window.location.href = "/tenants")}
+                data-testid="button-view-all-tenants"
+              >
+                View All
+              </Button>
             )}
           </div>
-          {recentTenants && recentTenants.length > 0 && (
-            <Button
-              variant="ghost"
-              className="w-full mt-4 text-blue-600 hover:text-blue-500"
-              onClick={() => (window.location.href = "/tenants")}
-              data-testid="button-view-all-tenants"
-            >
-              View All Tenants
-            </Button>
+          {tenantsLoading ? (
+            <div className="p-6 space-y-4">
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+            </div>
+          ) : recentTenants && recentTenants.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Org ID</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentTenants.map((tenant) => (
+                  <TableRow key={tenant.id} data-testid={`tenant-item-${tenant.orgId}`}>
+                    <TableCell className="font-medium text-slate-800">{tenant.name}</TableCell>
+                    <TableCell className="text-slate-600">{tenant.orgId}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`status-badge ${
+                          tenant.status === "active"
+                            ? "status-active"
+                            : tenant.status === "pending"
+                              ? "status-pending"
+                              : "status-suspended"
+                        }`}
+                        data-testid={`status-${tenant.orgId}`}
+                      >
+                        {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-500">
+                      {tenant.createdAt ? format(new Date(tenant.createdAt), "MMM d, yyyy") : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-slate-500">No tenants found.</div>
           )}
         </div>
 
         {/* Module Requests */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Bell className="h-5 w-5 text-amber-600" /> Module Requests
-          </h3>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6" id="module-requests">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <Bell className="h-5 w-5 text-amber-600" /> Module Requests
+            </h3>
+            <Button variant="ghost" className="text-blue-600 hover:text-blue-500" onClick={() => setLocation("/logs?tab=module")}>View All</Button>
+          </div>
           {requests.length === 0 ? (
             <div className="text-slate-500 text-sm">No pending requests</div>
           ) : (
@@ -221,6 +208,7 @@ export default function AdminDashboard() {
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/module-requests", "resolved"],
                           });
+                          toast({ title: "Approved", description: `${r.details?.moduleId} approved for ${r.tenantName || r.tenantId}` });
                         } catch (e) {
                           console.error(e);
                         }
@@ -243,6 +231,7 @@ export default function AdminDashboard() {
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/module-requests", "resolved"],
                           });
+                          toast({ title: "Dismissed", description: `${r.details?.moduleId} dismissed for ${r.tenantName || r.tenantId}` });
                         } catch (e) {
                           console.error(e);
                         }
@@ -284,7 +273,10 @@ export default function AdminDashboard() {
 
         {/* Provider Requests */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Provider Requests</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800">Provider Requests</h3>
+            <Button variant="ghost" className="text-blue-600 hover:text-blue-500" onClick={() => setLocation("/logs?tab=provider")}>View All</Button>
+          </div>
           {providerRequests.length === 0 ? (
             <div className="text-slate-500 text-sm">No pending provider requests</div>
           ) : (
@@ -312,6 +304,7 @@ export default function AdminDashboard() {
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/provider-requests"],
                           });
+                          toast({ title: "Approved", description: `${r.details?.provider} change approved` });
                         } catch (e) {
                           console.error(e);
                         }
@@ -328,6 +321,7 @@ export default function AdminDashboard() {
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/provider-requests"],
                           });
+                          toast({ title: "Dismissed", description: `${r.details?.provider} change dismissed` });
                         } catch (e) {
                           console.error(e);
                         }

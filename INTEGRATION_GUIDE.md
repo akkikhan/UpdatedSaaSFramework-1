@@ -50,6 +50,42 @@ const me = await res.json();
 await refreshToken();
 ```
 
+RBAC quick check in app:
+
+```ts
+import { fetchWithAuth } from "@saas-framework/auth-client";
+
+async function can(userId: string, resource: string, action: string) {
+  const res = await fetchWithAuth(`/api/v2/rbac/check-permission`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, resource, action }),
+  });
+  const data = await res.json();
+  return !!data.hasPermission;
+}
+```
+
+Logging quick sample:
+
+```ts
+// Send an app log when a claim is approved
+await fetch(`/api/v2/logging/events`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": import.meta.env.VITE_TENANT_LOGGING_KEY,
+  },
+  body: JSON.stringify({ level: "info", category: "claims", message: "Approved", metadata: { id } }),
+});
+```
+
+Notes
+
+- Permissions use a simple `resource.action` format (e.g., `users.read`).
+- Add custom permissions in Tenant Portal → Roles → RBAC Settings.
+- Assign roles in Tenant Portal → Users → Manage Roles.
+
 Angular HttpInterceptor:
 
 ```ts

@@ -1,8 +1,25 @@
 import { useState, useEffect } from "react";
+
+
+            {/* Manage Roles dialog */
+            <Dialog open={!!manageRolesUser} onOpenChange={v => !v && setManageRolesUser(null)}>
+              {manageRolesUser && (
+                <ManageRolesModal
+                  tenantId={tenant?.id}
+                  user={manageRolesUser}
+                  roles={tenantRoles as any[]}
+                  onClose={() => setManageRolesUser(null)}
+                  onChanged={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/v2/rbac/users", manageRolesUser.id, "roles", orgId] });
+                  }}
+                />
+              )}
+            </Dialog>
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -69,8 +86,6 @@ import { api } from "@/lib/api";
 // Form schemas
 const userFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
   status: z.enum(["active", "inactive"]).default("active"),
 });
@@ -116,6 +131,8 @@ export default function TenantDashboard() {
   const [permissionExplain, setPermissionExplain] = useState<any | null>(null);
   const [assignmentUserId, setAssignmentUserId] = useState<string>("");
   const [assignmentRoleId, setAssignmentRoleId] = useState<string>("");
+  const [manageRolesUser, setManageRolesUser] = useState<any | null>(null);
+  const [userRolesMap, setUserRolesMap] = useState<Record<string, any[]>>({});
   const { data: userRoles = [] } = useQuery({
     queryKey: ["/api/v2/rbac/users", assignmentUserId, "roles", orgId],
     enabled: !!assignmentUserId,
@@ -202,7 +219,7 @@ export default function TenantDashboard() {
       if (!response.ok) {
         throw new Error("Failed to delete user");
       }
-      return response.json();
+      const saved = await response.json();\n\n      // auto-assign role on create\n      if (!user && roles && Array.isArray(roles) && roles.length && selectedRoleId) {\n        try {\n          const token =\n            localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";\n          await fetch(`/api/v2/rbac/users/${saved.id}/roles`, {\n            method: "POST",\n            headers: {\n              "Content-Type": "application/json",\n              Authorization: `Bearer ${token}` ,\n              "x-tenant-id": tenantId || "",\n            },\n            body: JSON.stringify({ roleId: selectedRoleId }),\n          });\n        } catch {}\n      }\n      return saved;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/auth/users", tenant?.id] });
@@ -229,7 +246,7 @@ export default function TenantDashboard() {
       if (!response.ok) {
         throw new Error("Failed to delete role");
       }
-      return response.json();
+      const saved = await response.json();\n\n      // auto-assign role on create\n      if (!user && roles && Array.isArray(roles) && roles.length && selectedRoleId) {\n        try {\n          const token =\n            localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";\n          await fetch(`/api/v2/rbac/users/${saved.id}/roles`, {\n            method: "POST",\n            headers: {\n              "Content-Type": "application/json",\n              Authorization: `Bearer ${token}` ,\n              "x-tenant-id": tenantId || "",\n            },\n            body: JSON.stringify({ roleId: selectedRoleId }),\n          });\n        } catch {}\n      }\n      return saved;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/v2/rbac/roles", tenant?.id] });
@@ -479,6 +496,33 @@ export default function TenantDashboard() {
   const hasAuth0Provider = providerTypes.has("auth0");
   const hasSamlProvider = providerTypes.has("saml");
 
+  // Build a user->roles map for table display
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!tenant?.id || !(tenantUsers as any[]).length) return;
+        const token =
+          localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+        const headers: any = { "x-tenant-id": tenant.id };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const pairs = await Promise.all(
+          (tenantUsers as any[]).map(async u => {
+            try {
+              const res = await fetch(`/api/v2/rbac/users/${u.id}/roles`, { headers });
+              if (!res.ok) return [u.id, []] as const;
+              return [u.id, await res.json()] as const;
+            } catch {
+              return [u.id, []] as const;
+            }
+          })
+        );
+        const next: Record<string, any[]> = {};
+        pairs.forEach(([id, roles]) => (next[id] = roles));
+        setUserRolesMap(next);
+      } catch {}
+    })();
+  }, [tenant?.id, (tenantUsers as any[]).map(u => u?.id).join(","), orgId]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -542,6 +586,7 @@ export default function TenantDashboard() {
               Users {!isAuthEnabled && <span className="ml-1 text-xs opacity-60">(Disabled)</span>}
             </TabsTrigger>
             {isRbacEnabled && <TabsTrigger value="roles">Roles</TabsTrigger>}
+            {isLoggingEnabled && <TabsTrigger value="logs">Logs</TabsTrigger>}
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           </TabsList>
@@ -584,177 +629,30 @@ export default function TenantDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Getting Started</CardTitle>
+                <CardTitle>Usage Insights</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Simple user-role assignment */}
-                <div className="border rounded-md p-4 bg-slate-50">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div>
-                      <Label className="text-xs">User</Label>
-                      <Select onValueChange={v => setAssignmentUserId(v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select user" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(tenantUsers as any[]).map((u: any) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Role</Label>
-                      <Select onValueChange={v => setAssignmentRoleId(v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(tenantRoles as any[]).map((r: any) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Button
-                        onClick={async () => {
-                          try {
-                            if (!assignmentUserId || !assignmentRoleId) return;
-                            const token =
-                              localStorage.getItem(`tenant_token_${orgId}`) ||
-                              localStorage.getItem("tenant_token") ||
-                              "";
-                            const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-                            const t = tRes.ok ? await tRes.json() : null;
-                            if (!t) return;
-                            const res = await fetch(
-                              `/api/v2/rbac/users/${assignmentUserId}/roles`,
-                              {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                  Authorization: `Bearer ${token}`,
-                                  "x-tenant-id": t.id || "",
-                                },
-                                body: JSON.stringify({ roleId: assignmentRoleId }),
-                              }
-                            );
-                            if (!res.ok) throw new Error("Assign failed");
-                            toast({ title: "Role assigned" });
-                            queryClient.invalidateQueries({
-                              queryKey: ["/api/v2/rbac/users", assignmentUserId, "roles", orgId],
-                            });
-                          } catch (e: any) {
-                            toast({
-                              title: "Failed to assign",
-                              description: e.message || "Error",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                      >
-                        Assign Role
-                      </Button>
-                    </div>
-                  </div>
-                  {assignmentUserId && (
-                    <div className="mt-3 text-sm">
-                      <span className="text-slate-600">Current roles:</span>
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {(userRoles as any[]).map((r: any) => (
-                          <Badge key={r.id} variant="outline" className="text-xs">
-                            {r.name}
-                            <button
-                              className="ml-2 text-slate-500 hover:text-slate-700"
-                              onClick={async () => {
-                                try {
-                                  const token =
-                                    localStorage.getItem(`tenant_token_${orgId}`) ||
-                                    localStorage.getItem("tenant_token") ||
-                                    "";
-                                  const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-                                  const t = tRes.ok ? await tRes.json() : null;
-                                  if (!t) return;
-                                  const res = await fetch(
-                                    `/api/v2/rbac/users/${assignmentUserId}/roles/${r.id}`,
-                                    {
-                                      method: "DELETE",
-                                      headers: {
-                                        Authorization: `Bearer ${token}`,
-                                        "x-tenant-id": t.id || "",
-                                      },
-                                    }
-                                  );
-                                  if (!res.ok) throw new Error("Remove failed");
-                                  toast({ title: "Role removed" });
-                                  queryClient.invalidateQueries({
-                                    queryKey: [
-                                      "/api/v2/rbac/users",
-                                      assignmentUserId,
-                                      "roles",
-                                      orgId,
-                                    ],
-                                  });
-                                } catch (e: any) {
-                                  toast({
-                                    title: "Failed to remove",
-                                    description: e.message || "Error",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                  <div>
-                    <p className="font-medium">1. Install SDKs</p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      npm install @saas-framework/auth @saas-framework/rbac
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                  <div>
-                    <p className="font-medium">2. Configure API Keys</p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Use your Auth and RBAC API keys from the API Keys tab
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                  <div>
-                    <p className="font-medium">3. Integrate Authentication</p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Start with Azure AD SSO (or local JWT fallback) using our SDK.
-                      <a
-                        href="https://github.com/akkikhan/UpdatedSaaSFramework-1/tree/tenant-portal-enhancement/packages/auth-client#readme"
-                        className="text-blue-600 font-medium ml-2"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Auth SDK Guide →
-                      </a>
-                    </p>
-                  </div>
-                </div>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <OverviewMiniChart title="Users (last 7 days)" series={Array.from({ length: 7 }, (_, i) => (tenantInfo.users.length ? Math.max(0, tenantInfo.users.length - (6 - i)) : 0))} />
+                <LogsMiniChart tenantId={tenant.id} orgId={orgId!} />
+                
+
               </CardContent>
             </Card>
           </TabsContent>
+            {/* Manage Roles dialog */
+            <Dialog open={!!manageRolesUser} onOpenChange={v => !v && setManageRolesUser(null)}>
+              {manageRolesUser && (
+                <ManageRolesModal
+                  tenantId={tenant?.id}
+                  user={manageRolesUser}
+                  roles={tenantRoles as any[]}
+                  onClose={() => setManageRolesUser(null)}
+                  onChanged={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/v2/rbac/users", manageRolesUser.id, "roles", orgId] });
+                  }}
+                />
+              )}
+            </Dialog>
 
           <TabsContent value="users">
             {!isAuthEnabled ? (
@@ -796,6 +694,7 @@ export default function TenantDashboard() {
                       <UserModal
                         title="Add New User"
                         tenantId={tenant?.id}
+                        roles={tenantRoles as any[]}
                         onSuccess={() => {
                           setShowAddUserModal(false);
                           queryClient.invalidateQueries({
@@ -808,11 +707,12 @@ export default function TenantDashboard() {
                 </CardHeader>
                 <CardContent>
                   <Table>
+                  <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Roles</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -821,18 +721,35 @@ export default function TenantDashboard() {
                       {(tenantInfo.users as any[]).length > 0 ? (
                         (tenantInfo.users as any[]).map((user: any) => (
                           <TableRow key={user.id}>
-                            <TableCell className="font-medium">
-                              {user.firstName} {user.lastName}
-                            </TableCell>
                             <TableCell>{user.email}</TableCell>
                             <TableCell>
                               <Badge variant={user.status === "active" ? "default" : "secondary"}>
                                 {user.status}
                               </Badge>
                             </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1 flex-wrap">
+                                {(userRolesMap[user.id] || []).slice(0, 3).map((r: any) => (
+                                  <Badge key={r.id} variant="secondary" className="text-xs">{r.name}</Badge>
+                                ))}
+                                {(userRolesMap[user.id] || []).length > 3 && (
+                                  <Badge variant="outline" className="text-xs">+{(userRolesMap[user.id] || []).length - 3}</Badge>
+                                )}
+                                {!(userRolesMap[user.id] || []).length && (
+                                  <span className="text-xs text-slate-400">No roles</span>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setManageRolesUser(user)}
+                                >
+                                  <UserCheck className="h-4 w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -865,6 +782,7 @@ export default function TenantDashboard() {
                       )}
                     </TableBody>
                   </Table>
+                  </Table>
                 </CardContent>
               </Card>
             )}
@@ -875,6 +793,7 @@ export default function TenantDashboard() {
                 <UserModal
                   title="Edit User"
                   tenantId={tenant?.id}
+                  roles={tenantRoles as any[]}
                   user={selectedUser}
                   onSuccess={() => {
                     setShowEditUserModal(false);
@@ -882,9 +801,21 @@ export default function TenantDashboard() {
                     queryClient.invalidateQueries({ queryKey: ["/auth/users", tenant?.id] });
                   }}
                 />
-              </Dialog>
-            )}
           </TabsContent>
+            {/* Manage Roles dialog */
+            <Dialog open={!!manageRolesUser} onOpenChange={v => !v && setManageRolesUser(null)}>
+              {manageRolesUser && (
+                <ManageRolesModal
+                  tenantId={tenant?.id}
+                  user={manageRolesUser}
+                  roles={tenantRoles as any[]}
+                  onClose={() => setManageRolesUser(null)}
+                  onChanged={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/v2/rbac/users", manageRolesUser.id, "roles", orgId] });
+                  }}
+                />
+              )}
+            </Dialog>
 
           <TabsContent value="roles">
             {/* RBAC Settings full editor */}
@@ -902,6 +833,7 @@ export default function TenantDashboard() {
                 </CardHeader>
                 <CardContent className="pt-0 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-md bg-slate-50 text-sm text-slate-700">Roles group permissions. Assign roles to users in the Users tab. Templates and business types are sourced from Platform Admin RBAC configuration. You can also add custom permissions for your app here.</div>
                     <div>
                       <Label className="text-xs">Permission Template</Label>
                       <Select
@@ -1302,6 +1234,28 @@ export default function TenantDashboard() {
             </Dialog>
           </TabsContent>
 
+          <TabsContent value="logs" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Application Logs</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/v2/logging/events", tenant?.id] })}>
+                      Refresh
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => window.open("/docs/logging-quickstart.md", "_blank")}>
+                      Open Quick Start
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <TenantLogsList tenantId={tenant?.id} orgId={orgId!} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+
           <TabsContent value="modules" className="space-y-6">
             <Card className="max-h-[70vh] overflow-auto">
               <CardHeader>
@@ -1391,71 +1345,85 @@ export default function TenantDashboard() {
                         </div>
                       </div>
                       <div className="flex items-end">
-                        <Button
-                          variant="outline"
-                          onClick={async () => {
-                            const res = await fetch(`/api/auth/azure/${orgId}`);
-                            if (res.ok) {
-                              const data = await res.json();
-                              if (data?.authUrl) window.open(data.authUrl, "_blank");
-                            } else {
-                              toast({
-                                title: "Azure SSO not ready",
-                                description: "Check provider configuration",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                          disabled={!isAzureAdModuleActive}
-                        >
-                          Test Azure SSO
-                        </Button>
-                        <Button
-                          className="ml-2"
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const headers: any = {
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                              };
-                              const token =
-                                localStorage.getItem(`tenant_token_${orgId}`) ||
-                                localStorage.getItem("tenant_token") ||
-                                "";
-                              if (token) headers.Authorization = `Bearer ${token}`;
-                              if (tenant?.id) headers["x-tenant-id"] = tenant.id;
-                              const base = window.location.origin;
-                              // Switch to POST so behavior matches provider card overrides
-                              const res = await fetch(
-                                `${base}/api/tenant/${tenant?.id}/azure-ad/validate`,
-                                { method: "POST", headers, body: JSON.stringify({}) }
-                              );
-                              const data = await res.json();
-                              if (res.ok && data?.valid) {
-                                toast({
-                                  title: "Azure config looks good",
-                                  description: "You can try SSO now.",
-                                });
-                              } else {
-                                toast({
-                                  title: "Azure config invalid",
-                                  description: data?.message || "Fix settings and try again",
-                                  variant: "destructive",
-                                });
-                              }
-                            } catch (e: any) {
-                              toast({
-                                title: "Validation failed",
-                                description: e?.message || "Unknown error",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                          disabled={!isAzureAdModuleActive}
-                        >
-                          Validate Azure Config
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              onClick={async () => {
+                                const res = await fetch(`/api/auth/azure/${orgId}`);
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  if (data?.authUrl) window.open(data.authUrl, "_blank");
+                                } else {
+                                  toast({
+                                    title: "Azure SSO not ready",
+                                    description: "Check provider configuration",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              disabled={!isAzureAdModuleActive}
+                            >
+                              Test Azure SSO
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Uses the SAVED provider settings. If the stored secret is wrong, the Azure callback will fail with AADSTS7000215.
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              className="ml-2"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  const headers: any = {
+                                    "Content-Type": "application/json",
+                                    Accept: "application/json",
+                                  };
+                                  const token =
+                                    localStorage.getItem(`tenant_token_${orgId}`) ||
+                                    localStorage.getItem("tenant_token") ||
+                                    "";
+                                  if (token) headers.Authorization = `Bearer ${token}`;
+                                  if (tenant?.id) headers["x-tenant-id"] = tenant.id;
+                                  const base = window.location.origin;
+                                  // Switch to POST so behavior matches provider card overrides
+                                  const res = await fetch(
+                                    `${base}/api/tenant/${tenant?.id}/azure-ad/validate`,
+                                    { method: "POST", headers, body: JSON.stringify({}) }
+                                  );
+                                  const data = await res.json();
+                                  if (res.ok && data?.valid) {
+                                    toast({
+                                      title: "Azure config looks good",
+                                      description: "You can try SSO now.",
+                                    });
+                                  } else {
+                                    toast({
+                                      title: "Azure config invalid",
+                                      description: data?.message || "Fix settings and try again",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                } catch (e: any) {
+                                  toast({
+                                    title: "Validation failed",
+                                    description: e?.message || "Unknown error",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              disabled={!isAzureAdModuleActive}
+                            >
+                              Validate Azure Config
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Builds the authorization URL to check IDs and redirect format. Does not test the secret with Microsoft.
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -1848,27 +1816,11 @@ export default function TenantDashboard() {
 }
 
 // UserModal Component
-function UserModal({
-  title,
-  tenantId,
-  user,
-  onSuccess,
-}: {
-  title: string;
-  tenantId?: string;
-  user?: any;
-  onSuccess: () => void;
-}) {
+function UserModal({\n  title,\n  tenantId,\n  roles,\n  user,\n  onSuccess,\n}: {\n  title: string;\n  tenantId?: string;\n  roles?: any[];\n  user?: any;\n  onSuccess: () => void;\n}) {
   const { toast } = useToast();
-  const form = useForm<UserFormData>({
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");\n\n  const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      email: user?.email || "",
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      password: "",
-      status: user?.status || "active",
-    },
+    defaultValues: {\n      email: user?.email || "",\n      password: "",\n      status: user?.status || "active",\n    },
   });
 
   const mutation = useMutation({
@@ -1892,7 +1844,7 @@ function UserModal({
         throw new Error(errorData.message || "Failed to save user");
       }
 
-      return response.json();
+      const saved = await response.json();\n\n      // auto-assign role on create\n      if (!user && roles && Array.isArray(roles) && roles.length && selectedRoleId) {\n        try {\n          const token =\n            localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";\n          await fetch(`/api/v2/rbac/users/${saved.id}/roles`, {\n            method: "POST",\n            headers: {\n              "Content-Type": "application/json",\n              Authorization: `Bearer ${token}` ,\n              "x-tenant-id": tenantId || "",\n            },\n            body: JSON.stringify({ roleId: selectedRoleId }),\n          });\n        } catch {}\n      }\n      return saved;
     },
     onSuccess: () => {
       toast({
@@ -1915,7 +1867,7 @@ function UserModal({
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
+    <DialogContent className="sm:max-w-[500px]">
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>
@@ -1924,36 +1876,7 @@ function UserModal({
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
+                    <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
@@ -1969,6 +1892,21 @@ function UserModal({
 
           <FormField
             control={form.control}
+          {!user && Array.isArray(roles) && roles.length > 0 && (
+            <div>
+              <Label>Assign Role (optional)</Label>
+              <Select onValueChange={v => setSelectedRoleId(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
             name="password"
             render={({ field }) => (
               <FormItem>
@@ -2031,11 +1969,7 @@ function RoleModal({
 
   const form = useForm<RoleFormData>({
     resolver: zodResolver(roleFormSchema),
-    defaultValues: {
-      name: role?.name || "",
-      description: role?.description || "",
-      permissions: role?.permissions || [],
-    },
+    defaultValues: {\n      email: user?.email || "",\n      password: "",\n      status: user?.status || "active",\n    },
   });
 
   const mutation = useMutation({
@@ -2059,7 +1993,7 @@ function RoleModal({
         throw new Error(errorData.message || "Failed to save role");
       }
 
-      return response.json();
+      const saved = await response.json();\n\n      // auto-assign role on create\n      if (!user && roles && Array.isArray(roles) && roles.length && selectedRoleId) {\n        try {\n          const token =\n            localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";\n          await fetch(`/api/v2/rbac/users/${saved.id}/roles`, {\n            method: "POST",\n            headers: {\n              "Content-Type": "application/json",\n              Authorization: `Bearer ${token}` ,\n              "x-tenant-id": tenantId || "",\n            },\n            body: JSON.stringify({ roleId: selectedRoleId }),\n          });\n        } catch {}\n      }\n      return saved;
     },
     onSuccess: () => {
       toast({
@@ -2505,13 +2439,20 @@ function ProviderAzureCard({
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
       if (token) headers.Authorization = `Bearer ${token}`;
       if (tenantId) headers["x-tenant-id"] = tenantId;
+      const sanitizeGuid = (v: string) => v.trim().replace(/[{}]/g, "");
+      const payload = {
+        type: "azure-ad",
+        config: {
+          tenantId: sanitizeGuid(form.tenantId || ""),
+          clientId: sanitizeGuid(form.clientId || ""),
+          clientSecret: String(form.clientSecret || "").trim(),
+          callbackUrl: expectedRedirect,
+        },
+      };
       const res = await fetch(`${base}/api/tenant/${tenantId}/auth/providers/request`, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          type: "azure-ad",
-          config: { ...form, callbackUrl: expectedRedirect },
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");
@@ -2569,96 +2510,112 @@ function ProviderAzureCard({
         </div>
       </div>
       <div className="flex items-center gap-2 mt-2">
-        <Button
-          variant="secondary"
-          disabled={!isEnabled}
-          onClick={async () => {
-            try {
-              const headers: any = {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              };
-              const token =
-                localStorage.getItem(`tenant_token_${orgId}`) ||
-                localStorage.getItem("tenant_token") ||
-                "";
-              if (token) headers.Authorization = `Bearer ${token}`;
-              if (tenantId) headers["x-tenant-id"] = tenantId;
-              const base = window.location.origin;
-              const res = await fetch(`${base}/api/tenant/${tenantId}/azure-ad/verify-secret`, {
-                method: "POST",
-                headers,
-                body: JSON.stringify({
-                  tenantId: form.tenantId,
-                  clientId: form.clientId,
-                  clientSecret: form.clientSecret,
-                }),
-              });
-              const data = await res.json();
-              if (res.ok && data?.valid)
-                toast({ title: "Secret verified", description: "Client credentials succeeded." });
-              else
-                toast({
-                  title: "Secret invalid",
-                  description: data?.message || "Client credential flow failed",
-                  variant: "destructive",
-                });
-            } catch (e: any) {
-              toast({
-                title: "Verification failed",
-                description: e?.message || "Unknown error",
-                variant: "destructive",
-              });
-            }
-          }}
-        >
-          Verify Secret
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!isEnabled}
-          onClick={async () => {
-            try {
-              const headers: any = {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              };
-              const token =
-                localStorage.getItem(`tenant_token_${orgId}`) ||
-                localStorage.getItem("tenant_token") ||
-                "";
-              if (token) headers.Authorization = `Bearer ${token}`;
-              if (tenantId) headers["x-tenant-id"] = tenantId;
-              const base = window.location.origin;
-              const res = await fetch(`${base}/api/tenant/${tenantId}/azure-ad/validate`, {
-                method: "POST",
-                headers,
-                body: JSON.stringify({
-                  tenantId: form.tenantId,
-                  clientId: form.clientId,
-                  clientSecret: form.clientSecret,
-                }),
-              });
-              const data = await res.json();
-              if (res.ok && data?.valid)
-                toast({ title: "Azure config looks good", description: "You can try SSO now." });
-              else
-                toast({
-                  title: "Azure config invalid",
-                  description: data?.message || "Fix settings and try again",
-                  variant: "destructive",
-                });
-            } catch (e: any) {
-              toast({
-                title: "Validation failed",
-                description: e?.message || "Unknown error",
-                variant: "destructive",
-              });
-            }
-          }}
-        >
-          Validate
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              disabled={!isEnabled}
+              onClick={async () => {
+                try {
+                  const headers: any = {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                  };
+                  const token =
+                    localStorage.getItem(`tenant_token_${orgId}`) ||
+                    localStorage.getItem("tenant_token") ||
+                    "";
+                  if (token) headers.Authorization = `Bearer ${token}`;
+                  if (tenantId) headers["x-tenant-id"] = tenantId;
+                  const base = window.location.origin;
+                  const sanitizeGuid = (v: string) => v.trim().replace(/[{}]/g, "");
+                  const res = await fetch(`${base}/api/tenant/${tenantId}/azure-ad/verify-secret`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({
+                      tenantId: sanitizeGuid(form.tenantId || ""),
+                      clientId: sanitizeGuid(form.clientId || ""),
+                      clientSecret: String(form.clientSecret || "").trim(),
+                    }),
+                  });
+                  const data = await res.json();
+                  if (res.ok && data?.valid)
+                    toast({ title: "Secret verified", description: "Client credentials succeeded." });
+                  else
+                    toast({
+                      title: "Secret invalid",
+                      description: data?.message || "Client credential flow failed",
+                      variant: "destructive",
+                    });
+                } catch (e: any) {
+                  toast({
+                    title: "Verification failed",
+                    description: e?.message || "Unknown error",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Verify Secret
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Uses what you typed (not saved) to test the client-credential flow.</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              disabled={!isEnabled}
+              onClick={async () => {
+                try {
+                  const headers: any = {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                  };
+                  const token =
+                    localStorage.getItem(`tenant_token_${orgId}`) ||
+                    localStorage.getItem("tenant_token") ||
+                    "";
+                  if (token) headers.Authorization = `Bearer ${token}`;
+                  if (tenantId) headers["x-tenant-id"] = tenantId;
+                  const base = window.location.origin;
+                  const sanitizeGuid = (v: string) => v.trim().replace(/[{}]/g, "");
+                  const res = await fetch(`${base}/api/tenant/${tenantId}/azure-ad/validate`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({
+                      tenantId: sanitizeGuid(form.tenantId || ""),
+                      clientId: sanitizeGuid(form.clientId || ""),
+                      clientSecret: String(form.clientSecret || "").trim(),
+                    }),
+                  });
+                  const data = await res.json();
+                  if (res.ok && data?.valid) {
+                    toast({ title: "Azure config looks good", description: "You can try SSO now." });
+                    if (data?.authUrl) {
+                      window.open(data.authUrl, "_blank");
+                    }
+                  }
+                  else
+                    toast({
+                      title: "Azure config invalid",
+                      description: data?.message || "Fix settings and try again",
+                      variant: "destructive",
+                    });
+                } catch (e: any) {
+                  toast({
+                    title: "Validation failed",
+                    description: e?.message || "Unknown error",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Validate
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Checks IDs/redirect and returns an auth URL. Also opens an SSO window using your typed values.</TooltipContent>
+        </Tooltip>
         <Button disabled={!isEnabled} onClick={submitRequest}>
           Request Update
         </Button>
@@ -2961,3 +2918,193 @@ function ProviderSamlCard({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+// Manage Roles Modal
+function ManageRolesModal({
+  tenantId,
+  user,
+  roles,
+  onClose,
+  onChanged,
+}: {
+  tenantId?: string;
+  user: any;
+  roles: any[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { toast } = useToast();
+  const [currentRoles, setCurrentRoles] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem(`tenant_token_${user?.orgId}`) || localStorage.getItem("tenant_token") || "";
+        const headers: any = { "x-tenant-id": tenantId || "" };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(`/api/v2/rbac/users/${user.id}/roles`, { headers });
+        const data = await res.json();
+        if (res.ok) setCurrentRoles(Array.isArray(data) ? data : []);
+      } catch {}
+    })();
+  }, [tenantId, user?.id]);
+
+  const assign = async (roleId: string) => {
+    try {
+      const token = localStorage.getItem(`tenant_token_${user?.orgId}`) || localStorage.getItem("tenant_token") || "";
+      const headers: any = { "Content-Type": "application/json", "x-tenant-id": tenantId || "" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/v2/rbac/users/${user.id}/roles`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ roleId }),
+      });
+      if (!res.ok) throw new Error("Assign failed");
+      const role = roles.find((r: any) => r.id === roleId);
+      if (role) setCurrentRoles(prev => [...prev, role]);
+      onChanged();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e?.message || "Assign failed", variant: "destructive" });
+    }
+  };
+
+  const remove = async (roleId: string) => {
+    try {
+      const token = localStorage.getItem(`tenant_token_${user?.orgId}`) || localStorage.getItem("tenant_token") || "";
+      const headers: any = { "x-tenant-id": tenantId || "" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/v2/rbac/users/${user.id}/roles/${roleId}`, { method: "DELETE", headers });
+      if (!res.ok) throw new Error("Remove failed");
+      setCurrentRoles(prev => prev.filter(r => r.id !== roleId));
+      onChanged();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e?.message || "Remove failed", variant: "destructive" });
+    }
+  };
+
+  return (
+    <DialogContent className="sm:max-w-[520px]">
+      <DialogHeader>
+        <DialogTitle>Manage Roles</DialogTitle>
+        <DialogDescription>Assign or remove roles for {user?.email}</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-3">
+        <div>
+          <Label className="text-xs">Assigned Roles</Label>
+          <div className="flex gap-2 flex-wrap mt-2">
+            {currentRoles.length ? (
+              currentRoles.map(r => (
+                <Badge key={r.id} variant="secondary" className="text-xs">
+                  {r.name}
+                  <button className="ml-2" onClick={() => remove(r.id)} aria-label={`Remove ${r.name}`}>
+                    ×
+                  </button>
+                </Badge>
+              ))
+            ) : (
+              <span className="text-xs text-slate-400">No roles assigned</span>
+            )}
+          </div>
+        </div>
+        <div>
+          <Label className="text-xs">Assign New Role</Label>
+          <div className="flex gap-2 items-center mt-2">
+            <Select onValueChange={assign}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Select role to assign" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.filter(r => !currentRoles.some(cr => cr.id === r.id)).map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </div>
+    </DialogContent>
+  );
+}
+
+// Overview mini charts
+function OverviewMiniChart({ title, series }: { title: string; series: number[] }) {
+  const max = Math.max(1, ...series);
+  return (
+    <div className="p-4 border rounded-lg bg-white">
+      <p className="text-sm font-medium mb-3">{title}</p>
+      <div className="h-24 flex items-end gap-1">
+        {series.map((v, i) => (
+          <div key={i} style={{ height: `${(v / max) * 100}%` }} className="flex-1 bg-blue-200 rounded" title={`${v}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LogsMiniChart({ tenantId, orgId }: { tenantId?: string; orgId: string }) {
+  const { data = [] } = useQuery({
+    queryKey: ["/api/v2/logging/stats", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const token = localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const headers: any = { "x-tenant-id": tenantId || "" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/v2/logging/stats?period=24h`, { headers });
+      if (!res.ok) return [] as number[];
+      const payload = await res.json();
+      return Array.isArray(payload?.series) ? payload.series : [];
+    },
+  });
+  const series = (data as any[]).slice(-12);
+  return <OverviewMiniChart title="Logs (last 24h)" series={series.length ? series : [0]} />;
+}
+
+function TenantLogsList({ tenantId, orgId }: { tenantId?: string; orgId: string }) {
+  const { data = [], refetch, isFetching } = useQuery({
+    queryKey: ["/api/v2/logging/events", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const token = localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+      const headers: any = { "x-tenant-id": tenantId || "" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/v2/logging/events?limit=50`, { headers });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-xs text-slate-500">Latest 50 events</div>
+        <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+          {isFetching ? "Refreshing..." : "Refresh"}
+        </Button>
+      </div>
+      <div className="max-h-80 overflow-auto border rounded-md">
+        {(data as any[]).map((e: any) => (
+          <div key={e.id} className="px-3 py-2 text-sm border-b last:border-b-0 flex items-center justify-between">
+            <div>
+              <div className="font-medium">[{e.level?.toUpperCase?.() || "INFO"}] {e.category || e.eventType}</div>
+              <div className="text-slate-600 text-xs">{e.message}</div>
+            </div>
+            <div className="text-xs text-slate-500">{new Date(e.createdAt || e.timestamp).toLocaleString()}</div>
+          </div>
+        ))}
+        {!(data as any[]).length && (
+          <div className="p-4 text-center text-slate-500 text-sm">No logs yet</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
