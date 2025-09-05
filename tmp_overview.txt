@@ -1,0 +1,209 @@
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <Users className="h-4 w-4 text-slate-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{tenantInfo.users.length}</div>
+                  <p className="text-xs text-slate-600">+0 from last week</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Roles</CardTitle>
+                  <Shield className="h-4 w-4 text-slate-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{tenantInfo.roles.length}</div>
+                  <p className="text-xs text-slate-600">System defined</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Modules</CardTitle>
+                  <Key className="h-4 w-4 text-slate-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{tenantInfo.enabledModules.length}</div>
+                  <p className="text-xs text-slate-600">{tenantInfo.enabledModules.join(", ")}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Getting Started</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Simple user-role assignment */}
+                <div className="border rounded-md p-4 bg-slate-50">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                      <Label className="text-xs">User</Label>
+                      <Select onValueChange={v => setAssignmentUserId(v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(tenantUsers as any[]).map((u: any) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Role</Label>
+                      <Select onValueChange={v => setAssignmentRoleId(v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(tenantRoles as any[]).map((r: any) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Button
+                        onClick={async () => {
+                          try {
+                            if (!assignmentUserId || !assignmentRoleId) return;
+                            const token =
+                              localStorage.getItem(`tenant_token_${orgId}`) ||
+                              localStorage.getItem("tenant_token") ||
+                              "";
+                            const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+                            const t = tRes.ok ? await tRes.json() : null;
+                            if (!t) return;
+                            const res = await fetch(
+                              `/api/v2/rbac/users/${assignmentUserId}/roles`,
+                              {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  Authorization: `Bearer ${token}`,
+                                  "x-tenant-id": t.id || "",
+                                },
+                                body: JSON.stringify({ roleId: assignmentRoleId }),
+                              }
+                            );
+                            if (!res.ok) throw new Error("Assign failed");
+                            toast({ title: "Role assigned" });
+                            queryClient.invalidateQueries({
+                              queryKey: ["/api/v2/rbac/users", assignmentUserId, "roles", orgId],
+                            });
+                          } catch (e: any) {
+                            toast({
+                              title: "Failed to assign",
+                              description: e.message || "Error",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Assign Role
+                      </Button>
+                    </div>
+                  </div>
+                  {assignmentUserId && (
+                    <div className="mt-3 text-sm">
+                      <span className="text-slate-600">Current roles:</span>
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {(userRoles as any[]).map((r: any) => (
+                          <Badge key={r.id} variant="outline" className="text-xs">
+                            {r.name}
+                            <button
+                              className="ml-2 text-slate-500 hover:text-slate-700"
+                              onClick={async () => {
+                                try {
+                                  const token =
+                                    localStorage.getItem(`tenant_token_${orgId}`) ||
+                                    localStorage.getItem("tenant_token") ||
+                                    "";
+                                  const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+                                  const t = tRes.ok ? await tRes.json() : null;
+                                  if (!t) return;
+                                  const res = await fetch(
+                                    `/api/v2/rbac/users/${assignmentUserId}/roles/${r.id}`,
+                                    {
+                                      method: "DELETE",
+                                      headers: {
+                                        Authorization: `Bearer ${token}`,
+                                        "x-tenant-id": t.id || "",
+                                      },
+                                    }
+                                  );
+                                  if (!res.ok) throw new Error("Remove failed");
+                                  toast({ title: "Role removed" });
+                                  queryClient.invalidateQueries({
+                                    queryKey: [
+                                      "/api/v2/rbac/users",
+                                      assignmentUserId,
+                                      "roles",
+                                      orgId,
+                                    ],
+                                  });
+                                } catch (e: any) {
+                                  toast({
+                                    title: "Failed to remove",
+                                    description: e.message || "Error",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                  <div>
+                    <p className="font-medium">1. Install SDKs</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      npm install @saas-framework/auth @saas-framework/rbac
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                  <div>
+                    <p className="font-medium">2. Configure API Keys</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Use your Auth and RBAC API keys from the API Keys tab
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                  <div>
+                    <p className="font-medium">3. Integrate Authentication</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Start with Azure AD SSO (or local JWT fallback) using our SDK.
+                      <a
+                        href="https://github.com/akkikhan/UpdatedSaaSFramework-1/tree/tenant-portal-enhancement/packages/auth-client#readme"
+                        className="text-blue-600 font-medium ml-2"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Auth SDK Guide →
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>

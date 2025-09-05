@@ -1,4 +1,13 @@
-import { Building, CheckCircle, Clock, Mail, Plus, Bell } from "lucide-react";
+import {
+  Building,
+  CheckCircle,
+  Clock,
+  Mail,
+  Bell,
+  TrendingUp,
+  PieChart as PieIcon,
+  Activity,
+} from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import StatsCard from "@/components/ui/stats-card";
@@ -7,6 +16,31 @@ import { useRecentTenants } from "@/hooks/use-tenants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { api } from "@/lib/api";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -19,6 +53,63 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/module-requests"],
     refetchInterval: 5000,
   }) as { data: any[] };
+  const { toast } = useToast();
+
+  // All tenants for analytics
+  const { data: allTenants = [], isLoading: tenantsAllLoading } = useQuery({
+    queryKey: ["/api/tenants", "all"],
+    queryFn: () => api.getTenants(),
+    staleTime: 15000,
+  }) as { data: any[]; isLoading: boolean };
+
+  // Derived metrics
+  const total = stats?.totalTenants || (allTenants as any[]).length || 0;
+  const active =
+    stats?.activeTenants ||
+    (allTenants as any[]).filter((t: any) => t.status === "active").length ||
+    0;
+  const pending =
+    stats?.pendingTenants ||
+    (allTenants as any[]).filter((t: any) => t.status === "pending").length ||
+    0;
+  const suspended = (allTenants as any[]).filter((t: any) => t.status === "suspended").length || 0;
+  const activeRate = total ? Math.round((active / total) * 100) : 0;
+
+  // New tenants last 7 days
+  const now = new Date();
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (6 - i));
+    return d;
+  });
+  const newTenantsDaily = last7Days.map(d => {
+    const dayStr = format(d, "MMM d");
+    const count = (allTenants as any[]).filter(
+      (t: any) => t.createdAt && new Date(t.createdAt).toDateString() === d.toDateString()
+    ).length;
+    return { day: dayStr, count };
+  });
+
+  const statusBars = [
+    { name: "Active", value: active, color: "#16a34a" },
+    { name: "Pending", value: pending, color: "#f59e0b" },
+    { name: "Suspended", value: suspended, color: "#ef4444" },
+  ];
+
+  const rbacEnabled = (allTenants as any[]).filter((t: any) =>
+    (t.enabledModules || []).includes("rbac")
+  ).length;
+  const ssoConfigured = (allTenants as any[]).filter((t: any) => {
+    const providers = (t.moduleConfigs as any)?.auth?.providers || [];
+    return Array.isArray(providers)
+      ? providers.some((p: any) => ["azure-ad", "auth0", "saml"].includes(p?.type))
+      : false;
+  }).length;
+  const adoptionPie = [
+    { name: "RBAC", value: rbacEnabled, color: "#6366f1" },
+    { name: "SSO", value: ssoConfigured, color: "#06b6d4" },
+    { name: "Other", value: Math.max(total - (rbacEnabled + ssoConfigured), 0), color: "#e5e7eb" },
+  ];
   const { data: providerRequests = [] } = useQuery({
     queryKey: ["/api/admin/provider-requests"],
     refetchInterval: 5000,
@@ -38,7 +129,7 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      {/* Add Tenant Button - positioned absolutely for header */}
+      {/* Header Controls - Notifications only */}
       <div className="fixed top-4 right-6 z-10 flex items-center gap-3">
         <div className="relative">
           <Button variant="outline" onClick={() => (window.location.hash = "#module-requests")}>
@@ -50,17 +141,9 @@ export default function AdminDashboard() {
             </span>
           )}
         </div>
-        <Button
-          onClick={() => setLocation("/tenants/wizard")}
-          className="btn-primary flex items-center space-x-2"
-          data-testid="button-add-tenant"
-        >
-          <Plus size={16} />
-          <span>Add Tenant</span>
-        </Button>
       </div>
 
-      {/* Stats Grid */}
+      {/* KPI Highlights */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statsLoading ? (
           <>
@@ -73,22 +156,22 @@ export default function AdminDashboard() {
           <>
             <StatsCard
               title="Total Tenants"
-              value={stats?.totalTenants || 0}
+              value={total}
               icon={Building}
               iconColor="text-blue-600"
               backgroundColor="bg-blue-100"
             />
             <StatsCard
               title="Active Tenants"
-              value={stats?.activeTenants || 0}
+              value={active}
               icon={CheckCircle}
               iconColor="text-green-600"
               backgroundColor="bg-green-100"
             />
             <StatsCard
-              title="Pending"
-              value={stats?.pendingTenants || 0}
-              icon={Clock}
+              title="Pending Requests"
+              value={requests.length}
+              icon={Activity}
               iconColor="text-amber-600"
               backgroundColor="bg-amber-100"
             />
@@ -103,93 +186,195 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Tenants */}
-        <div
-          id="module-requests"
-          className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
-        >
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Recent Tenants</h3>
-          <div className="space-y-4">
-            {tenantsLoading ? (
-              <>
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-              </>
-            ) : recentTenants && recentTenants.length > 0 ? (
-              recentTenants.map(tenant => (
-                <div
-                  key={tenant.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                  data-testid={`tenant-item-${tenant.orgId}`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold text-sm">
-                        {tenant.name.substring(0, 2).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-800">{tenant.name}</p>
-                      <p className="text-sm text-slate-500">{tenant.adminEmail}</p>
-                      {(() => {
-                        const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
-                        const hasSSO = Array.isArray(providers)
-                          ? providers.some((p: any) =>
-                              ["azure-ad", "auth0", "saml"].includes(p?.type)
-                            )
-                          : false;
-                        const hasRBAC = (tenant.enabledModules || []).includes("rbac");
-                        const hasPending = (requests as any[]).some(
-                          (r: any) => r.tenantId === tenant.id
-                        );
-                        const needsAttention = hasPending || (hasRBAC && !hasSSO);
-                        return needsAttention ? (
-                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded mt-1 inline-block">
-                            Needs Attention
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
-                  </div>
-                  <span
-                    className={`status-badge ${
-                      tenant.status === "active"
-                        ? "status-active"
-                        : tenant.status === "pending"
-                          ? "status-pending"
-                          : "status-suspended"
-                    }`}
-                    data-testid={`status-${tenant.orgId}`}
-                  >
-                    {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-slate-500">
-                No tenants found. Create your first tenant to get started.
-              </div>
-            )}
+      {/* Analytics Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+        {/* New Tenants Trend */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-600" /> New Tenants (7 days)
+            </h3>
           </div>
-          {recentTenants && recentTenants.length > 0 && (
-            <Button
-              variant="ghost"
-              className="w-full mt-4 text-blue-600 hover:text-blue-500"
-              onClick={() => (window.location.href = "/tenants")}
-              data-testid="button-view-all-tenants"
-            >
-              View All Tenants
-            </Button>
+          {tenantsAllLoading ? (
+            <Skeleton className="h-48" />
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={newTenantsDaily}
+                  margin={{ left: 0, right: 0, top: 10, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} />
+                  <RechartsTooltip cursor={{ stroke: "#94a3b8", strokeWidth: 1 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#3b82f6"
+                    fillOpacity={1}
+                    fill="url(#colorNew)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </div>
 
-        {/* Module Requests */}
+        {/* Tenant Status Distribution */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Bell className="h-5 w-5 text-amber-600" /> Module Requests
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-emerald-600" /> Tenant Status
+            </h3>
+            <div className="text-sm text-slate-500">Active rate: {activeRate}%</div>
+          </div>
+          {tenantsAllLoading ? (
+            <Skeleton className="h-48" />
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={statusBars}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} />
+                  <RechartsTooltip />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {statusBars.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Module Adoption */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <PieIcon className="h-5 w-5 text-indigo-600" /> Module Adoption
+            </h3>
+            <div className="text-sm text-slate-500">Total: {total}</div>
+          </div>
+          {tenantsAllLoading ? (
+            <Skeleton className="h-48" />
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={adoptionPie}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={48}
+                    outerRadius={72}
+                    paddingAngle={4}
+                  >
+                    {adoptionPie.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-2 flex items-center justify-center gap-4 text-sm">
+                {adoptionPie.map(p => (
+                  <div key={p.name} className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-sm"
+                      style={{ backgroundColor: p.color }}
+                    />
+                    <span className="text-slate-600">
+                      {p.name}: <span className="font-medium text-slate-800">{p.value}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Tenants - Modern Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800">Recent Tenants</h3>
+            {recentTenants && recentTenants.length > 0 && (
+              <Button
+                variant="ghost"
+                className="text-blue-600 hover:text-blue-500"
+                onClick={() => (window.location.href = "/tenants")}
+                data-testid="button-view-all-tenants"
+              >
+                View All
+              </Button>
+            )}
+          </div>
+          {tenantsLoading ? (
+            <div className="p-6 space-y-4">
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+            </div>
+          ) : recentTenants && recentTenants.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Org ID</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentTenants.map(tenant => (
+                  <TableRow key={tenant.id} data-testid={`tenant-item-${tenant.orgId}`}>
+                    <TableCell className="font-medium text-slate-800">{tenant.name}</TableCell>
+                    <TableCell className="text-slate-600">{tenant.orgId}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`status-badge ${tenant.status === "active" ? "status-active" : tenant.status === "pending" ? "status-pending" : "status-suspended"}`}
+                        data-testid={`status-${tenant.orgId}`}
+                      >
+                        {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-500">
+                      {tenant.createdAt ? format(new Date(tenant.createdAt), "MMM d, yyyy") : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-slate-500">No tenants found.</div>
+          )}
+        </div>
+        {/* Module Requests */}
+        <div
+          className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+          id="module-requests"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <Bell className="h-5 w-5 text-amber-600" /> Module Requests
+            </h3>
+            <Button
+              variant="ghost"
+              className="text-blue-600 hover:text-blue-500"
+              onClick={() => setLocation("/logs?tab=module")}
+            >
+              View All
+            </Button>
+          </div>
           {requests.length === 0 ? (
             <div className="text-slate-500 text-sm">No pending requests</div>
           ) : (
@@ -221,6 +406,10 @@ export default function AdminDashboard() {
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/module-requests", "resolved"],
                           });
+                          toast({
+                            title: "Approved",
+                            description: `${r.details?.moduleId} approved for ${r.tenantName || r.tenantId}`,
+                          });
                         } catch (e) {
                           console.error(e);
                         }
@@ -242,6 +431,10 @@ export default function AdminDashboard() {
                           });
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/module-requests", "resolved"],
+                          });
+                          toast({
+                            title: "Dismissed",
+                            description: `${r.details?.moduleId} dismissed for ${r.tenantName || r.tenantId}`,
                           });
                         } catch (e) {
                           console.error(e);
@@ -284,7 +477,16 @@ export default function AdminDashboard() {
 
         {/* Provider Requests */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Provider Requests</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-800">Provider Requests</h3>
+            <Button
+              variant="ghost"
+              className="text-blue-600 hover:text-blue-500"
+              onClick={() => setLocation("/logs?tab=provider")}
+            >
+              View All
+            </Button>
+          </div>
           {providerRequests.length === 0 ? (
             <div className="text-slate-500 text-sm">No pending provider requests</div>
           ) : (
@@ -312,6 +514,10 @@ export default function AdminDashboard() {
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/provider-requests"],
                           });
+                          toast({
+                            title: "Approved",
+                            description: `${r.details?.provider} change approved`,
+                          });
                         } catch (e) {
                           console.error(e);
                         }
@@ -327,6 +533,10 @@ export default function AdminDashboard() {
                           await apiRequest("POST", `/api/admin/provider-requests/${r.id}/dismiss`);
                           queryClient.invalidateQueries({
                             queryKey: ["/api/admin/provider-requests"],
+                          });
+                          toast({
+                            title: "Dismissed",
+                            description: `${r.details?.provider} change dismissed`,
                           });
                         } catch (e) {
                           console.error(e);
