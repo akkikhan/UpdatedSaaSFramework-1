@@ -51,7 +51,7 @@
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
     "uuid": "^9.0.1",
-    "@saas-framework/auth-client": "file:../auth-client"
+    "@saas-framework/auth-client": "1.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
