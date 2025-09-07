@@ -100,6 +100,7 @@ export interface IStorage {
     limit?: number;
     offset?: number;
     action?: string;
+    state?: string;
   }): Promise<any[]>;
 
   // Compliance logging
@@ -555,9 +556,10 @@ export class DatabaseStorage implements IStorage {
       limit?: number;
       offset?: number;
       action?: string;
-    } = {}
+      state?: string;
+    } = {},
   ): Promise<any[]> {
-    const baseQuery = db
+    let query = db
       .select({
         id: systemLogs.id,
         tenantId: systemLogs.tenantId,
@@ -577,27 +579,26 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(systemLogs.adminUserId, users.id))
       .orderBy(desc(systemLogs.timestamp));
 
-    // Apply filters and execute
-    if (options.tenantId && options.action) {
-      return await baseQuery
-        .where(
-          sql`${systemLogs.tenantId} = ${options.tenantId} AND ${systemLogs.action} = ${options.action}`
-        )
-        .limit(options.limit || 50)
-        .offset(options.offset || 0);
-    } else if (options.tenantId) {
-      return await baseQuery
-        .where(eq(systemLogs.tenantId, options.tenantId))
-        .limit(options.limit || 50)
-        .offset(options.offset || 0);
-    } else if (options.action) {
-      return await baseQuery
-        .where(eq(systemLogs.action, options.action))
-        .limit(options.limit || 50)
-        .offset(options.offset || 0);
-    } else {
-      return await baseQuery.limit(options.limit || 50).offset(options.offset || 0);
+    const conditions: any[] = [];
+    if (options.tenantId) {
+      conditions.push(eq(systemLogs.tenantId, options.tenantId));
     }
+    if (options.action) {
+      conditions.push(eq(systemLogs.action, options.action));
+    }
+    if (options.state) {
+      conditions.push(sql`${systemLogs.details} ->> 'state' = ${options.state}`);
+    }
+
+    if (conditions.length > 0) {
+      const whereCondition = conditions.reduce(
+        (acc, condition, index) => (index == 0 ? condition : sql`${acc} AND ${condition}`),
+        conditions[0],
+      );
+      query = query.where(whereCondition);
+    }
+
+    return await query.limit(options.limit || 50).offset(options.offset || 0);
   }
 
   async updateSystemLogDetails(id: string, updates: any): Promise<void> {
@@ -762,7 +763,7 @@ export class DatabaseStorage implements IStorage {
       status?: string;
     } = {}
   ): Promise<any[]> {
-    const baseQuery = db
+    let query = db
       .select({
         id: emailLogs.id,
         tenantId: emailLogs.tenantId,
@@ -778,27 +779,23 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(tenants, eq(emailLogs.tenantId, tenants.id))
       .orderBy(desc(emailLogs.sentAt));
 
-    // Apply filters and execute
-    if (options.tenantId && options.status) {
-      return await baseQuery
-        .where(
-          sql`${emailLogs.tenantId} = ${options.tenantId} AND ${emailLogs.status} = ${options.status}`
-        )
-        .limit(options.limit || 50)
-        .offset(options.offset || 0);
-    } else if (options.tenantId) {
-      return await baseQuery
-        .where(eq(emailLogs.tenantId, options.tenantId))
-        .limit(options.limit || 50)
-        .offset(options.offset || 0);
-    } else if (options.status) {
-      return await baseQuery
-        .where(eq(emailLogs.status, options.status))
-        .limit(options.limit || 50)
-        .offset(options.offset || 0);
-    } else {
-      return await baseQuery.limit(options.limit || 50).offset(options.offset || 0);
+    const conditions: any[] = [];
+    if (options.tenantId) {
+      conditions.push(eq(emailLogs.tenantId, options.tenantId));
     }
+    if (options.status) {
+      conditions.push(eq(emailLogs.status, options.status));
+    }
+
+    if (conditions.length > 0) {
+      const whereCondition = conditions.reduce(
+        (acc, condition, index) => (index === 0 ? condition : sql`${acc} AND ${condition}`),
+        conditions[0]
+      );
+      query = query.where(whereCondition);
+    }
+
+    return await query.limit(options.limit || 50).offset(options.offset || 0);
   }
 
   async getTenantStats() {
@@ -1709,28 +1706,10 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  private emailTemplates = new Map<string, any[]>();
+
   async getEmailTemplates(tenantId: string): Promise<any[]> {
-    // Mock implementation - in production you'd have an email templates table
-    return [
-      {
-        id: "1",
-        tenantId,
-        name: "Welcome Email",
-        subject: "Welcome to {{companyName}}",
-        htmlContent: "<h1>Welcome {{userName}}!</h1>",
-        textContent: "Welcome {{userName}}!",
-        variables: ["companyName", "userName"],
-      },
-      {
-        id: "2",
-        tenantId,
-        name: "Invoice Email",
-        subject: "Your invoice #{{invoiceNumber}}",
-        htmlContent: "<h1>Invoice {{invoiceNumber}}</h1><p>Amount: {{amount}}</p>",
-        textContent: "Invoice {{invoiceNumber}} - Amount: {{amount}}",
-        variables: ["invoiceNumber", "amount"],
-      },
-    ];
+    return this.emailTemplates.get(tenantId) || [];
   }
 
   async createEmailTemplate(template: {
@@ -1741,22 +1720,39 @@ export class DatabaseStorage implements IStorage {
     textContent?: string;
     variables: string[];
   }): Promise<any> {
-    // Mock implementation - in production you'd insert into email templates table
-    return {
+    const list = this.emailTemplates.get(template.tenantId) || [];
+    const newTemplate = {
       id: randomUUID(),
       ...template,
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
+    list.push(newTemplate);
+    this.emailTemplates.set(template.tenantId, list);
+    return newTemplate;
   }
 
-  async updateEmailTemplate(templateId: string, updates: any): Promise<void> {
-    // Mock implementation - in production you'd update email templates table
-    console.log(`Updated email template ${templateId}`, updates);
+  async updateEmailTemplate(templateId: string, updates: any): Promise<any> {
+    for (const [tenantId, templates] of this.emailTemplates) {
+      const idx = templates.findIndex(t => t.id === templateId);
+      if (idx !== -1) {
+        templates[idx] = { ...templates[idx], ...updates, updatedAt: new Date() };
+        this.emailTemplates.set(tenantId, templates);
+        return templates[idx];
+      }
+    }
+    throw new Error("Template not found");
   }
 
   async deleteEmailTemplate(templateId: string): Promise<void> {
-    // Mock implementation - in production you'd delete from email templates table
-    console.log(`Deleted email template ${templateId}`);
+    for (const [tenantId, templates] of this.emailTemplates) {
+      const idx = templates.findIndex(t => t.id === templateId);
+      if (idx !== -1) {
+        templates.splice(idx, 1);
+        this.emailTemplates.set(tenantId, templates);
+        return;
+      }
+    }
   }
 
   async getEmailStats(
@@ -1838,7 +1834,15 @@ class DemoStorage implements IStorage {
   async logSystemActivity(): Promise<void> {
     return;
   }
-  async getSystemLogs(): Promise<any[]> {
+  async getSystemLogs(
+    _options?: {
+      tenantId?: string;
+      limit?: number;
+      offset?: number;
+      action?: string;
+      state?: string;
+    },
+  ): Promise<any[]> {
     return [];
   }
   async getComplianceAuditLogs(): Promise<any[]> {

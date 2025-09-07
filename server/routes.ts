@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { emailService } from "./services/email";
+import { db } from "./db";
 import { authService } from "./services/auth";
 import { platformAdminAuthService } from "./services/platform-admin-auth";
 import { AzureADService } from "./services/azure-ad";
@@ -10,6 +11,7 @@ import { SAMLService } from "./services/oauth/saml";
 import { authMiddleware, tenantMiddleware } from "./middleware/auth";
 import { platformAdminMiddleware } from "./middleware/platform-admin";
 import { validateApiKey } from "./middleware/apiKeyAuth";
+import { sql } from "drizzle-orm";
 import {
   insertTenantSchema,
   insertUserSchema,
@@ -56,13 +58,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Health check
-  app.get("/api/health", async (req, res) => {
-    const emailConnected = await emailService.testConnection();
+  app.get("/api/health", async (_req, res) => {
+    let database: "operational" | "unavailable" = "operational";
+    try {
+      if (!db) throw new Error("no_db");
+      await db.execute(sql`select 1`);
+    } catch {
+      database = "unavailable";
+    }
+    const emailConnected = await emailService.testConnection().catch(() => false);
+    const status = database === "operational" && emailConnected ? "operational" : "degraded";
     res.json({
-      status: "operational",
+      status,
       services: {
-        database: true,
-        email: emailConnected ? "operational" : "configuration_needed",
+        database,
+        email: emailConnected ? "operational" : "unavailable",
+      },
+      system: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
       },
       timestamp: new Date().toISOString(),
     });
@@ -420,6 +434,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Logout error:", error);
       res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  // ===========================================================================
+  // Platform Admin: System & Email Logs
+  app.get("/api/logs/system", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { tenantId, action, state, limit, offset } = req.query as {
+        tenantId?: string;
+        action?: string;
+        state?: string;
+        limit?: string;
+        offset?: string;
+      };
+
+      const logs = await storage.getSystemLogs({
+        tenantId,
+        action,
+        state,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
+
+      // Explicitly set JSON content type to avoid any HTML fallback responses
+      res.setHeader("Content-Type", "application/json");
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching system logs:", error);
+      res.status(500).json({ message: "Failed to fetch system logs" });
+    }
+  });
+
+  app.get("/api/logs/email", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { tenantId, status, limit, offset } = req.query as {
+        tenantId?: string;
+        status?: string;
+        limit?: string;
+        offset?: string;
+      };
+
+      const logs = await storage.getEmailLogs({
+        tenantId,
+        status,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
+
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching email logs:", error);
+      res.status(500).json({ message: "Failed to fetch email logs" });
     }
   });
 
@@ -3573,24 +3639,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email Templates
-  app.post("/email/templates", tenantMiddleware, async (req, res) => {
+  // Email Templates (platform admin manages per-tenant templates)
+  app.get("/api/email/templates", platformAdminMiddleware, async (req, res) => {
     try {
-      const { name, subject, html, variables } = req.body;
-      const tenantId = req.tenantId;
+      const tenantId = req.query.tenantId as string;
+      if (!tenantId) return res.status(400).json({ message: "tenantId is required" });
+      const templates = await storage.getEmailTemplates(tenantId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Get email templates error:", error);
+      res.status(500).json({ message: "Failed to get email templates" });
+    }
+  });
 
-      if (!name || !subject || !html) {
-        return res.status(400).json({ message: "Name, subject, and html are required" });
+  app.post("/api/email/templates", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { tenantId, name, subject, htmlContent, textContent, variables } = req.body;
+      if (!tenantId || !name || !subject || !htmlContent) {
+        return res
+          .status(400)
+          .json({ message: "tenantId, name, subject and htmlContent are required" });
       }
-
       const template = await storage.createEmailTemplate({
         tenantId,
         name,
         subject,
-        html,
+        htmlContent,
+        textContent,
         variables: variables || [],
       });
-
       res.status(201).json(template);
     } catch (error) {
       console.error("Create email template error:", error);
@@ -3598,14 +3675,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/email/templates", tenantMiddleware, async (req, res) => {
+  app.put("/api/email/templates/:id", platformAdminMiddleware, async (req, res) => {
     try {
-      const tenantId = req.tenantId;
-      const templates = await storage.getEmailTemplates(tenantId);
-      res.json(templates);
+      const id = req.params.id;
+      const updates = req.body || {};
+      const updated = await storage.updateEmailTemplate(id, updates);
+      res.json(updated);
     } catch (error) {
-      console.error("Get email templates error:", error);
-      res.status(500).json({ message: "Failed to get email templates" });
+      console.error("Update email template error:", error);
+      res.status(500).json({ message: "Failed to update email template" });
+    }
+  });
+
+  app.delete("/api/email/templates/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const id = req.params.id;
+      await storage.deleteEmailTemplate(id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete email template error:", error);
+      res.status(500).json({ message: "Failed to delete email template" });
     }
   });
 
