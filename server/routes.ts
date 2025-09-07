@@ -3691,29 +3691,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Compliance Endpoints (basic placeholders)
+  // Compliance Endpoints
   app.get("/api/compliance/summary", platformAdminMiddleware, async (req, res) => {
-    const days = parseInt((req.query.days as string) || "30", 10);
-    res.json({
-      timeframe: `${days}d`,
-      totalAuditEvents: 0,
-      rbacChanges: 0,
-      dataAccessEvents: 0,
-      authEvents: 0,
-      highRiskEvents: 0,
-      securityEvents: 0,
-      criticalSecurityEvents: 0,
-      complianceFrameworks: ["sox", "hipaa", "gdpr", "pci", "iso27001"],
-      riskDistribution: { low: 0, medium: 0, high: 0, critical: 0 },
-    });
+    const days = Number.parseInt((req.query.days as string) || "30", 10) || 30;
+    const summary = await complianceService.getSummary(days);
+    res.json(summary);
   });
 
   app.get("/api/compliance/audit-logs", platformAdminMiddleware, async (_req, res) => {
-    res.json([]);
+    const logs = await complianceService.getAuditLogs();
+    res.json(logs);
   });
 
   app.get("/api/compliance/security-events", platformAdminMiddleware, async (_req, res) => {
-    res.json([]);
+    const events = await complianceService.getSecurityEvents();
+    res.json(events);
   });
 
   // Email Stats
