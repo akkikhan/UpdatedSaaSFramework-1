@@ -128,9 +128,9 @@ export default function AdminDashboard() {
   }) as { data: any[] };
 
   return (
-    <div>
+    <div className="space-y-8">
       {/* Header Controls - Notifications only */}
-      <div className="fixed top-4 right-6 z-10 flex items-center gap-3">
+      <div className="flex justify-end">
         <div className="relative">
           <Button variant="outline" onClick={() => (window.location.hash = "#module-requests")}>
             <Bell className="h-4 w-4 mr-2" /> Notifications
@@ -144,7 +144,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* KPI Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsLoading ? (
           <>
             <Skeleton className="h-24" />
@@ -187,10 +187,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* Analytics Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* New Tenants Trend */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-600" /> New Tenants (7 days)
             </h3>
@@ -198,11 +198,11 @@ export default function AdminDashboard() {
           {tenantsAllLoading ? (
             <Skeleton className="h-48" />
           ) : (
-            <div className="h-56">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={newTenantsDaily}
-                  margin={{ left: 0, right: 0, top: 10, bottom: 0 }}
+                  margin={{ left: 12, right: 12, top: 10, bottom: 10 }}
                 >
                   <defs>
                     <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
@@ -210,14 +210,36 @@ export default function AdminDashboard() {
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} />
-                  <RechartsTooltip cursor={{ stroke: "#94a3b8", strokeWidth: 1 }} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="day"
+                    tickLine={false}
+                    axisLine={false}
+                    fontSize={12}
+                    tick={{ fill: "#64748b" }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    width={28}
+                    fontSize={12}
+                    tick={{ fill: "#64748b" }}
+                  />
+                  <RechartsTooltip
+                    cursor={{ stroke: "#94a3b8", strokeWidth: 1 }}
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                    }}
+                  />
                   <Area
                     type="monotone"
                     dataKey="count"
                     stroke="#3b82f6"
+                    strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorNew)"
                   />
@@ -229,7 +251,7 @@ export default function AdminDashboard() {
 
         {/* Tenant Status Distribution */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <Activity className="h-5 w-5 text-emerald-600" /> Tenant Status
             </h3>
@@ -238,13 +260,33 @@ export default function AdminDashboard() {
           {tenantsAllLoading ? (
             <Skeleton className="h-48" />
           ) : (
-            <div className="h-56">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={statusBars}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} />
-                  <RechartsTooltip />
+                <BarChart data={statusBars} margin={{ left: 12, right: 12, top: 10, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    tickLine={false}
+                    axisLine={false}
+                    fontSize={12}
+                    tick={{ fill: "#64748b" }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    width={28}
+                    fontSize={12}
+                    tick={{ fill: "#64748b" }}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                    }}
+                  />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                     {statusBars.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -258,7 +300,7 @@ export default function AdminDashboard() {
 
         {/* Module Adoption */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <PieIcon className="h-5 w-5 text-indigo-600" /> Module Adoption
             </h3>
@@ -267,29 +309,41 @@ export default function AdminDashboard() {
           {tenantsAllLoading ? (
             <Skeleton className="h-48" />
           ) : (
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={adoptionPie}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={48}
-                    outerRadius={72}
-                    paddingAngle={4}
-                  >
-                    {adoptionPie.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="mt-2 flex items-center justify-center gap-4 text-sm">
+            <div className="h-48">
+              <div className="flex items-center justify-center h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={adoptionPie}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={38}
+                      outerRadius={64}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      {adoptionPie.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value, name) => [value, name]}
+                      labelStyle={{ color: "#1e293b" }}
+                      contentStyle={{
+                        backgroundColor: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 flex items-center justify-center gap-4 text-sm">
                 {adoptionPie.map(p => (
                   <div key={p.name} className="flex items-center gap-2">
                     <span
-                      className="inline-block w-2.5 h-2.5 rounded-sm"
-                      style={{ backgroundColor: p.color }}
+                      className={`chart-legend-dot ${p.name === "RBAC" ? "legend-rbac" : p.name === "SSO" ? "legend-sso" : "legend-other"}`}
                     />
                     <span className="text-slate-600">
                       {p.name}: <span className="font-medium text-slate-800">{p.value}</span>
@@ -305,7 +359,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Tenants - Modern Table */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-800">Recent Tenants</h3>
             {recentTenants && recentTenants.length > 0 && (
               <Button
@@ -363,7 +417,7 @@ export default function AdminDashboard() {
           className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
           id="module-requests"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <Bell className="h-5 w-5 text-amber-600" /> Module Requests
             </h3>
@@ -477,7 +531,7 @@ export default function AdminDashboard() {
 
         {/* Provider Requests */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-800">Provider Requests</h3>
             <Button
               variant="ghost"
@@ -554,7 +608,7 @@ export default function AdminDashboard() {
 
         {/* System Health */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">System Health</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">System Health</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
