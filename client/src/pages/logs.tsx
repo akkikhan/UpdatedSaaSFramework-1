@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select";
 import { RefreshCw, Filter, Download, Clock, Mail, Settings, User, FileText } from "lucide-react";
 import { format } from "date-fns";
+import { api } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 
 interface SystemLog {
   id: string;
@@ -68,11 +70,7 @@ export default function LogsPage() {
 
   const tenantsQuery = useQuery({
     queryKey: ["/api/tenants"],
-    queryFn: async () => {
-      const res = await fetch(`/api/tenants`);
-      if (!res.ok) throw new Error("Failed to fetch tenants");
-      return res.json() as Promise<Array<{ id: string; name: string; orgId: string }>>;
-    },
+    queryFn: api.getTenants,
   });
 
   const tenantEventsQuery = useQuery({
@@ -86,8 +84,10 @@ export default function LogsPage() {
       if (tenantEventFilters.category) params.set("category", tenantEventFilters.category);
       params.set("limit", String(tenantEventFilters.limit));
       params.set("offset", String(tenantEventFilters.offset));
-      const res = await fetch(`/api/admin/logging/events?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch tenant logs");
+      const res = await apiRequest(
+        "GET",
+        `/api/admin/logging/events?${params.toString()}`
+      );
       return res.json() as Promise<Array<any>>;
     },
   });
@@ -98,13 +98,16 @@ export default function LogsPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (systemFilters.tenantId) params.append("tenantId", systemFilters.tenantId);
-      if (systemFilters.action) params.append("action", systemFilters.action);
+      if (systemFilters.action && systemFilters.action !== "all")
+        params.append("action", systemFilters.action);
       if (systemFilters.state) params.append("state", systemFilters.state);
       params.append("limit", systemFilters.limit.toString());
       params.append("offset", systemFilters.offset.toString());
 
-      const response = await fetch(`/api/logs/system?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch system logs");
+      const response = await apiRequest(
+        "GET",
+        `/api/logs/system?${params.toString()}`
+      );
       return response.json() as Promise<SystemLog[]>;
     },
   });
@@ -115,12 +118,15 @@ export default function LogsPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (emailFilters.tenantId) params.append("tenantId", emailFilters.tenantId);
-      if (emailFilters.status) params.append("status", emailFilters.status);
+      if (emailFilters.status && emailFilters.status !== "all")
+        params.append("status", emailFilters.status);
       params.append("limit", emailFilters.limit.toString());
       params.append("offset", emailFilters.offset.toString());
 
-      const response = await fetch(`/api/logs/email?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch email logs");
+      const response = await apiRequest(
+        "GET",
+        `/api/logs/email?${params.toString()}`
+      );
       return response.json() as Promise<EmailLog[]>;
     },
   });
