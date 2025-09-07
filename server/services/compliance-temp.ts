@@ -33,6 +33,38 @@ export class ComplianceService {
     return;
   }
 
+  /**
+   * Get summary of compliance activity for admin dashboard
+   */
+  async getSummary(days: number) {
+    return {
+      timeframe: `${days}d`,
+      totalAuditEvents: 0,
+      rbacChanges: 0,
+      dataAccessEvents: 0,
+      authEvents: 0,
+      highRiskEvents: 0,
+      securityEvents: 0,
+      criticalSecurityEvents: 0,
+      complianceFrameworks: ["sox", "hipaa", "gdpr", "pci", "iso27001"],
+      riskDistribution: { low: 0, medium: 0, high: 0, critical: 0 },
+    };
+  }
+
+  /**
+   * List audit log entries
+   */
+  async getAuditLogs() {
+    return [];
+  }
+
+  /**
+   * List security events
+   */
+  async getSecurityEvents() {
+    return [];
+  }
+
   // Helper methods
   private getEventCategory(action: string): string {
     if (action.includes("create") || action.includes("assign")) return "create";

@@ -3691,6 +3691,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Compliance Endpoints
+  app.get("/api/compliance/summary", platformAdminMiddleware, async (req, res) => {
+    const days = Number.parseInt((req.query.days as string) || "30", 10) || 30;
+    const summary = await complianceService.getSummary(days);
+    res.json(summary);
+  });
+
+  app.get("/api/compliance/audit-logs", platformAdminMiddleware, async (_req, res) => {
+    const logs = await complianceService.getAuditLogs();
+    res.json(logs);
+  });
+
+  app.get("/api/compliance/security-events", platformAdminMiddleware, async (_req, res) => {
+    const events = await complianceService.getSecurityEvents();
+    res.json(events);
+  });
+
   // Email Stats
   app.get("/email/stats", tenantMiddleware, async (req, res) => {
     try {
