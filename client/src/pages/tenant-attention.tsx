@@ -80,9 +80,13 @@ export default function TenantAttentionPage() {
   };
 
   const providers = tenant?.moduleConfigs?.auth?.providers || [];
-  const hasSSO = Array.isArray(providers)
-    ? providers.some((p: any) => ["azure-ad", "auth0", "saml"].includes(p?.type))
-    : false;
+  const providerTypes = new Set(
+    Array.isArray(providers) ? providers.map((p: any) => p?.type || p) : []
+  );
+  const hasAzure = providerTypes.has("azure-ad");
+  const hasAuth0 = providerTypes.has("auth0");
+  const hasSaml = providerTypes.has("saml");
+  const hasSSO = hasAzure || hasAuth0 || hasSaml;
   const hasRBAC = (tenant?.enabledModules || []).includes("rbac");
 
   return (
@@ -156,9 +160,16 @@ export default function TenantAttentionPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="text-sm">
-              Azure/Auth0/SAML:{" "}
-              {hasSSO ? <Badge>Configured</Badge> : <Badge variant="destructive">Missing</Badge>}
+            <div className="text-sm space-y-1">
+              <div>
+                Azure AD: {hasAzure ? <Badge>Configured</Badge> : <Badge variant="destructive">Missing</Badge>}
+              </div>
+              <div>
+                Auth0: {hasAuth0 ? <Badge>Configured</Badge> : <Badge variant="destructive">Missing</Badge>}
+              </div>
+              <div>
+                SAML: {hasSaml ? <Badge>Configured</Badge> : <Badge variant="destructive">Missing</Badge>}
+              </div>
             </div>
             {!hasSSO && (
               <Button
@@ -166,7 +177,7 @@ export default function TenantAttentionPage() {
                 variant="outline"
                 onClick={() => setLocation(`/modules?tenantId=${tenantId}`)}
               >
-                Configure Azure AD
+                Configure SSO Providers
               </Button>
             )}
           </CardContent>
