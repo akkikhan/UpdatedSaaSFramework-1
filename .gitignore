@@ -8,4 +8,16 @@ vite.config.ts.*
 # Build artifacts
 **/bin/
 **/obj/
-**/.angular/cache/
+**/.angular/
+**/package-lock.json
+
+# Development assets
+**/assets/
+client/vite.config.ts
+
+# .NET specific
+*.dll
+*.pdb
+*.cache
+*.deps.json
+*.runtimeconfig.json
