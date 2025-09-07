@@ -45,10 +45,6 @@ import {
   Copy,
   Settings,
   Building2,
-  FileText,
-  CreditCard,
-  GraduationCap,
-  Landmark,
   CheckCircle,
 } from "lucide-react";
 import { useParams, Link } from "wouter";
@@ -68,8 +64,9 @@ const permissionSchema = z.object({
 });
 
 const rbacConfigSchema = z.object({
-  permissionTemplate: z.enum(["standard", "enterprise", "custom"]),
-  businessType: z.enum(["general", "healthcare", "finance", "education", "government"]),
+  // Permit any template or business type coming from server config
+  permissionTemplate: z.string(),
+  businessType: z.string(),
 });
 
 type RoleForm = z.infer<typeof roleSchema>;
@@ -233,6 +230,15 @@ export default function RBACManagementPage() {
     enabled: !!tenantId,
   });
 
+  // Pull RBAC configuration options from platform admin APIs
+  const { data: permissionTemplates = [] } = useQuery({
+    queryKey: ["/api/rbac-config/permission-templates"],
+  });
+
+  const { data: businessTypes = [] } = useQuery({
+    queryKey: ["/api/rbac-config/business-types"],
+  });
+
   // Forms
   const roleForm = useForm<RoleForm>({
     resolver: zodResolver(roleSchema),
@@ -247,8 +253,8 @@ export default function RBACManagementPage() {
   const configForm = useForm<RBACConfigForm>({
     resolver: zodResolver(rbacConfigSchema),
     defaultValues: {
-      permissionTemplate: "standard",
-      businessType: "general",
+      permissionTemplate: "",
+      businessType: "",
     },
   });
 
@@ -271,34 +277,6 @@ export default function RBACManagementPage() {
     },
   });
 
-  const businessTypeInfo = {
-    general: {
-      icon: Building2,
-      label: "General Business",
-      description: "Standard business operations",
-    },
-    healthcare: {
-      icon: FileText,
-      label: "Healthcare",
-      description: "Healthcare providers and medical facilities",
-    },
-    finance: {
-      icon: CreditCard,
-      label: "Finance",
-      description: "Financial institutions and services",
-    },
-    education: {
-      icon: GraduationCap,
-      label: "Education",
-      description: "Schools and educational institutions",
-    },
-    government: {
-      icon: Landmark,
-      label: "Government",
-      description: "Government agencies and public sector",
-    },
-  };
-
   const renderConfiguration = () => (
     <Card>
       <CardHeader>
@@ -314,49 +292,27 @@ export default function RBACManagementPage() {
         <div>
           <h3 className="text-lg font-semibold mb-4">Permission Template</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                value: "standard",
-                label: "Standard",
-                description:
-                  "Basic set of permissions for general use cases. Includes core user management, role assignment, and essential business operations.",
-                permissions: "8-12 permissions",
-                recommended: true,
-              },
-              {
-                value: "enterprise",
-                label: "Enterprise",
-                description:
-                  "Advanced permissions with audit trails, compliance features, and system administration capabilities.",
-                permissions: "15+ permissions",
-                recommended: false,
-              },
-              {
-                value: "custom",
-                label: "Custom",
-                description:
-                  "Build your own permission set from scratch based on your specific requirements.",
-                permissions: "Unlimited",
-                recommended: false,
-              },
-            ].map(template => (
-              <Card
-                key={template.value}
-                className="relative cursor-pointer hover:shadow-md transition-shadow"
-              >
-                <CardContent className="p-4">
-                  {template.recommended && (
-                    <Badge className="absolute -top-2 -right-2 bg-blue-500">Recommended</Badge>
-                  )}
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="h-5 w-5 text-blue-500" />
-                    <h4 className="font-semibold">{template.label}</h4>
-                  </div>
-                  <p className="text-sm text-slate-600 mb-2">{template.description}</p>
-                  <p className="text-xs text-blue-600 font-medium">{template.permissions}</p>
-                </CardContent>
-              </Card>
-            ))}
+            {permissionTemplates.length > 0 ? (
+              permissionTemplates.map(t => (
+                <Card
+                  key={t.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="h-5 w-5 text-blue-500" />
+                      <h4 className="font-semibold">{t.name}</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-2">{t.description}</p>
+                    <p className="text-xs text-blue-600 font-medium">
+                      {(t.permissions || []).length} permissions
+                    </p>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <p className="text-sm text-slate-600">No permission templates defined.</p>
+            )}
           </div>
         </div>
 
@@ -364,25 +320,25 @@ export default function RBACManagementPage() {
 
         <div>
           <h3 className="text-lg font-semibold mb-4">Business Type</h3>
-          <p className="text-sm text-slate-600 mb-4">
-            Choose your business type to get industry-specific role templates and permission sets
-            that match your operational needs.
-          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(businessTypeInfo).map(([type, info]) => {
-              const Icon = info.icon;
-              return (
-                <Card key={type} className="cursor-pointer hover:shadow-md transition-shadow">
+            {businessTypes.length > 0 ? (
+              businessTypes.map(bt => (
+                <Card
+                  key={bt.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-2">
-                      <Icon className="h-5 w-5 text-blue-500" />
-                      <h4 className="font-semibold">{info.label}</h4>
+                      <Building2 className="h-5 w-5 text-blue-500" />
+                      <h4 className="font-semibold">{bt.name}</h4>
                     </div>
-                    <p className="text-sm text-slate-600">{info.description}</p>
+                    <p className="text-sm text-slate-600">{bt.description}</p>
                   </CardContent>
                 </Card>
-              );
-            })}
+              ))
+            ) : (
+              <p className="text-sm text-slate-600">No business types defined.</p>
+            )}
           </div>
         </div>
 
@@ -392,12 +348,12 @@ export default function RBACManagementPage() {
             <div>
               <h4 className="font-semibold text-blue-900">Current Configuration</h4>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Permission Template:</strong> Standard - Provides essential user management
-                and role-based permissions suitable for most applications.
+                <strong>Permission Template:</strong>{" "}
+                {tenant?.moduleConfigs?.rbac?.permissionTemplate || "N/A"}
               </p>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Business Type:</strong> General - Standard business operations with Admin,
-                Manager, and User roles.
+                <strong>Business Type:</strong>{" "}
+                {tenant?.moduleConfigs?.rbac?.businessType || "N/A"}
               </p>
             </div>
           </div>

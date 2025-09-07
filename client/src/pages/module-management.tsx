@@ -28,9 +28,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { MODULE_DEPENDENCIES } from "@/lib/constants";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -63,6 +65,7 @@ interface Tenant {
 const moduleUpdateSchema = z.object({
   enabledModules: z.array(z.string()),
   moduleConfigs: z.record(z.any()).optional(),
+  notifyTenant: z.boolean().optional(),
 });
 
 type ModuleUpdateFormData = z.infer<typeof moduleUpdateSchema>;
@@ -137,6 +140,8 @@ const availableModules = [
   },
 ];
 
+// Define module dependency relationships. Key is module requiring other modules.
+
 export default function ModuleManagementPage() {
   const [searchTenant, setSearchTenant] = useState("");
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -148,6 +153,7 @@ export default function ModuleManagementPage() {
     defaultValues: {
       enabledModules: ["auth", "rbac"],
       moduleConfigs: {},
+      notifyTenant: false,
     },
   });
 
@@ -172,11 +178,14 @@ export default function ModuleManagementPage() {
 
   // Update tenant modules mutation
   const updateModulesMutation = useMutation({
-    mutationFn: async (data: { tenantId: string; modules: ModuleUpdateFormData }) => {
+    mutationFn: async (data: { tenantId: string; modules: ModuleUpdateFormData; notify?: boolean }) => {
       const res = await apiRequest("PATCH", `/api/tenants/${data.tenantId}/modules`, data.modules);
       return res.json();
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
+      const previous = selectedTenant?.enabledModules || [];
+      const current = variables.modules.enabledModules || [];
+
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
       toast({
         title: "Modules Updated",
@@ -188,6 +197,33 @@ export default function ModuleManagementPage() {
         const updatedTenant = tenantsQuery.data?.find(t => t.id === variables.tenantId);
         if (updatedTenant) {
           setSelectedTenant(updatedTenant);
+        }
+      }
+
+      if (variables.notify) {
+        const enabledDiff = current.filter(m => !previous.includes(m));
+        const disabledDiff = previous.filter(m => !current.includes(m));
+
+        try {
+          await apiRequest("POST", `/api/tenants/${variables.tenantId}/notify-module-change`, {
+            enabled: enabledDiff,
+            disabled: disabledDiff,
+          });
+          // Flag the tenant portal to display snackbar notifications on next login
+          localStorage.setItem(
+            `notifyModules-${variables.tenantId}`,
+            Date.now().toString()
+          );
+          toast({
+            title: "Tenant Notified",
+            description: "Notification and email sent.",
+          });
+        } catch (e: any) {
+          toast({
+            title: "Notification Failed",
+            description: e?.message || "Could not notify tenant",
+            variant: "destructive",
+          });
         }
       }
     },
@@ -213,39 +249,40 @@ export default function ModuleManagementPage() {
     form.reset({
       enabledModules: tenant.enabledModules || ["auth", "rbac"],
       moduleConfigs: tenant.moduleConfigs || {},
+      notifyTenant: false,
     });
     setEditingModules(false);
   };
 
   const onSubmit = (data: ModuleUpdateFormData) => {
     if (!selectedTenant) return;
-    // Guard: RBAC requires Auth; auto-add Auth if missing
-    let payload = { ...data };
-    if (payload.enabledModules.includes("rbac") && !payload.enabledModules.includes("auth")) {
-      payload = {
-        ...payload,
-        enabledModules: Array.from(new Set([...payload.enabledModules, "auth"])),
-      };
-      toast({
-        title: "Dependency added",
-        description: "Authentication was enabled because RBAC depends on it.",
-      });
+
+    const { notifyTenant, ...rest } = data;
+    let payload = { ...rest };
+    const addedDeps = new Set<string>();
+
+    for (const [mod, deps] of Object.entries(MODULE_DEPENDENCIES)) {
+      if (payload.enabledModules.includes(mod)) {
+        deps.forEach(dep => {
+          if (!payload.enabledModules.includes(dep)) {
+            payload.enabledModules.push(dep);
+            addedDeps.add(dep);
+          }
+        });
+      }
     }
-    // Guard: Logging requires Auth
-    if (payload.enabledModules.includes("logging") && !payload.enabledModules.includes("auth")) {
-      payload = {
-        ...payload,
-        enabledModules: Array.from(new Set([...payload.enabledModules, "auth"])),
-      };
+
+    if (addedDeps.size > 0) {
       toast({
-        title: "Dependency added",
-        description: "Authentication was enabled because Logging depends on it.",
+        title: "Dependencies added",
+        description: `${Array.from(addedDeps).join(", ")} enabled due to dependencies.`,
       });
     }
 
     updateModulesMutation.mutate({
       tenantId: selectedTenant.id,
       modules: payload,
+      notify: notifyTenant,
     });
   };
 
@@ -363,6 +400,7 @@ export default function ModuleManagementPage() {
                               form.reset({
                                 enabledModules: selectedTenant.enabledModules || ["auth", "rbac"],
                                 moduleConfigs: selectedTenant.moduleConfigs || {},
+                                notifyTenant: false,
                               });
                             }}
                             data-testid="button-cancel-edit"
@@ -387,7 +425,9 @@ export default function ModuleManagementPage() {
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       <div className="grid gap-4">
-                        {availableModules.map(module => {
+                        {(editingModules
+                          ? availableModules
+                          : availableModules.filter(m => getModuleStatus(m.id))).map(module => {
                           const Icon = module.icon;
                           const isEnabled = editingModules
                             ? form.watch("enabledModules")?.includes(module.id)
@@ -455,18 +495,48 @@ export default function ModuleManagementPage() {
                                               <Switch
                                                 checked={field.value?.includes(module.id)}
                                                 onCheckedChange={checked => {
-                                                  if (module.required && !checked) return;
-
                                                   const current = field.value || [];
-                                                  if (checked) {
-                                                    field.onChange([...current, module.id]);
+                                                  if (!checked) {
+                                                    if (module.required) {
+                                                      toast({
+                                                        title: "Required Module",
+                                                        description: `${module.name} cannot be disabled.`,
+                                                        variant: "destructive",
+                                                      });
+                                                      return;
+                                                    }
+
+                                                    const dependents = Object.entries(MODULE_DEPENDENCIES)
+                                                      .filter(([mod, deps]) => deps.includes(module.id))
+                                                      .map(([mod]) => mod)
+                                                      .filter(mod => current.includes(mod));
+
+                                                    if (dependents.length > 0) {
+                                                      toast({
+                                                        title: "Dependency conflict",
+                                                        description: `${module.name} is required by ${dependents.join(', ')}. Disable dependent modules first.`,
+                                                        variant: "destructive",
+                                                      });
+                                                      return;
+                                                    }
+
+                                                    field.onChange(current.filter(id => id !== module.id));
                                                   } else {
-                                                    field.onChange(
-                                                      current.filter(id => id !== module.id)
-                                                    );
+                                                    const deps = MODULE_DEPENDENCIES[module.id] || [];
+                                                    const additions = deps.filter(dep => !current.includes(dep));
+                                                    if (additions.length > 0) {
+                                                      toast({
+                                                        title: "Dependencies added",
+                                                        description: `${additions.join(", ")} enabled due to dependency.`,
+                                                      });
+                                                    }
+                                                    field.onChange([
+                                                      ...current,
+                                                      module.id,
+                                                      ...additions,
+                                                    ]);
                                                   }
                                                 }}
-                                                disabled={module.required}
                                                 data-testid={`switch-${module.id}`}
                                               />
                                             </FormControl>
@@ -481,6 +551,29 @@ export default function ModuleManagementPage() {
                           );
                         })}
                       </div>
+
+                      <FormField
+                        control={form.control}
+                        name="notifyTenant"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Notify tenant about changes
+                              </FormLabel>
+                            </div>
+                            <FormDescription>
+                              Emails and dashboard alerts are sent after a short delay.
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
                     </form>
                   </Form>
                 </CardContent>

@@ -41,7 +41,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,7 +69,6 @@ export default function TenantsPage() {
   const { data: tenants, isLoading } = useTenants();
   const updateTenantStatus = useUpdateTenantStatus();
   const resendEmail = useResendOnboardingEmail();
-  const queryClient = useQueryClient();
 
   // Pending module requests for inline indicator badges
   const { data: pendingRequests = [] } = useQuery({
@@ -120,44 +119,6 @@ export default function TenantsPage() {
 
   const handleResendEmail = async (id: string) => {
     await resendEmail.mutateAsync(id);
-  };
-
-  const handleEnableRBAC = async (tenant: Tenant) => {
-    try {
-      const current = Array.isArray(tenant.enabledModules) ? tenant.enabledModules : [];
-      const next = Array.from(new Set([...(current || []), "auth", "rbac"]));
-      await apiRequest("PATCH", `/api/tenants/${tenant.id}/modules`, {
-        enabledModules: next,
-        moduleConfigs: tenant.moduleConfigs || {},
-      });
-      await queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
-      toast({ title: "RBAC Enabled", description: `${tenant.name}: RBAC has been enabled.` });
-    } catch (e: any) {
-      toast({
-        title: "Failed to enable RBAC",
-        description: e?.message || "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDisableRBAC = async (tenant: Tenant) => {
-    try {
-      const current = Array.isArray(tenant.enabledModules) ? tenant.enabledModules : [];
-      const next = current.filter(m => m !== "rbac");
-      await apiRequest("PATCH", `/api/tenants/${tenant.id}/modules`, {
-        enabledModules: next,
-        moduleConfigs: tenant.moduleConfigs || {},
-      });
-      await queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
-      toast({ title: "RBAC Disabled", description: `${tenant.name}: RBAC has been disabled.` });
-    } catch (e: any) {
-      toast({
-        title: "Failed to disable RBAC",
-        description: e?.message || "Please try again",
-        variant: "destructive",
-      });
-    }
   };
 
   const handleViewTenant = (tenant: Tenant) => {
@@ -633,19 +594,6 @@ export default function TenantsPage() {
                       </TableCell>
                       <TableCell className="px-6 py-4">
                         <div className="flex flex-wrap gap-2">
-                          {/* Pending requests */}
-                          {pendingRequests
-                            .filter((r: any) => r.tenantId === tenant.id)
-                            .map((r: any) => (
-                              <span
-                                key={r.id}
-                                className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
-                                title={`Pending: ${r.details?.action || ""} ${r.details?.moduleId || ""}`}
-                              >
-                                Pending: {r.details?.moduleId || "module"} {r.details?.action || ""}
-                              </span>
-                            ))}
-
                           {(tenant.enabledModules || []).map(m => (
                             <span
                               key={m}
@@ -654,52 +602,6 @@ export default function TenantsPage() {
                               {m.toUpperCase()}
                             </span>
                           ))}
-
-                          {/* RBAC quick actions */}
-                          {!(tenant.enabledModules || []).includes("rbac") ? (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleEnableRBAC(tenant)}
-                              title="Enable RBAC for this tenant"
-                            >
-                              Enable RBAC
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDisableRBAC(tenant)}
-                              title="Disable RBAC for this tenant"
-                            >
-                              Disable RBAC
-                            </Button>
-                          )}
-
-                          {/* Azure AD configuration hint when RBAC present but no SSO */}
-                          {(() => {
-                            const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
-                            const hasSSO = Array.isArray(providers)
-                              ? providers.some((p: any) =>
-                                  ["azure-ad", "auth0", "saml"].includes(p?.type)
-                                )
-                              : false;
-                            const hasRBAC = (tenant.enabledModules || []).includes("rbac");
-                            if (hasRBAC && !hasSSO) {
-                              return (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setLocation(`/modules?tenantId=${tenant.id}`)}
-                                  title="Configure Azure AD for this tenant"
-                                  data-testid={`button-configure-azure-${tenant.orgId}`}
-                                >
-                                  Configure Azure AD
-                                </Button>
-                              );
-                            }
-                            return null;
-                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-4">

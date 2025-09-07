@@ -65,6 +65,7 @@ import {
 import { useTenantAuth } from "@/hooks/use-tenant-auth";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import { NOTIFICATION_DELAY_MS } from "@/lib/constants";
 
 // Form schemas
 const userFormSchema = z.object({
@@ -314,44 +315,57 @@ export default function TenantDashboard() {
     );
   }
 
-  // Track previous enabled modules for real-time change detection
+  // Track previous enabled modules and display toast notifications when the
+  // platform admin explicitly requested tenant notifications.
   const [previousModules, setPreviousModules] = useState<string[]>([]);
 
-  // Detect module changes and show notifications
   useEffect(() => {
-    if (tenant?.enabledModules && previousModules.length > 0) {
+    if (!tenant?.id) return;
+    const flagKey = `notifyModules-${tenant.id}`;
+    const shouldNotify = !!localStorage.getItem(flagKey);
+
+    if (tenant.enabledModules && previousModules.length > 0 && shouldNotify) {
       const currentModules = tenant.enabledModules as string[];
       const newlyEnabled = currentModules.filter(m => !previousModules.includes(m));
       const newlyDisabled = previousModules.filter(m => !currentModules.includes(m));
 
-      // Show notifications for module changes
       if (newlyEnabled.length > 0) {
         newlyEnabled.forEach(module => {
-          toast({
-            title: "Module Enabled",
-            description: `${module.toUpperCase()} module has been enabled by your administrator.`,
-            duration: 5000,
-          });
+          setTimeout(
+            () =>
+              toast({
+                title: "Module Enabled",
+                description: `${module.toUpperCase()} module has been enabled by your administrator.`,
+                duration: 5000,
+              }),
+            NOTIFICATION_DELAY_MS
+          );
         });
       }
 
       if (newlyDisabled.length > 0) {
         newlyDisabled.forEach(module => {
-          toast({
-            title: "Module Disabled",
-            description: `${module.toUpperCase()} module has been disabled by your administrator.`,
-            variant: "destructive",
-            duration: 5000,
-          });
+          setTimeout(
+            () =>
+              toast({
+                title: "Module Disabled",
+                description: `${module.toUpperCase()} module has been disabled by your administrator.`,
+                variant: "destructive",
+                duration: 5000,
+              }),
+            NOTIFICATION_DELAY_MS
+          );
         });
       }
+
+      // Clear the notification flag so toasts are only shown once
+      localStorage.removeItem(flagKey);
     }
 
-    // Update previous modules tracking
     if (tenant?.enabledModules) {
       setPreviousModules(tenant.enabledModules as string[]);
     }
-  }, [tenant?.enabledModules, toast]);
+  }, [tenant?.enabledModules, tenant?.id, toast, previousModules]);
 
   const { data: tenantUsers = [] } = useQuery({
     queryKey: ["/auth/users", tenant?.id],

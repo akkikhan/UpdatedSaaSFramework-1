@@ -911,34 +911,28 @@ export default function OnboardingWizard() {
                                       <FormLabel>Permission Template</FormLabel>
                                       <Select
                                         onValueChange={field.onChange}
-                                        defaultValue={(field.value as any) || "standard"}
+                                        defaultValue={field.value as any}
                                       >
                                         <SelectTrigger>
                                           <SelectValue placeholder="Select a template" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          {(permissionTemplates as any[]).length
-                                            ? (permissionTemplates as any[]).map(t => (
-                                                <SelectItem
-                                                  key={t.id}
-                                                  value={(t.name || t.id || "")
-                                                    .toString()
-                                                    .toLowerCase()}
-                                                >
-                                                  {t.name || t.id}
-                                                </SelectItem>
-                                              ))
-                                            : [
-                                                <SelectItem key="standard" value="standard">
-                                                  Standard
-                                                </SelectItem>,
-                                                <SelectItem key="enterprise" value="enterprise">
-                                                  Enterprise
-                                                </SelectItem>,
-                                                <SelectItem key="custom" value="custom">
-                                                  Custom
-                                                </SelectItem>,
-                                              ]}
+                                          {(permissionTemplates as any[]).length > 0 ? (
+                                            (permissionTemplates as any[]).map(t => (
+                                              <SelectItem
+                                                key={t.id}
+                                                value={(t.name || t.id || "")
+                                                  .toString()
+                                                  .toLowerCase()}
+                                              >
+                                                {t.name || t.id}
+                                              </SelectItem>
+                                            ))
+                                          ) : (
+                                            <SelectItem value="" disabled>
+                                              No templates configured
+                                            </SelectItem>
+                                          )}
                                         </SelectContent>
                                       </Select>
                                       <FormDescription>
@@ -956,40 +950,28 @@ export default function OnboardingWizard() {
                                       <FormLabel>Business Type</FormLabel>
                                       <Select
                                         onValueChange={field.onChange}
-                                        defaultValue={(field.value as any) || "general"}
+                                        defaultValue={field.value as any}
                                       >
                                         <SelectTrigger>
                                           <SelectValue placeholder="Select business type" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          {(businessTypes as any[]).length
-                                            ? (businessTypes as any[]).map(bt => (
-                                                <SelectItem
-                                                  key={bt.id}
-                                                  value={(bt.name || bt.id || "")
-                                                    .toString()
-                                                    .toLowerCase()}
-                                                >
-                                                  {bt.name}
-                                                </SelectItem>
-                                              ))
-                                            : [
-                                                <SelectItem key="general" value="general">
-                                                  General
-                                                </SelectItem>,
-                                                <SelectItem key="healthcare" value="healthcare">
-                                                  Healthcare
-                                                </SelectItem>,
-                                                <SelectItem key="finance" value="finance">
-                                                  Finance
-                                                </SelectItem>,
-                                                <SelectItem key="education" value="education">
-                                                  Education
-                                                </SelectItem>,
-                                                <SelectItem key="government" value="government">
-                                                  Government
-                                                </SelectItem>,
-                                              ]}
+                                          {(businessTypes as any[]).length > 0 ? (
+                                            (businessTypes as any[]).map(bt => (
+                                              <SelectItem
+                                                key={bt.id}
+                                                value={(bt.name || bt.id || "")
+                                                  .toString()
+                                                  .toLowerCase()}
+                                              >
+                                                {bt.name}
+                                              </SelectItem>
+                                            ))
+                                          ) : (
+                                            <SelectItem value="" disabled>
+                                              No business types defined
+                                            </SelectItem>
+                                          )}
                                         </SelectContent>
                                       </Select>
                                     </FormItem>
@@ -1006,7 +988,7 @@ export default function OnboardingWizard() {
                                     const selected =
                                       (form.getValues(
                                         "moduleConfigs.rbac.permissionTemplate"
-                                      ) as string) || "standard";
+                                      ) as string) || "";
                                     const match = (permissionTemplates as any[]).find(
                                       t =>
                                         (t.name || t.id || "").toString().toLowerCase() === selected
