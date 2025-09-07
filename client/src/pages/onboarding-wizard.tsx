@@ -333,8 +333,8 @@ export default function OnboardingWizard() {
         description: `Onboarding email has been sent to ${data.adminEmail}`,
       });
 
-      // Redirect to success page
-      setLocation("/tenants/success");
+      // Redirect back to tenant listing so the new record is visible
+      setLocation("/tenants");
     } catch (error) {
       toast({
         title: "Failed to create tenant",
@@ -889,6 +889,67 @@ export default function OnboardingWizard() {
                                       )}
                                     />
                                   </div>
+                                </div>
+                              )}
+
+                              {/* SAML Configuration */}
+                              {watchedAuthProviders?.includes("saml") && (
+                                <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                                  <h4 className="font-medium">SAML Configuration</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.saml.entryPoint"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Entry Point URL{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="https://idp.example.com/sso"
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.saml.issuer"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Issuer{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input {...field} placeholder="urn:your-app" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth.saml.cert"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Certificate (PEM)</FormLabel>
+                                        <FormControl>
+                                          <Textarea
+                                            {...field}
+                                            placeholder="-----BEGIN CERTIFICATE-----..."
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
                                 </div>
                               )}
                             </div>

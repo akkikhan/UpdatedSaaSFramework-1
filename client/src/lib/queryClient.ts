@@ -2,13 +2,27 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 // Helper function to handle logout and redirect
 function handleUnauthorized() {
-  // Clear all authentication data
+  // Clear platform admin token
   localStorage.removeItem("platformAdminToken");
-  localStorage.removeItem("tenantToken");
+
+  // Clear tenant tokens (both global and namespaced)
+  const tenantMatch = window.location.pathname.match(/\/tenant\/([^/]+)/);
+  const orgId = tenantMatch ? decodeURIComponent(tenantMatch[1]) : null;
+  localStorage.removeItem("tenant_token");
+  localStorage.removeItem("tenant_user");
+  if (orgId) {
+    localStorage.removeItem(`tenant_token_${orgId}`);
+    localStorage.removeItem(`tenant_user_${orgId}`);
+  }
+  localStorage.removeItem("tenantToken"); // legacy key
   localStorage.removeItem("currentTenant");
 
-  // Redirect to platform admin login page
-  window.location.href = "/admin/login";
+  // Redirect based on current portal
+  if (orgId) {
+    window.location.href = `/tenant/${orgId}/login`;
+  } else {
+    window.location.href = "/admin/login";
+  }
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -30,13 +44,20 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined
 ): Promise<Response> {
-  // Get platform admin token from localStorage
+  // Determine which token to use based on current portal
   const platformAdminToken = localStorage.getItem("platformAdminToken");
+  const tenantMatch = window.location.pathname.match(/\/tenant\/([^/]+)/);
+  const tenantToken = tenantMatch
+    ? localStorage.getItem(`tenant_token_${decodeURIComponent(tenantMatch[1])}`) ||
+      localStorage.getItem("tenant_token")
+    : localStorage.getItem("tenant_token");
+
+  const authToken = platformAdminToken || tenantToken || undefined;
 
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...(data ? { "Content-Type": "application/json" } : {}),
-    ...(platformAdminToken ? { Authorization: `Bearer ${platformAdminToken}` } : {}),
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
   };
 
   const res = await fetch(url, {
@@ -54,12 +75,19 @@ type UnauthorizedBehavior = "returnNull" | "throw" | "redirect";
 export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Get platform admin token from localStorage
+    // Determine token based on portal
     const platformAdminToken = localStorage.getItem("platformAdminToken");
+    const tenantMatch = window.location.pathname.match(/\/tenant\/([^/]+)/);
+    const tenantToken = tenantMatch
+      ? localStorage.getItem(`tenant_token_${decodeURIComponent(tenantMatch[1])}`) ||
+        localStorage.getItem("tenant_token")
+      : localStorage.getItem("tenant_token");
+
+    const authToken = platformAdminToken || tenantToken || undefined;
 
     const headers: Record<string, string> = {
       Accept: "application/json",
-      ...(platformAdminToken ? { Authorization: `Bearer ${platformAdminToken}` } : {}),
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     };
 
     const res = await fetch(queryKey.join("/") as string, {
