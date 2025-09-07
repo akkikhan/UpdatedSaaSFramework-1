@@ -14,6 +14,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Edit, Trash2, Save, Shield, Users, Building2, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -255,19 +263,19 @@ export default function RBACConfigPage() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3" data-testid="tabs-rbac-config">
-          <TabsTrigger value="templates" data-testid="tab-templates">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex gap-6">
+        <TabsList className="flex flex-col w-48" data-testid="tabs-rbac-config">
+          <TabsTrigger value="templates" data-testid="tab-templates" className="justify-start">
             Permission Templates
           </TabsTrigger>
-          <TabsTrigger value="business-types" data-testid="tab-business-types">
+          <TabsTrigger value="business-types" data-testid="tab-business-types" className="justify-start">
             Business Types
           </TabsTrigger>
-          <TabsTrigger value="default-roles" data-testid="tab-default-roles">
+          <TabsTrigger value="default-roles" data-testid="tab-default-roles" className="justify-start">
             Default Roles
           </TabsTrigger>
         </TabsList>
-
+        <div className="flex-1 space-y-4">
         {/* Permission Templates Tab */}
         <TabsContent value="templates" className="space-y-4">
           <Card data-testid="card-permission-templates">
@@ -675,7 +683,389 @@ export default function RBACConfigPage() {
             </CardContent>
           </Card>
         </TabsContent>
+      </div>
       </Tabs>
+
+      {/* Template Dialog */}
+      <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && setEditingTemplate(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {editingTemplate && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveTemplate(editingTemplate);
+              }}
+              className="space-y-4"
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTemplate.id ? "Edit Permission Template" : "Add Permission Template"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="template-name">Name</Label>
+                <Input
+                  id="template-name"
+                  value={editingTemplate.name}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="template-description">Description</Label>
+                <Textarea
+                  id="template-description"
+                  value={editingTemplate.description}
+                  onChange={(e) =>
+                    setEditingTemplate({ ...editingTemplate, description: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Permissions</Label>
+                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                  {availablePermissions.map((perm) => (
+                    <div key={perm} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`perm-${perm}`}
+                        checked={editingTemplate.permissions.includes(perm)}
+                        onCheckedChange={(checked) => {
+                          const permissions = checked
+                            ? [...editingTemplate.permissions, perm]
+                            : editingTemplate.permissions.filter((p) => p !== perm);
+                          setEditingTemplate({ ...editingTemplate, permissions });
+                        }}
+                      />
+                      <label htmlFor={`perm-${perm}`} className="text-sm">
+                        {perm}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={editingTemplate.isDefault}
+                  onCheckedChange={(checked) =>
+                    setEditingTemplate({ ...editingTemplate, isDefault: checked })
+                  }
+                />
+                <Label>Default Template</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={editingTemplate.isActive}
+                  onCheckedChange={(checked) =>
+                    setEditingTemplate({ ...editingTemplate, isActive: checked })
+                  }
+                />
+                <Label>Active</Label>
+              </div>
+              <DialogFooter className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditingTemplate(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" data-testid="save-template">
+                  <Save className="h-4 w-4 mr-2" /> Save
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Business Type Dialog */}
+      <Dialog open={!!editingBusinessType} onOpenChange={(open) => !open && setEditingBusinessType(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {editingBusinessType && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveBusinessType(editingBusinessType);
+              }}
+              className="space-y-4"
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {editingBusinessType.id ? "Edit Business Type" : "Add Business Type"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="bt-name">Name</Label>
+                <Input
+                  id="bt-name"
+                  value={editingBusinessType.name}
+                  onChange={(e) =>
+                    setEditingBusinessType({ ...editingBusinessType, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bt-description">Description</Label>
+                <Textarea
+                  id="bt-description"
+                  value={editingBusinessType.description}
+                  onChange={(e) =>
+                    setEditingBusinessType({ ...editingBusinessType, description: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Required Compliance</Label>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                  {complianceFrameworks.map((fw) => (
+                    <div key={fw} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`fw-${fw}`}
+                        checked={editingBusinessType.requiredCompliance.includes(fw)}
+                        onCheckedChange={(checked) => {
+                          const requiredCompliance = checked
+                            ? [...editingBusinessType.requiredCompliance, fw]
+                            : editingBusinessType.requiredCompliance.filter((c) => c !== fw);
+                          setEditingBusinessType({ ...editingBusinessType, requiredCompliance });
+                        }}
+                      />
+                      <label htmlFor={`fw-${fw}`} className="text-sm">
+                        {fw.toUpperCase()}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Default Permissions</Label>
+                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                  {availablePermissions.map((perm) => (
+                    <div key={perm} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`bt-perm-${perm}`}
+                        checked={editingBusinessType.defaultPermissions.includes(perm)}
+                        onCheckedChange={(checked) => {
+                          const defaultPermissions = checked
+                            ? [...editingBusinessType.defaultPermissions, perm]
+                            : editingBusinessType.defaultPermissions.filter((p) => p !== perm);
+                          setEditingBusinessType({
+                            ...editingBusinessType,
+                            defaultPermissions,
+                          });
+                        }}
+                      />
+                      <label htmlFor={`bt-perm-${perm}`} className="text-sm">
+                        {perm}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Risk Level</Label>
+                <Select
+                  value={editingBusinessType.riskLevel}
+                  onValueChange={(value) =>
+                    setEditingBusinessType({
+                      ...editingBusinessType,
+                      riskLevel: value as any,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select risk" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bt-max-tenants">Max Tenants</Label>
+                <Input
+                  id="bt-max-tenants"
+                  type="number"
+                  value={editingBusinessType.maxTenants ?? ""}
+                  onChange={(e) =>
+                    setEditingBusinessType({
+                      ...editingBusinessType,
+                      maxTenants: e.target.value ? parseInt(e.target.value) : null,
+                    })
+                  }
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={editingBusinessType.isActive}
+                  onCheckedChange={(checked) =>
+                    setEditingBusinessType({ ...editingBusinessType, isActive: checked })
+                  }
+                />
+                <Label>Active</Label>
+              </div>
+              <DialogFooter className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingBusinessType(null)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" data-testid="save-business-type">
+                  <Save className="h-4 w-4 mr-2" /> Save
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Default Role Dialog */}
+      <Dialog open={!!editingRole} onOpenChange={(open) => !open && setEditingRole(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {editingRole && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveRole(editingRole);
+              }}
+              className="space-y-4"
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {editingRole.id ? "Edit Default Role" : "Add Default Role"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="role-name">Name</Label>
+                <Input
+                  id="role-name"
+                  value={editingRole.name}
+                  onChange={(e) => setEditingRole({ ...editingRole, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role-description">Description</Label>
+                <Textarea
+                  id="role-description"
+                  value={editingRole.description}
+                  onChange={(e) =>
+                    setEditingRole({ ...editingRole, description: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Business Type</Label>
+                <Select
+                  value={editingRole.businessTypeId || ""}
+                  onValueChange={(value) =>
+                    setEditingRole({ ...editingRole, businessTypeId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select business type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(businessTypesQuery.data as any[])?.map((bt) => (
+                      <SelectItem key={bt.id} value={bt.id}>
+                        {bt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Permission Template</Label>
+                <Select
+                  value={editingRole.permissionTemplateId || ""}
+                  onValueChange={(value) =>
+                    setEditingRole({ ...editingRole, permissionTemplateId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(permissionTemplatesQuery.data as any[])?.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Permissions</Label>
+                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                  {availablePermissions.map((perm) => (
+                    <div key={perm} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`role-perm-${perm}`}
+                        checked={editingRole.permissions.includes(perm)}
+                        onCheckedChange={(checked) => {
+                          const permissions = checked
+                            ? [...editingRole.permissions, perm]
+                            : editingRole.permissions.filter((p) => p !== perm);
+                          setEditingRole({ ...editingRole, permissions });
+                        }}
+                      />
+                      <label htmlFor={`role-perm-${perm}`} className="text-sm">
+                        {perm}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={editingRole.isSystemRole}
+                    onCheckedChange={(checked) =>
+                      setEditingRole({ ...editingRole, isSystemRole: checked })
+                    }
+                  />
+                  <Label>System Role</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={editingRole.canBeModified}
+                    onCheckedChange={(checked) =>
+                      setEditingRole({ ...editingRole, canBeModified: checked })
+                    }
+                  />
+                  <Label>Can Be Modified</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={editingRole.isActive}
+                    onCheckedChange={(checked) =>
+                      setEditingRole({ ...editingRole, isActive: checked })
+                    }
+                  />
+                  <Label>Active</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role-priority">Priority</Label>
+                  <Input
+                    id="role-priority"
+                    type="number"
+                    value={editingRole.priority}
+                    onChange={(e) =>
+                      setEditingRole({ ...editingRole, priority: parseInt(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
+              <DialogFooter className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditingRole(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" data-testid="save-default-role">
+                  <Save className="h-4 w-4 mr-2" /> Save
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Note about implementation */}
       <Card className="border-blue-200 bg-blue-50">
