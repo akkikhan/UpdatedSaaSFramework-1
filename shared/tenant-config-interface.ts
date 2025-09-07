@@ -112,10 +112,9 @@ export type AuthModuleConfig = z.infer<typeof AuthModuleConfigSchema>;
 
 export const RBACModuleConfigSchema = z.object({
   enabled: z.boolean().default(true),
-  permissionTemplate: z.enum(["minimal", "standard", "enterprise", "custom"]).default("standard"),
-  businessType: z
-    .enum(["general", "healthcare", "finance", "education", "government", "enterprise"])
-    .default("general"),
+  // Allow templates and business types to be defined dynamically via API
+  permissionTemplate: z.string().default("standard"),
+  businessType: z.string().default("general"),
 
   defaultRoles: z
     .array(

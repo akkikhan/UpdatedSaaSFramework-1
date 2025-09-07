@@ -22,6 +22,7 @@ import {
 } from "../shared/schema";
 import { notificationService } from "./services/notification";
 import { complianceService } from "./services/compliance-temp";
+import { NOTIFICATION_DELAY_MS, MODULE_DEPENDENCIES } from "../shared/constants";
 import { z } from "zod";
 import { sanitizeGuid, GUID_CANON } from "./utils/azure";
 import path from "path";
@@ -1217,104 +1218,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update tenant modules (PLATFORM ADMIN ONLY)
-  app.patch("/api/tenants/:id/modules", platformAdminMiddleware, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { enabledModules, moduleConfigs } = req.body;
-
-      const tenant = await storage.getTenant(id);
-      if (!tenant) {
-        return res.status(404).json({ message: "Tenant not found" });
-      }
-
-      const currentModules = (tenant.enabledModules as string[]) || ["auth", "rbac"];
-      const newModules = enabledModules || currentModules;
-      // Enforce dependency: RBAC requires Auth
-      if (newModules.includes("rbac") && !newModules.includes("auth")) {
-        return res.status(400).json({ message: "RBAC requires Authentication to be enabled" });
-      }
-
-      // Encrypt any provider secrets before persisting (parity with createTenant)
-      let safeConfigs = moduleConfigs || {};
+    app.patch("/api/tenants/:id/modules", platformAdminMiddleware, async (req, res) => {
       try {
-        if (safeConfigs?.auth?.providers?.length) {
-          const { encryptSecret } = await import("./utils/secret.js");
-          safeConfigs = {
-            ...safeConfigs,
-            auth: {
-              ...(safeConfigs.auth || {}),
-              providers: safeConfigs.auth.providers.map((p: any) => {
-                if (p?.type === "azure-ad" && p.config?.clientSecret) {
-                  return {
-                    ...p,
-                    config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
-                  };
-                }
-                if (p?.type === "auth0" && p.config?.clientSecret) {
-                  return {
-                    ...p,
-                    config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
-                  };
-                }
-                return p;
-              }),
-            },
-          } as any;
+        const { id } = req.params;
+        const { enabledModules, moduleConfigs } = req.body;
+
+        const tenant = await storage.getTenant(id);
+        if (!tenant) {
+          return res.status(404).json({ message: "Tenant not found" });
         }
-        // Clamp logging destinations to database only and cap retentionDays
-        if (safeConfigs?.logging) {
-          safeConfigs.logging = {
-            ...safeConfigs.logging,
-            destinations: ["database"],
-            retentionDays: Math.max(
-              1,
-              Math.min(365, Number(safeConfigs.logging.retentionDays || 30))
-            ),
-          };
+
+        const currentModules = (tenant.enabledModules as string[]) || ["auth", "rbac"];
+        const requested = enabledModules ? [...enabledModules] : currentModules;
+        const requestedSet = new Set(requested);
+
+        // Build reverse dependency map to validate removals
+        const reverseDeps: Record<string, string[]> = {};
+        for (const [mod, deps] of Object.entries(MODULE_DEPENDENCIES)) {
+          deps.forEach(dep => {
+            if (!reverseDeps[dep]) reverseDeps[dep] = [];
+            reverseDeps[dep].push(mod);
+          });
         }
-      } catch (e) {
-        console.warn(
-          "Provider secret encryption (update) skipped:",
-          e instanceof Error ? e.message : e
-        );
-      }
 
-      // Compute diff for notifications
-      const oldSet = new Set(currentModules);
-      const newSet = new Set(newModules);
-      const enabledDiff: string[] = [];
-      const disabledDiff: string[] = [];
-      for (const m of newSet) {
-        if (!oldSet.has(m)) enabledDiff.push(m);
-      }
-      for (const m of oldSet) {
-        if (!newSet.has(m)) disabledDiff.push(m);
-      }
+        // Prevent disabling modules that other modules depend on
+        for (const [dep, dependents] of Object.entries(reverseDeps)) {
+          if (!requestedSet.has(dep)) {
+            const active = dependents.filter(d => requestedSet.has(d));
+            if (active.length > 0) {
+              return res
+                .status(400)
+                .json({ message: `${dep} is required by ${active.join(", ")}` });
+            }
+          }
+        }
 
-      // Update tenant modules
-      await storage.updateTenantModules(id, newModules, safeConfigs);
+        // Auto-add dependencies for selected modules
+        for (const [mod, deps] of Object.entries(MODULE_DEPENDENCIES)) {
+          if (requestedSet.has(mod)) {
+            deps.forEach(dep => requestedSet.add(dep));
+          }
+        }
 
-      // Email tenant admin about changes (best-effort)
-      try {
-        const updated = await storage.getTenant(id);
-        if (updated && (enabledDiff.length || disabledDiff.length)) {
-          await emailService.sendModuleStatusEmail(
-            { id: updated.id, name: updated.name, adminEmail: updated.adminEmail },
-            { enabled: enabledDiff, disabled: disabledDiff }
+        const finalModules = Array.from(requestedSet);
+
+        // Encrypt any provider secrets before persisting (parity with createTenant)
+        let safeConfigs = moduleConfigs || {};
+        try {
+          if (safeConfigs?.auth?.providers?.length) {
+            const { encryptSecret } = await import("./utils/secret.js");
+            safeConfigs = {
+              ...safeConfigs,
+              auth: {
+                ...(safeConfigs.auth || {}),
+                providers: safeConfigs.auth.providers.map((p: any) => {
+                  if (p?.type === "azure-ad" && p.config?.clientSecret) {
+                    return {
+                      ...p,
+                      config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
+                    };
+                  }
+                  if (p?.type === "auth0" && p.config?.clientSecret) {
+                    return {
+                      ...p,
+                      config: { ...p.config, clientSecret: encryptSecret(p.config.clientSecret) },
+                    };
+                  }
+                  return p;
+                }),
+              },
+            } as any;
+          }
+          // Clamp logging destinations to database only and cap retentionDays
+          if (safeConfigs?.logging) {
+            safeConfigs.logging = {
+              ...safeConfigs.logging,
+              destinations: ["database"],
+              retentionDays: Math.max(
+                1,
+                Math.min(365, Number(safeConfigs.logging.retentionDays || 30))
+              ),
+            };
+          }
+        } catch (e) {
+          console.warn(
+            "Provider secret encryption (update) skipped:",
+            e instanceof Error ? e.message : e
           );
         }
-      } catch (e) {
-        console.warn("Module change email skipped:", e instanceof Error ? e.message : e);
-      }
 
-      res.json({
-        message: "Modules updated successfully",
-      });
-    } catch (error) {
-      console.error("Error updating tenant modules:", error);
-      res.status(500).json({ message: "Failed to update modules" });
-    }
-  });
+        // Update tenant modules
+        await storage.updateTenantModules(id, finalModules, safeConfigs);
+
+        res.json({
+          message: "Modules updated successfully",
+        });
+      } catch (error) {
+        console.error("Error updating tenant modules:", error);
+        res.status(500).json({ message: "Failed to update modules" });
+      }
+    });
+
+    // Explicitly notify tenant about module changes
+    app.post(
+      "/api/tenants/:id/notify-module-change",
+      platformAdminMiddleware,
+      async (req, res) => {
+        try {
+          const { id } = req.params;
+          const { enabled = [], disabled = [] } = req.body || {};
+          const tenant = await storage.getTenant(id);
+          if (!tenant) {
+            return res.status(404).json({ message: "Tenant not found" });
+          }
+
+          await new Promise(res => setTimeout(res, NOTIFICATION_DELAY_MS));
+
+          try {
+            await emailService.sendModuleStatusEmail(
+              { id: tenant.id, name: tenant.name, adminEmail: tenant.adminEmail },
+              { enabled, disabled }
+            );
+          } catch (e) {
+            console.warn(
+              "Module change email failed:",
+              e instanceof Error ? e.message : e
+            );
+          }
+
+          res.json({ message: "Notification dispatched" });
+        } catch (error) {
+          console.error("Notify module change error:", error);
+          res.status(500).json({ message: "Failed to notify tenant" });
+        }
+      }
+    );
 
   // Tenant module change request (tenant admin can request enable/disable)
   app.post("/api/tenant/:id/modules/request", tenantMiddleware, async (req, res) => {

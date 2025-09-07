@@ -65,10 +65,9 @@ export const MODULE_CONFIGS_SCHEMA = z
       .optional(),
     rbac: z
       .object({
-        permissionTemplate: z.enum(["standard", "enterprise", "custom"]).default("standard"),
-        businessType: z
-          .enum(["general", "healthcare", "finance", "education", "government"])
-          .default("general"),
+        // Use flexible strings so RBAC templates and business types come from DB
+        permissionTemplate: z.string().default("standard"),
+        businessType: z.string().default("general"),
         customPermissions: z.array(z.string()).optional(),
         defaultRoles: z.array(z.string()).optional(),
       })
