@@ -79,8 +79,12 @@ export const api = {
   async getHealthStatus(): Promise<{
     status: string;
     services: {
-      database: boolean;
-      email: boolean;
+      database: "operational" | "unavailable";
+      email: "operational" | "unavailable";
+    };
+    system: {
+      uptime: number;
+      memory: Record<string, number>;
     };
     timestamp: string;
   }> {

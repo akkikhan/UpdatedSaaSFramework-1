@@ -34,6 +34,7 @@ export async function apiRequest(
   const platformAdminToken = localStorage.getItem("platformAdminToken");
 
   const headers: Record<string, string> = {
+    Accept: "application/json",
     ...(data ? { "Content-Type": "application/json" } : {}),
     ...(platformAdminToken ? { Authorization: `Bearer ${platformAdminToken}` } : {}),
   };
@@ -57,6 +58,7 @@ export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryF
     const platformAdminToken = localStorage.getItem("platformAdminToken");
 
     const headers: Record<string, string> = {
+      Accept: "application/json",
       ...(platformAdminToken ? { Authorization: `Bearer ${platformAdminToken}` } : {}),
     };
 

@@ -172,7 +172,27 @@ export class EmailService {
     notificationsApiKey?: string;
     moduleConfigs?: any;
   }): Promise<boolean> {
-    const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    // Load tenant-specific onboarding template if available
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const onboardingTemplate = templates.find(
+      t => t.name?.toLowerCase() === "onboarding"
+    );
+
+    let subject =
+      onboardingTemplate?.subject ||
+      `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    let html = onboardingTemplate?.htmlContent ||
+      this.generateOnboardingEmailTemplate(tenant);
+
+    if (onboardingTemplate) {
+      for (const variable of onboardingTemplate.variables || []) {
+        const value = (tenant as any)[variable] ?? "";
+        html = html.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          String(value)
+        );
+      }
+    }
 
     // Get enabled modules or default
     const enabledModules = tenant.enabledModules || ["authentication", "rbac"];
@@ -211,15 +231,13 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: onboardingTemplate?.name || "onboarding",
         status: "sent",
         errorMessage: "Email disabled - credentials not configured",
       });
 
       return true;
     }
-
-    const html = this.generateOnboardingEmailTemplate(tenant);
 
     try {
       await this.transporter.sendMail({
@@ -234,7 +252,7 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: onboardingTemplate?.name || "onboarding",
         status: "sent",
         errorMessage: null,
       });
@@ -248,7 +266,7 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: onboardingTemplate?.name || "onboarding",
         status: "failed",
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });

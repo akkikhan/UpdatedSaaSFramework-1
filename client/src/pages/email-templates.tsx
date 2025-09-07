@@ -1,130 +1,204 @@
-import { Plus, Eye, Edit, Send, CheckCircle, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import StatsCard from "@/components/ui/stats-card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+
+interface EmailTemplate {
+  id: string;
+  tenantId: string;
+  name: string;
+  subject: string;
+  htmlContent: string;
+  textContent?: string;
+  variables: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function EmailTemplatesPage() {
+  const [tenantId, setTenantId] = useState("");
+  const [editing, setEditing] = useState<EmailTemplate | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const tenantsQuery = useQuery({
+    queryKey: ["/api/tenants"],
+    queryFn: async () => {
+      const res = await fetch("/api/tenants");
+      if (!res.ok) throw new Error("Failed to fetch tenants");
+      return res.json() as Promise<Array<{ id: string; name: string }>>;
+    },
+  });
+
+  const templatesQuery = useQuery({
+    queryKey: ["/api/email/templates", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const res = await fetch(`/api/email/templates?tenantId=${tenantId}`);
+      if (!res.ok) throw new Error("Failed to fetch templates");
+      return res.json() as Promise<EmailTemplate[]>;
+    },
+  });
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (template: Partial<EmailTemplate>) => {
+      if (editing) {
+        const res = await fetch(`/api/email/templates/${editing.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(template),
+        });
+        if (!res.ok) throw new Error("Failed to update template");
+        return res.json();
+      } else {
+        const res = await fetch(`/api/email/templates`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...template, tenantId, variables: [] }),
+        });
+        if (!res.ok) throw new Error("Failed to create template");
+        return res.json();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/email/templates", tenantId] });
+      setEditing(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save template", variant: "destructive" });
+    },
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/email/templates/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete template");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/email/templates", tenantId] });
+    },
+  });
+
+  const startNew = () => {
+    setEditing({
+      id: "",
+      tenantId,
+      name: "",
+      subject: "",
+      htmlContent: "",
+      variables: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
   return (
     <div className="space-y-6">
-      {/* Email Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatsCard
-          title="Emails Sent Today"
-          value={23}
-          icon={Send}
-          iconColor="text-blue-600"
-          backgroundColor="bg-blue-100"
-        />
-        <StatsCard
-          title="Delivery Rate"
-          value="98.5%"
-          icon={CheckCircle}
-          iconColor="text-green-600"
-          backgroundColor="bg-green-100"
-        />
-        <StatsCard
-          title="Failed Emails"
-          value={3}
-          icon={AlertTriangle}
-          iconColor="text-red-600"
-          backgroundColor="bg-red-100"
-        />
+      <h1 className="text-2xl font-semibold text-slate-800">Email Templates</h1>
+
+      <div className="max-w-xs">
+        <Select onValueChange={setTenantId} value={tenantId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select Tenant" />
+          </SelectTrigger>
+          <SelectContent>
+            {tenantsQuery.data?.map(t => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Email Templates */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-800">Email Templates</h3>
-              <p className="text-slate-600 text-sm mt-1">Manage your email templates and configurations</p>
-            </div>
-            <Button className="btn-primary flex items-center space-x-2">
-              <Plus size={16} />
-              <span>New Template</span>
+      {editing && (
+        <div className="space-y-4 border p-4 rounded-md bg-white">
+          <Input
+            placeholder="Template Name"
+            value={editing.name}
+            onChange={e => setEditing({ ...editing, name: e.target.value })}
+          />
+          <Input
+            placeholder="Subject"
+            value={editing.subject}
+            onChange={e => setEditing({ ...editing, subject: e.target.value })}
+          />
+          <Textarea
+            placeholder="HTML Content"
+            value={editing.htmlContent}
+            onChange={e => setEditing({ ...editing, htmlContent: e.target.value })}
+            className="h-40"
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={() =>
+                saveTemplateMutation.mutate({
+                  name: editing.name,
+                  subject: editing.subject,
+                  htmlContent: editing.htmlContent,
+                })
+              }
+            >
+              Save
+            </Button>
+            <Button variant="secondary" onClick={() => setEditing(null)}>
+              Cancel
             </Button>
           </div>
         </div>
+      )}
 
-        <div className="p-6">
-          <div className="space-y-4">
-            <div className="border border-slate-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-slate-800">Tenant Onboarding</h4>
-                  <p className="text-sm text-slate-500 mt-1">Welcome email sent to new tenant administrators</p>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Active</span>
-                    <span className="text-xs text-slate-500">Last sent: 2 hours ago</span>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm" title="Preview">
-                    <Eye size={16} />
-                  </Button>
-                  <Button variant="ghost" size="sm" title="Edit">
-                    <Edit size={16} />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-500" title="Send Test">
-                    <Send size={16} />
-                  </Button>
-                </div>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800">Templates</h3>
+            <p className="text-slate-600 text-sm mt-1">Manage email templates per tenant</p>
+          </div>
+          <Button className="btn-primary flex items-center gap-2" onClick={startNew} disabled={!tenantId}>
+            <Plus size={16} /> New Template
+          </Button>
+        </div>
+        <div className="p-6 space-y-4">
+          {templatesQuery.data?.map(t => (
+            <div key={t.id} className="border p-4 rounded-lg flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-slate-800">{t.name}</h4>
+                <p className="text-sm text-slate-500 mt-1">{t.subject}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => alert(t.htmlContent)} title="Preview">
+                  <Eye size={16} />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(t)} title="Edit">
+                  <Edit size={16} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteTemplateMutation.mutate(t.id)}
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </Button>
               </div>
             </div>
-
-            <div className="border border-slate-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-slate-800">Password Reset</h4>
-                  <p className="text-sm text-slate-500 mt-1">Password recovery email for tenant users</p>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Active</span>
-                    <span className="text-xs text-slate-500">Last sent: 1 day ago</span>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm" title="Preview">
-                    <Eye size={16} />
-                  </Button>
-                  <Button variant="ghost" size="sm" title="Edit">
-                    <Edit size={16} />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-500" title="Send Test">
-                    <Send size={16} />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+          ))}
+          {templatesQuery.data && templatesQuery.data.length === 0 && (
+            <p className="text-sm text-slate-500">No templates configured.</p>
+          )}
         </div>
-      </div>
-
-      {/* SMTP Configuration */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">SMTP Configuration</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">SMTP Host</label>
-            <Input value="smtp.office365.com" readOnly />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">SMTP Port</label>
-            <Input value="587" readOnly />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">From Email</label>
-            <Input value="dev-saas@primussoft.com" readOnly />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-            <div className="flex items-center space-x-2 mt-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-green-600 font-medium text-sm">Connected</span>
-            </div>
-          </div>
-        </div>
-        <Button className="mt-4 btn-primary">Test Connection</Button>
       </div>
     </div>
   );
 }
+

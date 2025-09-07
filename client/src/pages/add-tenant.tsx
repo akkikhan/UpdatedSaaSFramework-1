@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Building2, Key, Mail, Settings } from "lucide-react";
 import { useCreateTenant } from "@/hooks/use-tenants";
+import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   name: z.string().min(2, "Organization name must be at least 2 characters"),
@@ -161,6 +162,39 @@ export default function AddTenantPage() {
   };
 
   const watchedModules = form.watch("enabledModules");
+
+  const permissionTemplatesQuery = useQuery({
+    queryKey: ["/api/rbac-config/permission-templates"],
+    enabled: watchedModules.includes("rbac"),
+    queryFn: async () => {
+      const res = await fetch(`/api/rbac-config/permission-templates`);
+      if (!res.ok) throw new Error("Failed to fetch permission templates");
+      return res.json() as Promise<Array<{ id: string; name: string }>>;
+    },
+  });
+
+  const businessTypesQuery = useQuery({
+    queryKey: ["/api/rbac-config/business-types"],
+    enabled: watchedModules.includes("rbac"),
+    queryFn: async () => {
+      const res = await fetch(`/api/rbac-config/business-types`);
+      if (!res.ok) throw new Error("Failed to fetch business types");
+      return res.json() as Promise<Array<{ id: string; name: string }>>;
+    },
+  });
+
+  useEffect(() => {
+    if (!watchedModules.includes("rbac")) return;
+    const current = form.getValues("moduleConfigs") || {};
+    const rbacCfg = { ...(current as any).rbac };
+    if (!rbacCfg.permissionTemplate && permissionTemplatesQuery.data?.length) {
+      rbacCfg.permissionTemplate = permissionTemplatesQuery.data[0].id;
+    }
+    if (!rbacCfg.businessType && businessTypesQuery.data?.length) {
+      rbacCfg.businessType = businessTypesQuery.data[0].id;
+    }
+    form.setValue("moduleConfigs", { ...current, rbac: rbacCfg });
+  }, [watchedModules, permissionTemplatesQuery.data, businessTypesQuery.data, form]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -479,12 +513,18 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Permission Template</Label>
                         <Select
-                          defaultValue="standard"
+                          value={
+                            (form.watch("moduleConfigs") as any)?.rbac?.permissionTemplate ||
+                            ""
+                          }
                           onValueChange={value => {
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
-                              rbac: { permissionTemplate: value, businessType: "general" },
+                              rbac: {
+                                ...(currentConfigs as any).rbac,
+                                permissionTemplate: value,
+                              },
                             });
                           }}
                         >
@@ -492,22 +532,50 @@ export default function AddTenantPage() {
                             <SelectValue placeholder="Select template" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="minimal">Minimal</SelectItem>
-                            <SelectItem value="standard">Standard</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                            {permissionTemplatesQuery.isLoading && (
+                              <SelectItem value="" disabled>
+                                Loading...
+                              </SelectItem>
+                            )}
+                            {(permissionTemplatesQuery.data || []).map(t => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label className="text-sm font-medium">Business Type</Label>
-                        <Select defaultValue="general">
+                        <Select
+                          value={
+                            (form.watch("moduleConfigs") as any)?.rbac?.businessType || ""
+                          }
+                          onValueChange={value => {
+                            const currentConfigs = form.getValues("moduleConfigs") || {};
+                            form.setValue("moduleConfigs", {
+                              ...currentConfigs,
+                              rbac: {
+                                ...(currentConfigs as any).rbac,
+                                businessType: value,
+                              },
+                            });
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select business type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="saas">SaaS</SelectItem>
-                            <SelectItem value="ecommerce">E-commerce</SelectItem>
+                            {businessTypesQuery.isLoading && (
+                              <SelectItem value="" disabled>
+                                Loading...
+                              </SelectItem>
+                            )}
+                            {(businessTypesQuery.data || []).map(bt => (
+                              <SelectItem key={bt.id} value={bt.id}>
+                                {bt.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>

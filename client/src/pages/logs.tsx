@@ -45,6 +45,7 @@ export default function LogsPage() {
   const [systemFilters, setSystemFilters] = useState({
     tenantId: "",
     action: "",
+    state: "",
     limit: 50,
     offset: 0,
   });
@@ -98,6 +99,7 @@ export default function LogsPage() {
       const params = new URLSearchParams();
       if (systemFilters.tenantId) params.append("tenantId", systemFilters.tenantId);
       if (systemFilters.action) params.append("action", systemFilters.action);
+      if (systemFilters.state) params.append("state", systemFilters.state);
       params.append("limit", systemFilters.limit.toString());
       params.append("offset", systemFilters.offset.toString());
 
@@ -234,6 +236,13 @@ export default function LogsPage() {
                     <SelectItem value="tenant_status_updated">Status Updates</SelectItem>
                   </SelectContent>
                 </Select>
+                <Input
+                  placeholder="Filter by state..."
+                  value={systemFilters.state}
+                  onChange={e => setSystemFilters(prev => ({ ...prev, state: e.target.value }))}
+                  className="max-w-xs"
+                  data-testid="input-system-state-filter"
+                />
               </div>
 
               {/* System Logs List */}
@@ -263,6 +272,11 @@ export default function LogsPage() {
                                 <Badge variant="secondary" className="text-xs">
                                   {log.entityType}
                                 </Badge>
+                                {log.details?.state && (
+                                  <Badge className="text-xs" variant="secondary">
+                                    {log.details.state}
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-sm text-slate-800">
                                 <span className="font-medium">{log.tenantName || "System"}</span>
