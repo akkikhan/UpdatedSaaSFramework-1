@@ -2,7 +2,11 @@
   "name": "rest-express",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx --no-warnings server/index.ts",
     "dev:no-check": "cross-env NODE_ENV=development tsx --no-warnings --tsconfig tsconfig.server.json server/index.ts",
@@ -50,7 +54,6 @@
   },
   "dependencies": {
     "@azure/mcp": "^0.5.10",
-    "@azure/mcp-win32-x64": "^0.5.10",
     "@azure/msal-node": "^3.7.2",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
