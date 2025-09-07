@@ -11,6 +11,7 @@ export interface TenantInfo {
   status: string;
   enabledModules: string[];
   moduleConfigs?: any;
+  loggingApiKey?: string;
 }
 
 const BASE = localStorage.getItem("claims_base") || "http://localhost:5000";

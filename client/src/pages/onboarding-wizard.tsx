@@ -921,7 +921,11 @@ export default function OnboardingWizard() {
                                             (permissionTemplates as any[]).map(t => (
                                               <SelectItem
                                                 key={t.id}
-                                                value={(t.name || t.id || "")
+                                                value={(
+                                                  t.name ||
+                                                  t.id ||
+                                                  `template-${Math.random()}`
+                                                )
                                                   .toString()
                                                   .toLowerCase()}
                                               >
@@ -929,7 +933,7 @@ export default function OnboardingWizard() {
                                               </SelectItem>
                                             ))
                                           ) : (
-                                            <SelectItem value="" disabled>
+                                            <SelectItem value="no-templates" disabled>
                                               No templates configured
                                             </SelectItem>
                                           )}
@@ -960,7 +964,11 @@ export default function OnboardingWizard() {
                                             (businessTypes as any[]).map(bt => (
                                               <SelectItem
                                                 key={bt.id}
-                                                value={(bt.name || bt.id || "")
+                                                value={(
+                                                  bt.name ||
+                                                  bt.id ||
+                                                  `business-type-${Math.random()}`
+                                                )
                                                   .toString()
                                                   .toLowerCase()}
                                               >
@@ -968,7 +976,7 @@ export default function OnboardingWizard() {
                                               </SelectItem>
                                             ))
                                           ) : (
-                                            <SelectItem value="" disabled>
+                                            <SelectItem value="no-business-types" disabled>
                                               No business types defined
                                             </SelectItem>
                                           )}

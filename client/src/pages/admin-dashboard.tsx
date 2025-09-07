@@ -117,8 +117,27 @@ export default function AdminDashboard() {
   const { data: resolved = [] } = useQuery({
     queryKey: ["/api/admin/module-requests", "resolved"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/module-requests?includeResolved=true");
-      if (!res.ok) return [];
+      const platformAdminToken = localStorage.getItem("platformAdminToken");
+      const headers: Record<string, string> = {
+        Accept: "application/json",
+        ...(platformAdminToken ? { Authorization: `Bearer ${platformAdminToken}` } : {}),
+      };
+
+      const res = await fetch("/api/admin/module-requests?includeResolved=true", {
+        headers,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          // Clear all authentication data and redirect
+          localStorage.removeItem("platformAdminToken");
+          window.location.href = "/admin/login";
+          return [];
+        }
+        return [];
+      }
+
       const all = await res.json();
       return all.filter(
         (r: any) => r.details?.status === "approved" || r.details?.status === "dismissed"
