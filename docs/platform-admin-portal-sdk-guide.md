@@ -6,6 +6,21 @@ reflected immediately in tenant applications. It covers installation,
 prerequisites, and end‑to‑end examples for all core modules: Authentication,
 RBAC, and Logging.
 
+## Table of Contents
+
+- [1. Prerequisites](#1-prerequisites)
+- [2. Installation](#2-installation)
+- [3. Configuring Tenants with the Admin SDK](#3-configuring-tenants-with-the-admin-sdk)
+- [4. Authentication Module](#4-authentication-module)
+  - [4.1 Local JWT](#41-local-jwt)
+  - [4.2 Azure AD Setup](#42-azure-ad-setup)
+  - [4.3 Auth0 Setup](#43-auth0-setup)
+  - [4.4 SAML Setup](#44-saml-setup)
+- [5. RBAC Module](#5-rbac-module)
+- [6. Logging Module](#6-logging-module)
+- [7. End‑to‑End Example](#7-end-to-end-example)
+- [8. Support](#8-support)
+
 ## 1. Prerequisites
 
 Before starting, ensure you have:
@@ -25,6 +40,9 @@ npm install @saas-framework/platform-admin-sdk \
             @saas-framework/auth-client \
             @saas-framework/rbac-sdk
 ```
+
+The Logging module uses plain HTTP requests, so no additional client package is
+required.
 
 ## 3. Configuring Tenants with the Admin SDK
 
