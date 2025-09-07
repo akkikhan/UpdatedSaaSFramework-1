@@ -21,6 +21,7 @@ import {
 import { notificationService } from "./services/notification";
 import { complianceService } from "./services/compliance-temp";
 import { z } from "zod";
+import { sanitizeGuid, GUID_CANON } from "./utils/azure";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -1361,14 +1362,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { tenantId, clientId, clientSecret, callbackUrl } = req.body;
 
+      const tenantIdVal = sanitizeGuid(tenantId);
+      const clientIdVal = sanitizeGuid(clientId);
+      const clientSecretVal = String(clientSecret ?? "").trim();
+
       console.log(`Configuring Azure AD for tenant ${id}`);
 
-      // Validate required fields
-      if (!tenantId || !clientId || !clientSecret) {
-        return res.status(400).json({
-          message: "Missing required Azure AD configuration fields",
-          required: ["tenantId", "clientId", "clientSecret"],
-        });
+      // Validate required fields and formats
+      const errors: string[] = [];
+      if (!tenantIdVal || !GUID_CANON.test(tenantIdVal))
+        errors.push("tenantId must be a GUID from Azure AD (format: 8-4-4-4-12)");
+      if (!clientIdVal || !GUID_CANON.test(clientIdVal))
+        errors.push("clientId must be a GUID (Application ID) (format: 8-4-4-4-12)");
+      if (!clientSecretVal) errors.push("clientSecret is required");
+      if (errors.length) {
+        return res.status(400).json({ message: "Invalid Azure AD configuration", errors });
       }
 
       // Get current tenant configuration
@@ -1393,10 +1401,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add new Azure AD provider
       // Encrypt secret before storing
-      let encryptedSecret: string | undefined = clientSecret;
+      let encryptedSecret: string | undefined = clientSecretVal;
       try {
         const { encryptSecret } = await import("./utils/secret.js");
-        encryptedSecret = encryptSecret(clientSecret);
+        encryptedSecret = encryptSecret(clientSecretVal);
       } catch {}
 
       moduleConfigs.auth.providers.push({
@@ -1404,8 +1412,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: "Azure AD SSO",
         priority: 1,
         config: {
-          tenantId,
-          clientId,
+          tenantId: tenantIdVal,
+          clientId: clientIdVal,
           clientSecret: encryptedSecret,
           callbackUrl:
             callbackUrl ||
@@ -2966,12 +2974,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cfg = azure.config || {};
       const errors: string[] = [];
       // Canonical GUID 8-4-4-4-12, allow braces and trim whitespace
-      const GUID_CANON =
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-      const sanitizeGuid = (v: any) =>
-        String(v ?? "")
-          .trim()
-          .replace(/[{}]/g, "");
       const tenantIdVal = sanitizeGuid(cfg.tenantId);
       const clientIdVal = sanitizeGuid(cfg.clientId);
       if (!tenantIdVal || !GUID_CANON.test(tenantIdVal)) {
@@ -3053,13 +3055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bodyCfg = req.body || {};
       const mergedCfg = { ...(azure.config || {}), ...bodyCfg } as any;
 
-      const sanitizeGuid = (v: any) =>
-        String(v ?? "")
-          .trim()
-          .replace(/[{}]/g, "");
-      const GUID_CANON =
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-
+      // Canonical GUID 8-4-4-4-12, allow braces and trim whitespace
       const tenantIdVal = sanitizeGuid(mergedCfg.tenantId);
       const clientIdVal = sanitizeGuid(mergedCfg.clientId);
       const clientSecretVal = String(mergedCfg.clientSecret ?? "").trim();
@@ -3120,13 +3116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bodyCfg = req.body || {};
       const mergedCfg = { ...(azure.config || {}), ...bodyCfg } as any;
 
-      const sanitizeGuid = (v: any) =>
-        String(v ?? "")
-          .trim()
-          .replace(/[{}]/g, "");
-      const GUID_CANON =
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-
+      // Canonical GUID 8-4-4-4-12, allow braces and trim whitespace
       const tenantIdVal = sanitizeGuid(mergedCfg.tenantId);
       const clientIdVal = sanitizeGuid(mergedCfg.clientId);
       const clientSecretVal = String(mergedCfg.clientSecret ?? "").trim();
