@@ -569,14 +569,11 @@ export class SaaSAuth {
   /**
    * SAML Authentication - Initiate SAML login
    */
-  async initiateSAMLLogin(tenantId: string, relayState?: string): Promise<string> {
-    const response = await fetch(`${this.config.baseUrl}/saml/${tenantId}/login`, {
-      method: "POST",
+  async initiateSAMLLogin(orgId: string): Promise<{ authUrl: string; state: string }> {
+    const response = await fetch(`${this.config.baseUrl}/auth/saml/${orgId}`, {
       headers: {
-        "Content-Type": "application/json",
         "X-API-Key": this.config.apiKey,
       },
-      body: JSON.stringify({ relayState }),
     });
 
     if (!response.ok) {
@@ -584,21 +581,21 @@ export class SaaSAuth {
       throw new Error(error.message || "SAML initiation failed");
     }
 
-    const data = (await response.json()) as { redirectUrl: string };
-    return data.redirectUrl;
+    const data = (await response.json()) as { authUrl: string; state: string };
+    return data;
   }
 
   /**
    * SAML Authentication - Process SAML response
    */
-  async processSAMLResponse(samlResponse: string, relayState?: string): Promise<AuthSession> {
-    const response = await fetch(`${this.config.baseUrl}/saml/callback`, {
+  async processSAMLResponse(samlResponse: string, state: string): Promise<AuthSession> {
+    const response = await fetch(`${this.config.baseUrl}/auth/saml/callback`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": this.config.apiKey,
       },
-      body: JSON.stringify({ samlResponse, relayState }),
+      body: JSON.stringify({ samlResponse, state }),
     });
 
     if (!response.ok) {

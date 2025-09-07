@@ -5,6 +5,8 @@ import { emailService } from "./services/email";
 import { authService } from "./services/auth";
 import { platformAdminAuthService } from "./services/platform-admin-auth";
 import { AzureADService } from "./services/azure-ad";
+import { Auth0Service } from "./services/oauth/auth0";
+import { SAMLService } from "./services/oauth/saml";
 import { authMiddleware, tenantMiddleware } from "./middleware/auth";
 import { platformAdminMiddleware } from "./middleware/platform-admin";
 import { validateApiKey } from "./middleware/apiKeyAuth";
@@ -1752,6 +1754,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error starting Azure AD OAuth:", error);
       res.status(500).json({ message: "Failed to start Azure AD authentication" });
+    }
+  });
+
+  app.get("/api/auth/auth0/:orgId", async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const tenant = await storage.getTenantByOrgId(orgId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = moduleConfigs.auth;
+
+      if (!authConfig?.providers) {
+        return res.status(400).json({ message: "Authentication not configured for this tenant" });
+      }
+
+      let auth0Provider = authConfig.providers.find((p: any) => p.type === "auth0");
+      if (!auth0Provider || !auth0Provider.enabled) {
+        return res.status(400).json({ message: "Auth0 authentication not enabled for this tenant" });
+      }
+
+      try {
+        const { decryptSecret } = await import("./utils/secret.js");
+        if (auth0Provider.config?.clientSecret) {
+          auth0Provider = {
+            ...auth0Provider,
+            config: {
+              ...auth0Provider.config,
+              clientSecret: decryptSecret(auth0Provider.config.clientSecret),
+            },
+          };
+        }
+      } catch {
+        // ignore decryption errors
+      }
+
+      const service = new Auth0Service({
+        domain: auth0Provider.config.domain,
+        clientId: auth0Provider.config.clientId,
+        clientSecret: auth0Provider.config.clientSecret,
+        redirectUri:
+          auth0Provider.config.callbackUrl ||
+          `${req.protocol}://${req.get("host")}/api/auth/auth0/callback`,
+      });
+
+      const state = service.generateState(tenant.orgId);
+      const authUrl = service.getAuthUrl(state);
+      res.json({ authUrl, state });
+    } catch (err) {
+      console.error("Error starting Auth0 OAuth:", err);
+      res.status(500).json({ message: "Failed to start Auth0 authentication" });
+    }
+  });
+
+  app.post("/api/auth/auth0/callback", async (req, res) => {
+    try {
+      const { code, state, config } = req.body as any;
+      if (!code || !state || !config) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+
+      const service = new Auth0Service({
+        domain: config.domain,
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        redirectUri:
+          config.redirectUri || `${req.protocol}://${req.get("host")}/api/auth/auth0/callback`,
+      });
+
+      const parsed = service.parseState(state);
+      if (!parsed) return res.status(400).json({ message: "Invalid state parameter" });
+
+      const tenant = await storage.getTenantByOrgId(parsed.tenantOrgId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const result = await service.handleCallback(code, state, tenant);
+      if (!result) return res.status(400).json({ message: "Auth0 authentication failed" });
+
+      res.json(result);
+    } catch (err) {
+      console.error("Auth0 callback error:", err);
+      res.status(500).json({ message: "Failed to handle Auth0 callback" });
+    }
+  });
+
+  app.get("/api/auth/saml/:orgId", async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const tenant = await storage.getTenantByOrgId(orgId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = moduleConfigs.auth;
+      if (!authConfig?.providers) {
+        return res.status(400).json({ message: "Authentication not configured for this tenant" });
+      }
+
+      const samlProvider = authConfig.providers.find((p: any) => p.type === "saml" && p.enabled);
+      if (!samlProvider) {
+        return res.status(400).json({ message: "SAML authentication not enabled for this tenant" });
+      }
+
+      const service = new SAMLService({
+        entryPoint: samlProvider.config.entryPoint,
+        issuer: samlProvider.config.issuer,
+        cert: samlProvider.config.cert,
+        callbackUrl:
+          samlProvider.config.callbackUrl ||
+          `${req.protocol}://${req.get("host")}/api/auth/saml/callback`,
+      });
+
+      const state = SAMLService.generateState(tenant.orgId);
+      const authUrl = service.initiateLogin(state);
+      res.json({ authUrl, state });
+    } catch (err) {
+      console.error("Error starting SAML authentication:", err);
+      res.status(500).json({ message: "Failed to start SAML authentication" });
+    }
+  });
+
+  app.post("/api/auth/saml/callback", async (req, res) => {
+    try {
+      const { samlResponse, state } = req.body as any;
+      if (!samlResponse || !state) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+
+      const parsed = SAMLService.parseState(state);
+      if (!parsed) return res.status(400).json({ message: "Invalid state parameter" });
+
+      const tenant = await storage.getTenantByOrgId(parsed.tenantOrgId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+      const moduleConfigs = (tenant.moduleConfigs as any) || {};
+      const authConfig = moduleConfigs.auth;
+      const samlProvider = authConfig?.providers?.find((p: any) => p.type === "saml" && p.enabled);
+      if (!samlProvider) {
+        return res.status(400).json({ message: "SAML authentication not enabled for this tenant" });
+      }
+
+      const service = new SAMLService({
+        entryPoint: samlProvider.config.entryPoint,
+        issuer: samlProvider.config.issuer,
+        cert: samlProvider.config.cert,
+        callbackUrl:
+          samlProvider.config.callbackUrl ||
+          `${req.protocol}://${req.get("host")}/api/auth/saml/callback`,
+      });
+
+      const result = await service.handleCallback(samlResponse, state, tenant);
+      if (!result) return res.status(400).json({ message: "SAML authentication failed" });
+
+      res.json(result);
+    } catch (err) {
+      console.error("SAML callback error:", err);
+      res.status(500).json({ message: "Failed to handle SAML callback" });
     }
   });
 

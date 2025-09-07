@@ -327,6 +327,7 @@ const Auth0Config: React.FC<{ form: UseFormReturn<TenantOnboardingConfig> }> = (
             <FormControl>
               <Input placeholder="your-tenant.auth0.com" {...field} />
             </FormControl>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -339,6 +340,34 @@ const Auth0Config: React.FC<{ form: UseFormReturn<TenantOnboardingConfig> }> = (
             <FormControl>
               <Input placeholder="Auth0 Client ID" {...field} />
             </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="modules.auth.providerConfigs.auth0.clientSecret"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client Secret *</FormLabel>
+            <FormControl>
+              <Input type="password" placeholder="Auth0 Client Secret" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="modules.auth.providerConfigs.auth0.audience"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Audience</FormLabel>
+            <FormControl>
+              <Input placeholder="https://api.yourapp.com" {...field} />
+            </FormControl>
+            <FormDescription>Optional</FormDescription>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -349,15 +378,44 @@ const Auth0Config: React.FC<{ form: UseFormReturn<TenantOnboardingConfig> }> = (
 const SAMLConfig: React.FC<{ form: UseFormReturn<TenantOnboardingConfig> }> = ({ form }) => (
   <div className="border rounded-lg p-4 bg-green-50">
     <h4 className="font-medium mb-4">SAML Configuration</h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        control={form.control}
+        name="modules.auth.providerConfigs.saml.entryPoint"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Entry Point URL *</FormLabel>
+            <FormControl>
+              <Input placeholder="https://identity-provider.com/saml/sso" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="modules.auth.providerConfigs.saml.issuer"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Issuer *</FormLabel>
+            <FormControl>
+              <Input placeholder="urn:your-app" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
     <FormField
       control={form.control}
-      name="modules.auth.providerConfigs.saml.entryPoint"
+      name="modules.auth.providerConfigs.saml.cert"
       render={({ field }) => (
-        <FormItem>
-          <FormLabel>Entry Point URL *</FormLabel>
+        <FormItem className="mt-4">
+          <FormLabel>Certificate (PEM) *</FormLabel>
           <FormControl>
-            <Input placeholder="https://identity-provider.com/saml/sso" {...field} />
+            <Textarea placeholder="-----BEGIN CERTIFICATE-----..." {...field} />
           </FormControl>
+          <FormMessage />
         </FormItem>
       )}
     />

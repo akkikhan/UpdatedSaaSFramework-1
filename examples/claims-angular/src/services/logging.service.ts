@@ -1,24 +1,19 @@
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
-import { SnackbarService } from "./snackbar.service";
+import { TenantService } from "./tenant.service";
 
 const BASE = localStorage.getItem("claims_base") || "http://localhost:5000";
 
 @Injectable({ providedIn: "root" })
 export class LoggingService {
   private get apiKey(): string | null {
-    return localStorage.getItem("claims_logging_key");
+    return this.tenant.loggingKey;
   }
 
   constructor(
     private http: HttpClient,
-    private snack: SnackbarService
+    private tenant: TenantService
   ) {}
-
-  setApiKey(key: string) {
-    localStorage.setItem("claims_logging_key", key);
-    this.snack.success("Logging API key saved");
-  }
 
   private headers() {
     const key = this.apiKey;

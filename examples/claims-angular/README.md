@@ -13,10 +13,9 @@ npx ng serve --port 5173 --open
 
 Usage:
 
-- Enter Org ID and (optional) Logging API Key on the page.
-- Sign in with Microsoft or Local.
-- View claims; Approve button requires `claims.approve` permission.
-- Send/Query logs uses `X-API-Key` to `/api/v2/logging/*`.
+- Enter Org ID and sign in with Microsoft or Local credentials.
+- View claims; Adjuster can update, Approver can approve.
+- Logs are sent and queried automatically using the tenant's logging key.
 
 Config:
 

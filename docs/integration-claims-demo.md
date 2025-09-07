@@ -28,16 +28,23 @@ Restart the platform server if it was running.
 2. Configure Azure AD for the tenant (Tenant Id, Client Id, Client Secret,
    Callback URL):
    - Callback: `http://localhost:5000/api/auth/azure/callback`
-3. Note down the tenant’s `loggingApiKey` (format `logging_...`).
+3. The tenant’s logging API key is generated automatically; the demo apps pick it up from tenant configuration.
 
-Optional: Create roles and permissions (example)
+### Seed demo roles and users
 
-- Roles: Adjuster, Reviewer, Manager, Admin
-- Permissions:
-  - `claims.read`, `claims.update`, `claims.approve`
-  - `reports.export`, `users.read`, `settings.read`
+Run the helper script to create three roles and users:
 
-Assign users to roles in the tenant portal.
+```
+ORG_ID=<orgId> EMAIL=<admin@example.com> PASSWORD=<adminPass> node scripts/seed-claims-roles.mjs
+```
+
+Roles created:
+
+- **Viewer** – `claims.read`
+- **Adjuster** – `claims.read`, `claims.update`
+- **Approver** – `claims.read`, `claims.update`, `claims.approve`
+
+Users `viewer@example.com`, `adjuster@example.com`, `approver@example.com` are provisioned and assigned accordingly. Changing their roles in the Tenant Portal takes effect in the Claims app after refresh.
 
 ## 3) Angular App (claims-angular)
 
@@ -54,7 +61,7 @@ npx ng serve --port 5173 --open
 Configuration:
 
 - Platform base URL defaults to `http://localhost:5000`.
-- Enter the Logging API key in the UI to enable sending/querying logs.
+- Logging API key is fetched from tenant settings; no manual entry required.
 
 Features:
 
