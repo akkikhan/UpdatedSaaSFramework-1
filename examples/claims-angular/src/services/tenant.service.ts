@@ -36,6 +36,14 @@ export class TenantService {
     return this.modules$.asObservable();
   }
 
+  get currentTenant() {
+    return this.tenant$.value;
+  }
+
+  get loggingKey() {
+    return this.tenant$.value?.loggingApiKey || null;
+  }
+
   fetchByOrgId(orgId: string) {
     return this.http.get<TenantInfo>(`${BASE}/api/tenants/by-org-id/${orgId}`);
   }

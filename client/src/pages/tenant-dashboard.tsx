@@ -61,7 +61,21 @@ import {
   Edit,
   Trash2,
   UserCheck,
+  TrendingUp,
+  PieChart as PieIcon,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { useTenantAuth } from "@/hooks/use-tenant-auth";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
@@ -69,10 +83,9 @@ import { api } from "@/lib/api";
 // Form schemas
 const userFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
   status: z.enum(["active", "inactive"]).default("active"),
+  roleId: z.string().optional(),
 });
 
 const roleFormSchema = z.object({
@@ -116,24 +129,6 @@ export default function TenantDashboard() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState<any>(null);
   const [permissionExplain, setPermissionExplain] = useState<any | null>(null);
-  const [assignmentUserId, setAssignmentUserId] = useState<string>("");
-  const [assignmentRoleId, setAssignmentRoleId] = useState<string>("");
-  const { data: userRoles = [] } = useQuery({
-    queryKey: ["/api/v2/rbac/users", assignmentUserId, "roles", orgId],
-    enabled: !!assignmentUserId,
-    queryFn: async () => {
-      const token =
-        localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
-      const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-      const t = tRes.ok ? await tRes.json() : null;
-      if (!t) return [] as any[];
-      const res = await fetch(`/api/v2/rbac/users/${assignmentUserId}/roles`, {
-        headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
-      });
-      if (!res.ok) return [] as any[];
-      return res.json();
-    },
-  });
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -381,6 +376,31 @@ export default function TenantDashboard() {
     },
   }) as { data: any[] };
 
+  const [userRolesMap, setUserRolesMap] = useState<Record<string, any[]>>({});
+
+  const fetchUserRoles = async () => {
+    if (!tenant?.id || !(tenantUsers as any[]).length) return;
+    const token =
+      localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
+    const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+    const t = tRes.ok ? await tRes.json() : null;
+    if (!t) return;
+    const map: Record<string, any[]> = {};
+    await Promise.all(
+      (tenantUsers as any[]).map(async (u: any) => {
+        const res = await fetch(`/api/v2/rbac/users/${u.id}/roles`, {
+          headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
+        });
+        map[u.id] = res.ok ? await res.json() : [];
+      })
+    );
+    setUserRolesMap(map);
+  };
+
+  useEffect(() => {
+    fetchUserRoles();
+  }, [tenantUsers, tenant?.id, orgId]);
+
   // Check if tenant is suspended and handle accordingly
   if (tenant && tenant.status === "suspended") {
     return (
@@ -499,6 +519,32 @@ export default function TenantDashboard() {
   );
   availablePermissions.sort();
 
+  const now = new Date();
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (6 - i));
+    return d;
+    });
+  const userGrowth = last7Days.map(d => {
+    const dayStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const count = (tenantInfo.users as any[]).filter(
+      (u: any) => u.createdAt && new Date(u.createdAt).toDateString() === d.toDateString()
+    ).length;
+    return { day: dayStr, count };
+  });
+  const statusPie = [
+    {
+      name: "Active",
+      value: (tenantInfo.users as any[]).filter((u: any) => u.status === "active").length,
+      color: "#16a34a",
+    },
+    {
+      name: "Inactive",
+      value: (tenantInfo.users as any[]).filter((u: any) => u.status !== "active").length,
+      color: "#ef4444",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -562,6 +608,7 @@ export default function TenantDashboard() {
               Users {!isAuthEnabled && <span className="ml-1 text-xs opacity-60">(Disabled)</span>}
             </TabsTrigger>
             {isRbacEnabled && <TabsTrigger value="roles">Roles</TabsTrigger>}
+            {isRbacEnabled && <TabsTrigger value="settings">Settings</TabsTrigger>}
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           </TabsList>
@@ -602,6 +649,38 @@ export default function TenantDashboard() {
               </Card>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="p-4">
+                <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-blue-600" /> User Signups (7 days)
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={userGrowth}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis allowDecimals={false} />
+                    <RechartsTooltip />
+                    <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="#bfdbfe" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+              <Card className="p-4">
+                <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                  <PieIcon className="h-4 w-4 text-emerald-600" /> User Status
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={statusPie} dataKey="value" nameKey="name" outerRadius={80}>
+                      {statusPie.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Card>
+            </div>
+
             <div className="flex justify-end mb-2">
               <Button variant="secondary" size="sm" onClick={() => setShowQuickstart(true)}>
                 Open Quick Start
@@ -610,139 +689,9 @@ export default function TenantDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Getting Started</CardTitle>
+                <CardTitle>Integration Guide</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Simple user-role assignment */}
-                <div className="border rounded-md p-4 bg-slate-50">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div>
-                      <Label className="text-xs">User</Label>
-                      <Select onValueChange={v => setAssignmentUserId(v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select user" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(tenantUsers as any[]).map((u: any) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Role</Label>
-                      <Select onValueChange={v => setAssignmentRoleId(v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(tenantRoles as any[]).map((r: any) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Button
-                        onClick={async () => {
-                          try {
-                            if (!assignmentUserId || !assignmentRoleId) return;
-                            const token =
-                              localStorage.getItem(`tenant_token_${orgId}`) ||
-                              localStorage.getItem("tenant_token") ||
-                              "";
-                            const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-                            const t = tRes.ok ? await tRes.json() : null;
-                            if (!t) return;
-                            const res = await fetch(
-                              `/api/v2/rbac/users/${assignmentUserId}/roles`,
-                              {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                  Authorization: `Bearer ${token}`,
-                                  "x-tenant-id": t.id || "",
-                                },
-                                body: JSON.stringify({ roleId: assignmentRoleId }),
-                              }
-                            );
-                            if (!res.ok) throw new Error("Assign failed");
-                            toast({ title: "Role assigned" });
-                            queryClient.invalidateQueries({
-                              queryKey: ["/api/v2/rbac/users", assignmentUserId, "roles", orgId],
-                            });
-                          } catch (e: any) {
-                            toast({
-                              title: "Failed to assign",
-                              description: e.message || "Error",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                      >
-                        Assign Role
-                      </Button>
-                    </div>
-                  </div>
-                  {assignmentUserId && (
-                    <div className="mt-3 text-sm">
-                      <span className="text-slate-600">Current roles:</span>
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {(userRoles as any[]).map((r: any) => (
-                          <Badge key={r.id} variant="outline" className="text-xs">
-                            {r.name}
-                            <button
-                              className="ml-2 text-slate-500 hover:text-slate-700"
-                              onClick={async () => {
-                                try {
-                                  const token =
-                                    localStorage.getItem(`tenant_token_${orgId}`) ||
-                                    localStorage.getItem("tenant_token") ||
-                                    "";
-                                  const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-                                  const t = tRes.ok ? await tRes.json() : null;
-                                  if (!t) return;
-                                  const res = await fetch(
-                                    `/api/v2/rbac/users/${assignmentUserId}/roles/${r.id}`,
-                                    {
-                                      method: "DELETE",
-                                      headers: {
-                                        Authorization: `Bearer ${token}`,
-                                        "x-tenant-id": t.id || "",
-                                      },
-                                    }
-                                  );
-                                  if (!res.ok) throw new Error("Remove failed");
-                                  toast({ title: "Role removed" });
-                                  queryClient.invalidateQueries({
-                                    queryKey: [
-                                      "/api/v2/rbac/users",
-                                      assignmentUserId,
-                                      "roles",
-                                      orgId,
-                                    ],
-                                  });
-                                } catch (e: any) {
-                                  toast({
-                                    title: "Failed to remove",
-                                    description: e.message || "Error",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                   <div>
@@ -857,6 +806,7 @@ export default function TenantDashboard() {
                       <UserModal
                         title="Add New User"
                         tenantId={tenant?.id}
+                        roles={tenantRoles as any[]}
                         onSuccess={() => {
                           setShowAddUserModal(false);
                           queryClient.invalidateQueries({
@@ -871,8 +821,8 @@ export default function TenantDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
+                        <TableHead>Roles</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -882,10 +832,16 @@ export default function TenantDashboard() {
                       {(tenantInfo.users as any[]).length > 0 ? (
                         (tenantInfo.users as any[]).map((user: any) => (
                           <TableRow key={user.id}>
-                            <TableCell className="font-medium">
-                              {user.firstName} {user.lastName}
-                            </TableCell>
                             <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {(userRolesMap[user.id] || []).map((r: any) => (
+                                  <Badge key={r.id} variant="outline" className="text-xs">
+                                    {r.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <Badge variant={user.status === "active" ? "default" : "secondary"}>
                                 {user.status}
@@ -904,6 +860,14 @@ export default function TenantDashboard() {
                                   data-testid={`button-edit-user-${user.id}`}
                                 >
                                   <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setManageRolesUser(user)}
+                                  data-testid={`button-manage-roles-${user.id}`}
+                                >
+                                  <UserCheck className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -945,234 +909,20 @@ export default function TenantDashboard() {
                 />
               </Dialog>
             )}
+            {manageRolesUser && (
+              <ManageRolesModal
+                user={manageRolesUser}
+                roles={tenantRoles as any[]}
+                currentRoles={userRolesMap[manageRolesUser.id] || []}
+                tenantId={tenant?.id}
+                orgId={orgId}
+                onClose={() => setManageRolesUser(null)}
+                refresh={fetchUserRoles}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="roles">
-            {/* RBAC Settings full editor */}
-            {rbacSettings && (
-              <Card className="mb-4">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">RBAC Settings</CardTitle>
-                      <p className="text-sm text-slate-600 mt-1">
-                        Adjust defaults for this tenant.
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs">Permission Template</Label>
-                      <Select
-                        defaultValue={(rbacSettings as any)?.permissionTemplate || "standard"}
-                        onValueChange={val => ((rbacSettings as any).permissionTemplate = val)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select template" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(rbacCatalog.templates as any[]).length
-                            ? (rbacCatalog.templates as any[]).map((t: any) => (
-                                <SelectItem
-                                  key={t.id}
-                                  value={(t.name || t.id).toString().toLowerCase()}
-                                >
-                                  {t.name}
-                                </SelectItem>
-                              ))
-                            : [
-                                <SelectItem key="standard" value="standard">
-                                  Standard
-                                </SelectItem>,
-                                <SelectItem key="enterprise" value="enterprise">
-                                  Enterprise
-                                </SelectItem>,
-                                <SelectItem key="custom" value="custom">
-                                  Custom
-                                </SelectItem>,
-                              ]}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Business Type</Label>
-                      <Select
-                        defaultValue={(rbacSettings as any)?.businessType || "general"}
-                        onValueChange={val => ((rbacSettings as any).businessType = val)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select business type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(rbacCatalog.businessTypes as any[]).length
-                            ? (rbacCatalog.businessTypes as any[]).map((b: any) => (
-                                <SelectItem
-                                  key={b.id}
-                                  value={(b.name || b.id).toString().toLowerCase()}
-                                >
-                                  {b.name}
-                                </SelectItem>
-                              ))
-                            : [
-                                <SelectItem key="general" value="general">
-                                  General
-                                </SelectItem>,
-                                <SelectItem key="healthcare" value="healthcare">
-                                  Healthcare
-                                </SelectItem>,
-                                <SelectItem key="finance" value="finance">
-                                  Finance
-                                </SelectItem>,
-                                <SelectItem key="education" value="education">
-                                  Education
-                                </SelectItem>,
-                                <SelectItem key="government" value="government">
-                                  Government
-                                </SelectItem>,
-                              ]}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Default Roles</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(((rbacSettings as any)?.defaultRoles || []) as string[]).map(r => (
-                        <Badge key={r} variant="secondary" className="px-2 py-1">
-                          <span className="mr-2">{r}</span>
-                          <button
-                            type="button"
-                            className="text-slate-500 hover:text-slate-700"
-                            onClick={() => {
-                              (rbacSettings as any).defaultRoles = (
-                                (rbacSettings as any).defaultRoles || []
-                              ).filter((x: string) => x !== r);
-                              queryClient.invalidateQueries({
-                                queryKey: ["/api/tenant", "rbac", "settings", orgId],
-                              });
-                            }}
-                            aria-label={`Remove ${r}`}
-                          >
-                            ×
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <Input
-                        placeholder="Add a role"
-                        onKeyDown={e => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const v = (e.target as HTMLInputElement).value.trim();
-                            if (!v) return;
-                            const arr = Array.from(
-                              new Set([
-                                ...(((rbacSettings as any).defaultRoles || []) as string[]),
-                                v,
-                              ])
-                            );
-                            (rbacSettings as any).defaultRoles = arr;
-                            (e.target as HTMLInputElement).value = "";
-                            queryClient.invalidateQueries({
-                              queryKey: ["/api/tenant", "rbac", "settings", orgId],
-                            });
-                          }
-                        }}
-                      />
-                      <Button variant="secondary">Add</Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Custom Permissions</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(((rbacSettings as any)?.customPermissions || []) as string[]).map(p => (
-                        <Badge key={p} variant="outline" className="px-2 py-1">
-                          <span className="mr-2">{p}</span>
-                          <button
-                            type="button"
-                            className="text-slate-500 hover:text-slate-700"
-                            onClick={() => {
-                              (rbacSettings as any).customPermissions = (
-                                (rbacSettings as any).customPermissions || []
-                              ).filter((x: string) => x !== p);
-                              queryClient.invalidateQueries({
-                                queryKey: ["/api/tenant", "rbac", "settings", orgId],
-                              });
-                            }}
-                            aria-label={`Remove ${p}`}
-                          >
-                            ×
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <Input
-                        placeholder="Add permission (e.g., reports.export)"
-                        onKeyDown={e => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const v = (e.target as HTMLInputElement).value.trim();
-                            if (!v) return;
-                            const arr = Array.from(
-                              new Set([
-                                ...(((rbacSettings as any).customPermissions || []) as string[]),
-                                v,
-                              ])
-                            );
-                            (rbacSettings as any).customPermissions = arr;
-                            (e.target as HTMLInputElement).value = "";
-                            queryClient.invalidateQueries({
-                              queryKey: ["/api/tenant", "rbac", "settings", orgId],
-                            });
-                          }
-                        }}
-                      />
-                      <Button variant="secondary">Add</Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={async () => {
-                        try {
-                          const token =
-                            localStorage.getItem(`tenant_token_${orgId}`) ||
-                            localStorage.getItem("tenant_token") ||
-                            "";
-                          const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-                          const t = tRes.ok ? await tRes.json() : null;
-                          if (!t) return;
-                          const res = await fetch(`/api/tenant/${t.id}/rbac/settings`, {
-                            method: "PATCH",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${token}`,
-                            },
-                            body: JSON.stringify(rbacSettings),
-                          });
-                          if (!res.ok) throw new Error("Save failed");
-                          queryClient.invalidateQueries({
-                            queryKey: ["/api/tenant", "rbac", "settings", orgId],
-                          });
-                          toast({ title: "RBAC settings saved" });
-                        } catch (e: any) {
-                          toast({
-                            title: "Failed to save",
-                            description: e.message || "Error",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                    >
-                      Save Changes
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1363,6 +1113,137 @@ export default function TenantDashboard() {
               />
             </Dialog>
           </TabsContent>
+
+          {isRbacEnabled && (
+            <TabsContent value="settings">
+              {rbacSettings && (
+                <Card className="mb-4">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base">RBAC Settings</CardTitle>
+                        <p className="text-sm text-slate-600 mt-1">Adjust defaults for this tenant.</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs">Permission Template</Label>
+                        <Select
+                          defaultValue={(rbacSettings as any)?.permissionTemplate || "standard"}
+                          onValueChange={val => ((rbacSettings as any).permissionTemplate = val)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(rbacCatalog.templates as any[]).length
+                              ? (rbacCatalog.templates as any[]).map((t: any) => (
+                                  <SelectItem key={t.id} value={(t.name || t.id).toString().toLowerCase()}>
+                                    {t.name}
+                                  </SelectItem>
+                                ))
+                              : ["standard", "custom"].map(t => (
+                                  <SelectItem key={t} value={t}>
+                                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                                  </SelectItem>
+                                ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Business Type</Label>
+                        <Select
+                          defaultValue={(rbacSettings as any)?.businessType || "general"}
+                          onValueChange={val => ((rbacSettings as any).businessType = val)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select business type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(rbacCatalog.businessTypes as any[]).length
+                              ? (rbacCatalog.businessTypes as any[]).map((b: any) => (
+                                  <SelectItem key={b.id} value={(b.name || b.id).toString().toLowerCase()}>
+                                    {b.name}
+                                  </SelectItem>
+                                ))
+                              : ["general", "saas"].map(b => (
+                                  <SelectItem key={b} value={b}>
+                                    {b.charAt(0).toUpperCase() + b.slice(1)}
+                                  </SelectItem>
+                                ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Custom Permissions</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g., invoices.approve"
+                          onKeyDown={e => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const v = (e.target as HTMLInputElement).value.trim();
+                              if (!v) return;
+                              const arr = Array.from(
+                                new Set([
+                                  ...(((rbacSettings as any).customPermissions || []) as string[]),
+                                  v,
+                                ])
+                              );
+                              (rbacSettings as any).customPermissions = arr;
+                              (e.target as HTMLInputElement).value = "";
+                              queryClient.invalidateQueries({
+                                queryKey: ["/api/tenant", "rbac", "settings", orgId],
+                              });
+                            }
+                          }}
+                        />
+                        <Button variant="secondary">Add</Button>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const token =
+                              localStorage.getItem(`tenant_token_${orgId}`) ||
+                              localStorage.getItem("tenant_token") || "";
+                            const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
+                            const t = tRes.ok ? await tRes.json() : null;
+                            if (!t) return;
+                            const res = await fetch(`/api/tenant/${t.id}/rbac/settings`, {
+                              method: "PATCH",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify(rbacSettings),
+                            });
+                            if (!res.ok) throw new Error("Save failed");
+                            queryClient.invalidateQueries({
+                              queryKey: ["/api/tenant", "rbac", "settings", orgId],
+                            });
+                            toast({ title: "RBAC settings saved" });
+                          } catch (e: any) {
+                            toast({
+                              title: "Failed to save",
+                              description: e.message || "Error",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          )}
 
           <TabsContent value="modules" className="space-y-6">
             <Card className="max-h-[70vh] overflow-auto">
@@ -1914,11 +1795,13 @@ function UserModal({
   title,
   tenantId,
   user,
+  roles,
   onSuccess,
 }: {
   title: string;
   tenantId?: string;
   user?: any;
+  roles?: any[];
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
@@ -1926,10 +1809,9 @@ function UserModal({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
       email: user?.email || "",
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
       password: "",
       status: user?.status || "active",
+      roleId: "",
     },
   });
 
@@ -1938,6 +1820,7 @@ function UserModal({
       const token =
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
       const url = user ? `/auth/users/${user.id}` : `/auth/users`;
+      const { roleId, ...userData } = data as any;
 
       const response = await fetch(url, {
         method: user ? "PUT" : "POST",
@@ -1946,7 +1829,7 @@ function UserModal({
           Authorization: `Bearer ${token}`,
           "x-tenant-id": tenantId || "",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
@@ -1954,7 +1837,19 @@ function UserModal({
         throw new Error(errorData.message || "Failed to save user");
       }
 
-      return response.json();
+      const created = await response.json();
+      if (!user && roleId) {
+        await fetch(`/api/v2/rbac/users/${created.id}/roles`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "x-tenant-id": tenantId || "",
+          },
+          body: JSON.stringify({ roleId }),
+        });
+      }
+      return created;
     },
     onSuccess: () => {
       toast({
@@ -1986,35 +1881,6 @@ function UserModal({
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
           <FormField
             control={form.control}
             name="email"
@@ -2042,6 +1908,33 @@ function UserModal({
               </FormItem>
             )}
           />
+
+          {!user && (
+            <FormField
+              control={form.control}
+              name="roleId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {(roles || []).map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <FormField
             control={form.control}
@@ -2234,6 +2127,100 @@ function RoleModal({
         </form>
       </Form>
     </DialogContent>
+  );
+}
+
+// ManageRolesModal Component
+function ManageRolesModal({
+  user,
+  roles,
+  currentRoles,
+  tenantId,
+  orgId,
+  onClose,
+  refresh,
+}: {
+  user: any;
+  roles: any[];
+  currentRoles: any[];
+  tenantId?: string;
+  orgId: string;
+  onClose: () => void;
+  refresh: () => void;
+}) {
+  const { toast } = useToast();
+  const [selected, setSelected] = useState<string[]>(currentRoles.map((r: any) => r.id));
+
+  const toggle = (id: string) => {
+    setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  };
+
+  const save = async () => {
+    try {
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) ||
+        localStorage.getItem("tenant_token") || "";
+      const toAdd = selected.filter(id => !currentRoles.some((r: any) => r.id === id));
+      const toRemove = currentRoles.filter((r: any) => !selected.includes(r.id));
+      await Promise.all([
+        ...toAdd.map(roleId =>
+          fetch(`/api/v2/rbac/users/${user.id}/roles`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              "x-tenant-id": tenantId || "",
+            },
+            body: JSON.stringify({ roleId }),
+          })
+        ),
+        ...toRemove.map(r =>
+          fetch(`/api/v2/rbac/users/${user.id}/roles/${r.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}`, "x-tenant-id": tenantId || "" },
+          })
+        ),
+      ]);
+      toast({ title: "Roles updated" });
+      refresh();
+      onClose();
+    } catch (e: any) {
+      toast({
+        title: "Failed to update",
+        description: e.message || "Error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={!!user} onOpenChange={v => { if (!v) onClose(); }}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Manage Roles</DialogTitle>
+          <DialogDescription>Assign roles for {user?.email}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {roles.map((r: any) => (
+            <div key={r.id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`role-${r.id}`}
+                checked={selected.includes(r.id)}
+                onChange={() => toggle(r.id)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor={`role-${r.id}`} className="text-sm">
+                {r.name}
+              </label>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

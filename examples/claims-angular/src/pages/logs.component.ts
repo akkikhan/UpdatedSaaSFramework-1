@@ -12,6 +12,7 @@ import { MatPaginator, MatPaginatorModule } from "@angular/material/paginator";
 import { MatSort, MatSortModule } from "@angular/material/sort";
 import { LoggingService } from "../services/logging.service";
 import { SnackbarService } from "../services/snackbar.service";
+import { TenantService } from "../services/tenant.service";
 
 interface LogRow {
   id?: string;
@@ -47,20 +48,6 @@ interface LogRow {
     </div>
 
     <div class="logs-container">
-      <div class="logs-config-section">
-        <div class="config-group">
-          <mat-form-field appearance="outline" class="api-key-field">
-            <mat-label>Logging API Key</mat-label>
-            <input matInput [(ngModel)]="apiKey" placeholder="logging_..." type="password" />
-            <mat-icon matPrefix>vpn_key</mat-icon>
-          </mat-form-field>
-          <button mat-raised-button color="primary" (click)="saveKey()" class="save-btn">
-            <mat-icon>save</mat-icon>
-            Save Key
-          </button>
-        </div>
-      </div>
-
       <div class="log-actions-section">
         <div class="action-group">
           <mat-form-field appearance="outline" class="message-field">
@@ -157,11 +144,11 @@ interface LogRow {
         >
         </mat-paginator>
 
-        <div *ngIf="!data.data.length" class="empty-state">
-          <mat-icon class="empty-icon">inbox</mat-icon>
-          <h3>No logs to display</h3>
-          <p>Configure your API key and start logging to see entries here.</p>
-        </div>
+          <div *ngIf="!data.data.length" class="empty-state">
+            <mat-icon class="empty-icon">inbox</mat-icon>
+            <h3>No logs to display</h3>
+            <p>Perform actions in the app to generate log entries.</p>
+          </div>
       </div>
     </div>
   `,
@@ -205,22 +192,19 @@ interface LogRow {
         overflow: hidden;
       }
 
-      .logs-config-section,
       .log-actions-section {
         padding: 20px 24px;
         border-bottom: 1px solid #e2e8f0;
         background: #f8fafc;
       }
 
-      .config-group,
       .action-group {
         display: flex;
         gap: 16px;
         align-items: flex-end;
         flex-wrap: wrap;
       }
-
-      .api-key-field,
+      
       .message-field {
         min-width: 300px;
         flex: 1;
@@ -230,7 +214,6 @@ interface LogRow {
         min-width: 180px;
       }
 
-      .save-btn,
       .send-btn {
         border-radius: 8px;
         font-weight: 600;
@@ -408,7 +391,6 @@ interface LogRow {
   ],
 })
 export class LogsComponent implements OnInit {
-  apiKey = localStorage.getItem("claims_logging_key") || "";
   message = "";
   level: "info" | "warning" | "error" = "info";
 
@@ -419,15 +401,14 @@ export class LogsComponent implements OnInit {
 
   constructor(
     private logging: LoggingService,
-    private snack: SnackbarService
+    private snack: SnackbarService,
+    private tenant: TenantService
   ) {}
 
   ngOnInit() {
-    this.loadLogs();
-  }
-
-  saveKey() {
-    this.logging.setApiKey(this.apiKey.trim());
+    this.tenant.tenant.subscribe(t => {
+      if (t?.loggingApiKey) this.loadLogs();
+    });
   }
 
   sendLog() {
