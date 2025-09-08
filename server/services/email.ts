@@ -30,6 +30,12 @@ export class EmailService {
       console.warn(
         "⚠️  Gmail credentials not configured. Email functionality will be disabled."
       );
+      // Use a JSON transport that outputs messages instead of sending them so
+      // that calls to sendMail do not throw when credentials are absent.
+      this.transporter = nodemailer.createTransport({
+        jsonTransport: true,
+      });
+      return;
     }
 
     this.transporter = nodemailer.createTransport({
