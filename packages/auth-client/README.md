@@ -9,13 +9,15 @@ for a consistent, multi‑tenant flow.
 - Local (JWT) login: simple email/password fallback (optional; controllable per
   tenant)
 - One token model: Regardless of provider, your app receives the same platform
-  JWT
+JWT
 
 ## Install
 
 ```bash
 npm i @saas-framework/auth-client
 ```
+
+> **Base URL**: All server endpoints are prefixed with `/api/v2`. Use full URLs like `https://your-platform.com/api/v2/auth/verify` when calling the platform.
 
 ## API
 
@@ -64,7 +66,7 @@ await loginWithPassword({
 });
 
 // 4) Call your (or platform) APIs with the token attached
-const res = await fetchWithAuth("/api/tenant/me");
+const res = await fetchWithAuth("/api/v2/tenant/me");
 const me = await res.json();
 ```
 

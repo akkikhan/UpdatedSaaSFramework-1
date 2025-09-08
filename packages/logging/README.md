@@ -20,6 +20,8 @@ capabilities, and alert management for SaaS applications.
 npm install @saas-framework/logging
 ```
 
+> **Base URL**: Logging endpoints live under `/api/v2/logging`. The SDK appends this path automatically.
+
 ## Quick Start
 
 ```typescript
@@ -28,7 +30,7 @@ import { SaaSLogging } from "@saas-framework/logging";
 const logger = new SaaSLogging({
   // Use your tenant's Logging API key
   apiKey: "logging_...",
-  // Your platform API base URL
+  // Your platform API host; the SDK adds `/api/v2/logging`
   baseUrl: "http://localhost:5000",
   tenantId: "tenant-123",
   batchSize: 100,
@@ -48,7 +50,7 @@ await logger.info("User logged in successfully", {
 ```typescript
 const config = {
   apiKey: string;           // Logging API key (sent as X-API-Key)
-  baseUrl: string;          // Base URL for the SaaS API
+  baseUrl: string;          // Base host for the SaaS API (SDK adds /api/v2/logging)
   tenantId: string;         // Tenant identifier
   batchSize?: number;       // Batch size for bulk operations (default: 100)
   flushInterval?: number;   // Auto-flush interval in ms (default: 5000)
