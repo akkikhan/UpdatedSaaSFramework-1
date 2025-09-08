@@ -27,8 +27,10 @@ export class EmailService {
     };
 
     if (!this.config.user || !this.config.pass) {
+      console.warn("⚠️  Gmail credentials not configured. Email functionality will be disabled.");
+      console.warn("⚠️  Please set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file");
       console.warn(
-        "⚠️  Gmail credentials not configured. Email functionality will be disabled."
+        "⚠️  To get Gmail App Password: https://support.google.com/accounts/answer/185833"
       );
       // Use a JSON transport that outputs messages instead of sending them so
       // that calls to sendMail do not throw when credentials are absent.
@@ -56,11 +58,7 @@ export class EmailService {
       });
   }
 
-  private async deliver(
-    to: string | string[],
-    subject: string,
-    html: string
-  ): Promise<void> {
+  private async deliver(to: string | string[], subject: string, html: string): Promise<void> {
     const recipients = Array.isArray(to) ? to : [to];
     await this.transporter.sendMail({
       from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
@@ -75,9 +73,7 @@ export class EmailService {
     changes: { enabled: string[]; disabled: string[] }
   ): Promise<boolean> {
     const templates = await storage.getEmailTemplates(tenant.id);
-    const template = templates.find(
-      t => t.name?.toLowerCase() === "module_status"
-    );
+    const template = templates.find(t => t.name?.toLowerCase() === "module_status");
 
     let subject = template?.subject || `Module Access Updated - ${tenant.name}`;
     let html = template?.htmlContent || this.generateModuleStatusEmailTemplate(tenant, changes);
@@ -103,10 +99,7 @@ export class EmailService {
       for (const variable of template.variables || []) {
         const value = replacements[variable] ?? "";
         html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
-        subject = subject.replace(
-          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
-          value
-        );
+        subject = subject.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
       }
     }
 
@@ -152,15 +145,11 @@ export class EmailService {
     moduleConfigs?: any;
   }): Promise<boolean> {
     const templates = await storage.getEmailTemplates(tenant.id);
-    const template = templates.find(
-      t => t.name?.toLowerCase() === "onboarding"
-    );
+    const template = templates.find(t => t.name?.toLowerCase() === "onboarding");
 
     let subject =
-      template?.subject ||
-      `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
-    let html =
-      template?.htmlContent || this.generateOnboardingEmailTemplate(tenant);
+      template?.subject || `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    let html = template?.htmlContent || this.generateOnboardingEmailTemplate(tenant);
 
     if (template) {
       const baseUrl = process.env.BASE_URL || "https://localhost:5000";
@@ -172,13 +161,9 @@ export class EmailService {
         orgId: tenant.orgId,
       };
       for (const variable of template.variables || []) {
-        const value =
-          replacements[variable] ?? (tenant as any)[variable] ?? "";
+        const value = replacements[variable] ?? (tenant as any)[variable] ?? "";
         html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
-        subject = subject.replace(
-          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
-          value
-        );
+        subject = subject.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
       }
     }
 
@@ -217,9 +202,7 @@ export class EmailService {
     to: string | string[]
   ): Promise<boolean> {
     const templates = await storage.getEmailTemplates(tenant.id);
-    const template = templates.find(
-      t => t.name?.toLowerCase() === "module_request"
-    );
+    const template = templates.find(t => t.name?.toLowerCase() === "module_request");
 
     let subject =
       template?.subject ||
@@ -238,10 +221,7 @@ export class EmailService {
       for (const variable of template.variables || []) {
         const value = replacements[variable] ?? "";
         html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
-        subject = subject.replace(
-          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
-          value
-        );
+        subject = subject.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
       }
     }
 
@@ -361,10 +341,7 @@ export class EmailService {
     }
   }
 
-  async sendSimpleTestEmail(
-    to: string,
-    subject = "Test Email"
-  ): Promise<boolean> {
+  async sendSimpleTestEmail(to: string, subject = "Test Email"): Promise<boolean> {
     try {
       const html = `
         <!DOCTYPE html>
