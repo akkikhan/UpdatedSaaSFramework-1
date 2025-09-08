@@ -34,6 +34,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Debug route for Azure AD login troubleshooting (must be early to avoid SPA routing conflicts)
+  app.get("/debug-azure", (req, res) => {
+    const file = path.resolve(__dirname, "../debug-azure-login.html");
+    res.setHeader("Content-Type", "text/html");
+    res.sendFile(file);
+  });
+
   // Public routes
 
   // NOTE: Static HTML routes removed in favor of SPA routes

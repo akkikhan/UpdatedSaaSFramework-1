@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Azure AD Login Debug</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+      }
+      .info {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+      }
+      .code {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 3px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .result {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 Azure AD Platform Admin Login Debug</h1>
+
+      <div class="section info">
+        <h2>Current State</h2>
+        <div id="current-state">Loading...</div>
+      </div>
+
+      <div class="section">
+        <h2>Actions</h2>
+        <button id="check-token-btn">🔑 Check Token Status</button>
+        <button id="test-api-btn">🧪 Test API Call</button>
+        <button id="clear-token-btn">🗑️ Clear Token</button>
+        <button id="start-azure-btn">🔄 Start Azure Login</button>
+      </div>
+
+      <div class="section">
+        <h2>Results</h2>
+        <div id="results"></div>
+      </div>
+
+      <div class="section">
+        <h2>Manual Token Test</h2>
+        <textarea
+          id="manual-token"
+          placeholder="Paste JWT token here to test manually"
+          style="width: 100%; height: 100px"
+        ></textarea>
+        <br />
+        <button id="test-manual-btn">Test Manual Token</button>
+      </div>
+    </div>
+
+    <script>
+      function log(message, type = "info") {
+        const results = document.getElementById("results");
+        const timestamp = new Date().toLocaleTimeString();
+        const div = document.createElement("div");
+        div.className = `section ${type}`;
+        div.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+        results.appendChild(div);
+        results.scrollTop = results.scrollHeight;
+      }
+
+      function updateCurrentState() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get("token");
+        const adminFromUrl = urlParams.get("admin");
+        const storedToken = localStorage.getItem("platformAdminToken");
+
+        let html = `
+                <div class="code">
+                    <strong>URL Parameters:</strong><br>
+                    • Token in URL: ${tokenFromUrl ? `✅ EXISTS (${tokenFromUrl.substring(0, 30)}...)` : "❌ NOT FOUND"}<br>
+                    • Admin flag: ${adminFromUrl || "NOT SET"}<br><br>
+                    
+                    <strong>Local Storage:</strong><br>
+                    • Platform Admin Token: ${storedToken ? `✅ EXISTS (${storedToken.substring(0, 30)}...)` : "❌ NOT FOUND"}<br><br>
+                    
+                    <strong>Current URL:</strong><br>
+                    ${window.location.href}<br><br>
+                    
+                    <strong>Referrer:</strong><br>
+                    ${document.referrer || "None"}
+                </div>
+            `;
+
+        document.getElementById("current-state").innerHTML = html;
+      }
+
+      function checkToken() {
+        log("🔍 Checking token status...");
+
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get("token");
+
+        if (tokenFromUrl) {
+          log(`✅ Token found in URL! Storing in localStorage...`, "success");
+          localStorage.setItem("platformAdminToken", tokenFromUrl);
+
+          // Clean URL
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+          log("🧹 URL cleaned", "info");
+        }
+
+        const storedToken = localStorage.getItem("platformAdminToken");
+        if (storedToken) {
+          log(`✅ Platform admin token found in localStorage`, "success");
+          log(`Token preview: ${storedToken.substring(0, 50)}...`, "info");
+        } else {
+          log(`❌ No platform admin token found`, "error");
+        }
+
+        updateCurrentState();
+      }
+
+      async function testApiCall() {
+        log("🧪 Testing API call...");
+
+        const token = localStorage.getItem("platformAdminToken");
+        if (!token) {
+          log("❌ No token available for API call", "error");
+          return;
+        }
+
+        try {
+          log("📡 Making API request to /api/platform/auth/verify");
+          const response = await fetch("/api/platform/auth/verify", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+
+          log(
+            `📊 Response Status: ${response.status} ${response.statusText}`,
+            response.ok ? "success" : "error"
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            log(`✅ API Success: ${JSON.stringify(data, null, 2)}`, "success");
+          } else {
+            const errorText = await response.text();
+            log(`❌ API Error: ${errorText}`, "error");
+          }
+        } catch (error) {
+          log(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      function clearToken() {
+        localStorage.removeItem("platformAdminToken");
+        log("🗑️ Token cleared from localStorage", "info");
+        updateCurrentState();
+      }
+
+      function startAzureLogin() {
+        log("🔄 Redirecting to Azure AD login...", "info");
+        window.location.href = "/api/platform/auth/azure/login";
+      }
+
+      async function testManualToken() {
+        const token = document.getElementById("manual-token").value.trim();
+        if (!token) {
+          log("❌ Please paste a token to test", "error");
+          return;
+        }
+
+        // Store the manual token
+        localStorage.setItem("platformAdminToken", token);
+        log("💾 Manual token stored in localStorage", "info");
+
+        // Test it
+        await testApiCall();
+        updateCurrentState();
+      }
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        updateCurrentState();
+        checkToken(); // Automatically check token on load
+
+        // Add event listeners for buttons
+        document.getElementById("check-token-btn").addEventListener("click", checkToken);
+        document.getElementById("test-api-btn").addEventListener("click", testApiCall);
+        document.getElementById("clear-token-btn").addEventListener("click", clearToken);
+        document.getElementById("start-azure-btn").addEventListener("click", startAzureLogin);
+        document.getElementById("test-manual-btn").addEventListener("click", testManualToken);
+      });
+    </script>
+  </body>
+</html>
