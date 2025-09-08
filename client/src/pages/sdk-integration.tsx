@@ -77,7 +77,7 @@ export default function SDKIntegrationPage() {
             </div>
             <a
               className="inline-flex items-center text-blue-600 hover:text-blue-500 text-sm font-medium"
-              href="/packages/auth-client/README.md"
+              href="/readmes/auth-client.md"
               target="_blank"
               rel="noreferrer"
             >
@@ -103,7 +103,9 @@ export default function SDKIntegrationPage() {
             </div>
             <a
               className="inline-flex items-center text-blue-600 hover:text-blue-500 text-sm font-medium"
-              href="/packages/rbac-sdk/README.md"
+
+              href="/readmes/rbac-sdk.md"
+
               target="_blank"
               rel="noreferrer"
             >
@@ -129,7 +131,9 @@ export default function SDKIntegrationPage() {
             </div>
             <a
               className="inline-flex items-center text-blue-600 hover:text-blue-500 text-sm font-medium"
-              href="/packages/logging/README.md"
+
+              href="/readmes/logging.md"
+
               target="_blank"
               rel="noreferrer"
             >
@@ -155,7 +159,9 @@ export default function SDKIntegrationPage() {
             </div>
             <a
               className="inline-flex items-center text-blue-600 hover:text-blue-500 text-sm font-medium"
-              href="/packages/email/README.md"
+
+              href="/readmes/email.md"
+
               target="_blank"
               rel="noreferrer"
             >
