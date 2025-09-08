@@ -21,12 +21,15 @@ export class EmailService {
   constructor() {
     // Use environment variables with fallbacks
     const smtpEmail =
-      process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || "your-email@example.com";
-    const fromEmail = process.env.FROM_EMAIL || smtpEmail;
+      process.env.GMAIL_USER ||
+      process.env.SMTP_EMAIL ||
+      process.env.SMTP_USERNAME ||
+      "your-email@example.com";
+    const fromEmail = process.env.FROM_EMAIL || process.env.GMAIL_USER || smtpEmail;
 
-    // Force Gmail settings if FROM_EMAIL is a Gmail address
+    // Force Gmail settings if GMAIL_USER provided or FROM_EMAIL is a Gmail address
     let smtpSettings;
-    if (fromEmail.includes("@gmail.com")) {
+    if (process.env.GMAIL_USER || fromEmail.includes("@gmail.com")) {
       smtpSettings = { host: "smtp.gmail.com", port: 587, secure: false };
     } else {
       smtpSettings = this.getSmtpSettings(smtpEmail);
@@ -35,9 +38,13 @@ export class EmailService {
     this.config = {
       smtpHost: process.env.SMTP_HOST || smtpSettings.host,
       smtpPort: parseInt(process.env.SMTP_PORT || "") || smtpSettings.port,
-      // Prefer explicit SMTP_USERNAME, fall back to FROM_EMAIL
-      smtpUsername: process.env.SMTP_USERNAME || fromEmail,
-      smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || "",
+      // Prefer explicit SMTP_USERNAME/GMAIL_USER, fall back to FROM_EMAIL
+      smtpUsername: process.env.GMAIL_USER || process.env.SMTP_USERNAME || fromEmail,
+      smtpPassword:
+        process.env.GMAIL_APP_PASSWORD ||
+        process.env.SMTP_PASSWORD ||
+        process.env.SMTP_APP_PASSWORD ||
+        "",
       fromEmail: fromEmail,
       fromName: process.env.FROM_NAME || "SaaS Framework Platform",
     };
