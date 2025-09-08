@@ -19,6 +19,7 @@ export interface Tenant {
   moduleConfigs: Record<string, any>;
   createdAt: string;
   updatedAt: string;
+  emailSent?: boolean;
 }
 
 export interface CreateTenantData {
