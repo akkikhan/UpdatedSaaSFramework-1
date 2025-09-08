@@ -462,9 +462,14 @@ export default function RBACManagementPage() {
                   Roles, permissions and access control for {(tenant as any)?.name || "this tenant"}
                 </p>
               </div>
-              <Link href={`/tenants`}>
-                <Button variant="outline">← Back to Tenants</Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href={`/tenants/${tenantId}/attention`}>
+                  <Button variant="outline">← Back to Settings</Button>
+                </Link>
+                <Link href="/tenants">
+                  <Button variant="ghost">Tenants</Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

@@ -84,7 +84,7 @@ export default function TenantAttentionPage() {
                 </div>
               ))}
             </div>
-            <Link href={`/tenants/${tenant.id}/portal`}>
+            <Link href={`/tenants/${tenant.id}/sso`}>
               <Button className="w-full mt-2" variant="outline">
                 Configure SSO Providers
               </Button>
