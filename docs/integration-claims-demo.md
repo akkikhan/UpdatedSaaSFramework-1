@@ -11,6 +11,8 @@ real capabilities provided by the modules are used.
 - .NET demo API (will run on `http://localhost:5299`)
 - Azure AD app registration (values in `.env.azure-credentials`)
 
+> **Base URL**: All platform API examples use `http://localhost:5000/api/v2`.
+
 ## 1) Configure CORS
 
 In `.env`, set:
@@ -27,7 +29,7 @@ Restart the platform server if it was running.
    `logging` enabled.
 2. Configure Azure AD for the tenant (Tenant Id, Client Id, Client Secret,
    Callback URL):
-   - Callback: `http://localhost:5000/api/auth/azure/callback`
+   - Callback: `http://localhost:5000/api/v2/auth/azure/callback`
 3. The tenant’s logging API key is generated automatically; the demo apps pick it up from tenant configuration.
 
 ### Seed demo roles and users

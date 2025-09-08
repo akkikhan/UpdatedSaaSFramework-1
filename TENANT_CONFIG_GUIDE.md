@@ -137,6 +137,7 @@ requirements that are dynamically shown in the UI based on user selections.
 
 **Parameter meanings:**
 
+
 - `permissionTemplate` – baseline set of roles and permissions to seed the tenant (`minimal`, `standard`, `enterprise`, or `custom`).
 - `businessType` – industry context used to tailor default templates (e.g., healthcare, finance).
 - `defaultRoles` – array of roles provisioned during onboarding:
@@ -167,6 +168,7 @@ requirements that are dynamically shown in the UI based on user selections.
   - `enableAccessReview` – schedule periodic review of role assignments.
   - `accessReviewFrequency` – cadence for those reviews.
   - `enableSODControl` – enforce segregation of duties to prevent conflicting roles.
+
 
 **Permission Templates:**
 
