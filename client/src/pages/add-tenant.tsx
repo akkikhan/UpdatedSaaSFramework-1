@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Form,
   FormControl,
@@ -511,6 +512,11 @@ export default function AddTenantPage() {
                                 {template.name}
                               </SelectItem>
                             ))}
+                            {permissionTemplatesQuery.data?.map((template: any) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -533,6 +539,11 @@ export default function AddTenantPage() {
                             <SelectValue placeholder="Select business type" />
                           </SelectTrigger>
                           <SelectContent>
+                            {businessTypesQuery.data?.map((type: any) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
                             {businessTypesQuery.data?.map((type: any) => (
                               <SelectItem key={type.id} value={type.id}>
                                 {type.name}

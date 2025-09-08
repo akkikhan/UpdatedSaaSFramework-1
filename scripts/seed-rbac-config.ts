@@ -3,10 +3,17 @@ import { storage } from "../server/storage";
 async function seed() {
   try {
     const templates = await storage.getPermissionTemplates();
+<<<<<<< HEAD
     if (!templates.find((t) => t.name === "Standard")) {
       await storage.createPermissionTemplate({
         name: "Standard",
         description: "Default permission template with full user and role access",
+=======
+    if (templates.length === 0) {
+      await storage.createPermissionTemplate({
+        name: "Standard",
+        description: "Default permission template",
+>>>>>>> a1f0de9624468052f111c2ab44bfa46077f4fe33
         permissions: [
           "user.create",
           "user.read",
@@ -20,6 +27,7 @@ async function seed() {
       });
     }
 
+<<<<<<< HEAD
     if (!templates.find((t) => t.name === "Read Only")) {
       await storage.createPermissionTemplate({
         name: "Read Only",
@@ -31,6 +39,8 @@ async function seed() {
       });
     }
 
+=======
+>>>>>>> a1f0de9624468052f111c2ab44bfa46077f4fe33
     const businessTypes = await storage.getBusinessTypes();
     let general = businessTypes.find((b) => b.name === "General");
     if (!general) {
@@ -46,7 +56,11 @@ async function seed() {
     }
 
     const defaultRoles = await storage.getDefaultRoles();
+<<<<<<< HEAD
     if (!defaultRoles.find((r) => r.name === "Admin")) {
+=======
+    if (defaultRoles.length === 0) {
+>>>>>>> a1f0de9624468052f111c2ab44bfa46077f4fe33
       await storage.createDefaultRole({
         name: "Admin",
         description: "Full access to system",
@@ -60,6 +74,7 @@ async function seed() {
       });
     }
 
+<<<<<<< HEAD
     if (!defaultRoles.find((r) => r.name === "Manager")) {
       await storage.createDefaultRole({
         name: "Manager",
@@ -74,6 +89,8 @@ async function seed() {
       });
     }
 
+=======
+>>>>>>> a1f0de9624468052f111c2ab44bfa46077f4fe33
     console.log("RBAC configuration seeded");
     process.exit(0);
   } catch (err) {
