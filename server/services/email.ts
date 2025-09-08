@@ -43,6 +43,7 @@ export class EmailService {
       smtpPassword:
         process.env.GMAIL_APP_PASSWORD ||
         process.env.SMTP_PASSWORD ||
+        process.env.SMTP_PASS ||
         process.env.SMTP_APP_PASSWORD ||
         "",
       fromEmail: fromEmail,
@@ -51,7 +52,7 @@ export class EmailService {
 
     if (!this.config.smtpPassword) {
       console.warn(
-        "⚠️  SMTP_PASSWORD or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled."
+        "⚠️  SMTP_PASSWORD, SMTP_PASS, or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled."
       );
       console.warn(
         "   For Gmail: Generate an App Password at https://myaccount.google.com/apppasswords"

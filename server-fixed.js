@@ -19,7 +19,11 @@ const fromEmail =
   process.env.FROM_EMAIL || gmailUser || process.env.SMTP_USERNAME || "no-reply@example.com";
 const fromName = process.env.FROM_NAME || "SaaS Framework Platform";
 const smtpPassword =
-  process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || gmailPass || "";
+  process.env.SMTP_PASSWORD ||
+  process.env.SMTP_PASS ||
+  process.env.SMTP_APP_PASSWORD ||
+  gmailPass ||
+  "";
 
 let transporter = null;
 try {
