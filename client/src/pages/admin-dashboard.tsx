@@ -14,9 +14,11 @@ import StatsCard from "@/components/ui/stats-card";
 import { useStats, useHealthStatus } from "@/hooks/use-stats";
 import { useRecentTenants } from "@/hooks/use-tenants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -54,6 +56,20 @@ export default function AdminDashboard() {
     refetchInterval: 5000,
   }) as { data: any[] };
   const { toast } = useToast();
+  const [testEmail, setTestEmail] = useState("");
+  const sendTestEmail = useMutation({
+    mutationFn: (to?: string) => api.sendTestEmail(to),
+    onSuccess: res => {
+      toast({ title: "Test email sent", description: `Sent to ${res.to}` });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Failed to send test email",
+        description: err?.message || "Email service error",
+        variant: "destructive",
+      });
+    },
+  });
 
   // All tenants for analytics
   const { data: allTenants = [], isLoading: tenantsAllLoading } = useQuery({
@@ -688,6 +704,23 @@ export default function AdminDashboard() {
                 {healthStatus?.services.database ? "Operational" : "Error"}
               </span>
             </div>
+          </div>
+          <div className="flex items-center gap-2 mt-4">
+            <Input
+              type="email"
+              placeholder="Test email address"
+              value={testEmail}
+              onChange={e => setTestEmail(e.target.value)}
+              className="max-w-sm"
+            />
+            <Button
+              onClick={() => sendTestEmail.mutate(testEmail || undefined)}
+              disabled={sendTestEmail.isPending}
+              className="flex items-center gap-2"
+            >
+              <Mail className="w-4 h-4" />
+              {sendTestEmail.isPending ? "Sending..." : "Send Test Email"}
+            </Button>
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-200">

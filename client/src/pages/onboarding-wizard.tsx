@@ -388,11 +388,14 @@ export default function OnboardingWizard() {
         },
       };
 
-      await createTenant.mutateAsync(transformedData as any);
+      const result = await createTenant.mutateAsync(transformedData as any);
 
       toast({
         title: "Tenant created successfully!",
-        description: `Onboarding email has been sent to ${data.adminEmail}`,
+        description: result?.emailSent
+          ? `Onboarding email has been sent to ${data.adminEmail}`
+          : "Tenant created but failed to send onboarding email",
+        variant: result?.emailSent ? undefined : "destructive",
       });
 
       // Redirect back to tenant listing so the new record is visible
