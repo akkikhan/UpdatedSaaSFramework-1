@@ -9,6 +9,14 @@ export function useTenants() {
   });
 }
 
+export function useTenant(id: string | undefined) {
+  return useQuery({
+    queryKey: ["/api/tenants", id],
+    queryFn: () => api.getTenant(id as string),
+    enabled: !!id,
+  });
+}
+
 export function useRecentTenants(limit: number = 5) {
   return useQuery({
     queryKey: ["/api/tenants/recent", limit],

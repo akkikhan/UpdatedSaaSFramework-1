@@ -1,17 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
-import type { Tenant } from "@/lib/api";
+import { useTenant } from "@/hooks/use-tenants";
 
 export default function TenantAttentionPage() {
   const { tenantId } = useParams();
-  const { data: tenant, isLoading } = useQuery<Tenant>({
-    queryKey: ["/api/tenants", tenantId],
-    enabled: !!tenantId,
-  });
+  const { data: tenant, isLoading } = useTenant(tenantId);
 
   if (isLoading) {
     return <div className="p-6">Loading tenant data...</div>;

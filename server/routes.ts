@@ -388,6 +388,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get tenant by id
+  app.get("/api/tenants/:id", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const tenant = await storage.getTenant(id);
+
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error fetching tenant:", error);
+      res.status(500).json({ message: "Failed to fetch tenant" });
+    }
+  });
+
   // Create new tenant
   app.post("/api/tenants", platformAdminMiddleware, async (req, res) => {
     try {
