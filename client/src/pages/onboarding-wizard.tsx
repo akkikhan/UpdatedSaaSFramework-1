@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -61,6 +61,13 @@ import { useCreateTenant } from "@/hooks/use-tenants";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
+const AzureAdSchema = z.object({
+  tenantId: z.string().uuid("Azure AD Tenant ID must be a valid GUID"),
+  clientId: z.string().uuid("Azure AD Client ID must be a valid GUID"),
+  clientSecret: z.string().min(1, "Azure AD Client Secret is required"),
+  redirectUri: z.string().url("Valid redirect URI required").optional(),
+});
+
 // Use a relaxed schema for the wizard to allow provider "string[]" during form filling
 // Some environments may not expose `.extend` on imported schemas; define a local schema explicitly.
 const WIZARD_FORM_SCHEMA = z.object({
@@ -73,7 +80,23 @@ const WIZARD_FORM_SCHEMA = z.object({
   adminName: z.string().min(1, "Admin name is required"),
   sendEmail: z.boolean().optional(),
   enabledModules: z.array(z.string()).optional(),
-  moduleConfigs: z.any().optional(),
+  moduleConfigs: z
+    .object({
+      auth: z
+        .object({
+          providers: z.array(z.string()).optional(),
+          azureAd: AzureAdSchema.optional(),
+          auth0: z.any().optional(),
+          saml: z.any().optional(),
+          local: z.any().optional(),
+        })
+        .optional(),
+      rbac: z.any().optional(),
+      logging: z.any().optional(),
+      notifications: z.any().optional(),
+      aiCopilot: z.any().optional(),
+    })
+    .optional(),
   metadata: z
     .object({
       adminName: z.string().optional(),
@@ -138,6 +161,7 @@ export default function OnboardingWizard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createTenant = useCreateTenant();
+  const [azureSecretVerified, setAzureSecretVerified] = useState(false);
   // Dynamic RBAC options from Platform Admin config APIs (hooks must be top-level)
   const { data: permissionTemplates = [] } = useQuery({
     queryKey: ["/api/rbac-config/permission-templates"],
@@ -190,6 +214,13 @@ export default function OnboardingWizard() {
     },
   });
 
+  const azureTenantId = form.watch("moduleConfigs.auth.azureAd.tenantId");
+  const azureClientId = form.watch("moduleConfigs.auth.azureAd.clientId");
+  const azureClientSecret = form.watch("moduleConfigs.auth.azureAd.clientSecret");
+  useEffect(() => {
+    setAzureSecretVerified(false);
+  }, [azureTenantId, azureClientId, azureClientSecret]);
+
   const watchedModules = form.watch("enabledModules") || [];
   // Align with shared schema key: "auth" (not "authentication")
   const watchedAuthProviders = form.watch("moduleConfigs.auth.providers");
@@ -238,9 +269,27 @@ export default function OnboardingWizard() {
           });
         }
       }
+      const providers = form.getValues("moduleConfigs.auth.providers") as any[] | undefined;
+      if (
+        mods.includes("auth") &&
+        providers?.includes("azure-ad") &&
+        !azureSecretVerified
+      ) {
+        toast({
+          title: "Azure AD secret not verified",
+          description: "Please verify the Azure AD client secret before continuing.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
-    const isValid = await form.trigger(fieldsToValidate as any);
+    let isValid;
+    if (fieldsToValidate.length > 0) {
+      isValid = await form.trigger(fieldsToValidate as any);
+    } else {
+      isValid = await form.trigger();
+    }
 
     if (isValid) {
       if (currentStep < STEPS.length - 1) {
@@ -909,6 +958,82 @@ export default function OnboardingWizard() {
                                         </FormItem>
                                       )}
                                     />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.azureAd.redirectUri"
+                                      render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                          <FormLabel>Redirect URI</FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="https://yourapp.com/auth/callback"
+                                            />
+                                          </FormControl>
+                                          <FormDescription>
+                                            Optional: Will use default if not provided
+                                          </FormDescription>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <Button
+                                      type="button"
+                                      onClick={async () => {
+                                        const valid = await form.trigger([
+                                          "moduleConfigs.auth.azureAd.tenantId",
+                                          "moduleConfigs.auth.azureAd.clientId",
+                                          "moduleConfigs.auth.azureAd.clientSecret",
+                                          "moduleConfigs.auth.azureAd.redirectUri",
+                                        ]);
+                                        if (!valid) return;
+                                        try {
+                                          const res = await fetch(`/api/azure-ad/verify-secret`, {
+                                            method: "POST",
+                                            headers: {
+                                              "Content-Type": "application/json",
+                                              Accept: "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                              tenantId: azureTenantId,
+                                              clientId: azureClientId,
+                                              clientSecret: azureClientSecret,
+                                            }),
+                                          });
+                                          const data = await res.json();
+                                          if (res.ok && data?.valid) {
+                                            setAzureSecretVerified(true);
+                                            toast({
+                                              title: "Secret verified",
+                                              description: "Client credentials succeeded.",
+                                            });
+                                          } else {
+                                            setAzureSecretVerified(false);
+                                            toast({
+                                              title: "Secret invalid",
+                                              description:
+                                                data?.message || "Client credential flow failed",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        } catch (e: any) {
+                                          setAzureSecretVerified(false);
+                                          toast({
+                                            title: "Verification failed",
+                                            description: e?.message || "Unknown error",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Verify Secret
+                                    </Button>
+                                    {azureSecretVerified && (
+                                      <span className="text-sm text-green-600 flex items-center gap-1">
+                                        <CheckCircle className="w-4 h-4" /> Secret verified
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               )}

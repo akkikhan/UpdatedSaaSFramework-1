@@ -23,15 +23,17 @@ requirements that are dynamically shown in the UI based on user selections.
 ```typescript
 {
   azureAd: {
-    tenantId: string,          // Required: Azure AD Tenant ID
-    clientId: string,          // Required: Application ID
+    tenantId: string,          // Required: Azure AD Tenant ID (GUID)
+    clientId: string,          // Required: Application ID (GUID)
     clientSecret: string,      // Required: Client Secret
-    redirectUri?: string,      // Optional: Custom redirect URI
+    redirectUri?: string,      // Optional: Custom redirect URI (must be a valid URL)
     scopes?: string[],         // Optional: Default ["User.Read"]
     allowedDomains?: string[]  // Optional: Restrict to specific domains
   }
 }
 ```
+
+> A **Verify Secret** button in the onboarding form can confirm the client credentials before you proceed.
 
 #### Auth0 (`auth0`)
 

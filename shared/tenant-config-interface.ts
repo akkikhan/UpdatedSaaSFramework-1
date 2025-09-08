@@ -19,10 +19,19 @@ export const AuthProviderConfigSchema = z.object({
   // Azure AD Configuration
   azureAd: z
     .object({
-      tenantId: z.string().min(1, "Azure AD Tenant ID is required"),
-      clientId: z.string().min(1, "Azure AD Client ID is required"),
-      clientSecret: z.string().min(1, "Azure AD Client Secret is required"),
-      redirectUri: z.string().url("Valid redirect URI required").optional(),
+      tenantId: z
+        .string()
+        .uuid("Azure AD Tenant ID must be a valid GUID"),
+      clientId: z
+        .string()
+        .uuid("Azure AD Client ID must be a valid GUID"),
+      clientSecret: z
+        .string()
+        .min(1, "Azure AD Client Secret is required"),
+      redirectUri: z
+        .string()
+        .url("Valid redirect URI required")
+        .optional(),
       scopes: z.array(z.string()).default(["User.Read"]),
       allowedDomains: z.array(z.string()).optional(), // Restrict to specific domains
     })
