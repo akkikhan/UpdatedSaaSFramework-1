@@ -18,54 +18,33 @@ const permissionTemplates = [
   {
     name: 'Standard',
     description: 'Basic set of permissions for general use cases.',
-    permissions: ['user.create', 'user.read', 'user.update', 'user.delete', 'role.read'],
-    businessTypes: ['general'],
+    permissions: ['user.create', 'user.read', 'user.update', 'user.delete', 'role.manage'],
+    businessTypes: ['standard'],
     isDefault: true,
   },
   {
-    name: 'Enterprise',
-    description: 'Expanded permissions including audit and system admin features.',
-    permissions: ['user.*', 'role.*', 'audit.read', 'system.config'],
-    businessTypes: ['general'],
+    name: 'Everything',
+    description: 'All permissions enabled for demo purposes.',
+    permissions: ['*'],
+    businessTypes: ['everything'],
     isDefault: false,
   },
 ];
 
 const businessTypes = [
   {
-    name: 'General',
+    name: 'Standard',
     description: 'Standard business operations',
     requiredCompliance: [],
-    defaultPermissions: [],
+    defaultPermissions: ['user.read', 'role.read'],
     riskLevel: 'low',
   },
   {
-    name: 'Healthcare',
-    description: 'Healthcare providers and medical facilities',
-    requiredCompliance: ['hipaa'],
-    defaultPermissions: [],
-    riskLevel: 'high',
-  },
-  {
-    name: 'Finance',
-    description: 'Financial institutions and services',
-    requiredCompliance: ['sox'],
-    defaultPermissions: [],
-    riskLevel: 'high',
-  },
-  {
-    name: 'Education',
-    description: 'Schools and educational institutions',
-    requiredCompliance: ['ferpa'],
-    defaultPermissions: [],
-    riskLevel: 'medium',
-  },
-  {
-    name: 'Government',
-    description: 'Government agencies and public sector',
+    name: 'Everything',
+    description: 'Access to every module and permission',
     requiredCompliance: [],
-    defaultPermissions: [],
-    riskLevel: 'critical',
+    defaultPermissions: ['*'],
+    riskLevel: 'high',
   },
 ];
 
@@ -81,13 +60,13 @@ const defaultRoles = [
   {
     name: 'Manager',
     description: 'Management-level access',
-    permissions: ['user.read', 'role.read'],
+    permissions: ['user.create', 'user.read', 'user.update', 'role.manage'],
     priority: 2,
   },
   {
-    name: 'User',
-    description: 'Basic user access',
-    permissions: ['user.read'],
+    name: 'Viewer',
+    description: 'Read-only access',
+    permissions: ['user.read', 'role.read'],
     priority: 3,
   },
 ];

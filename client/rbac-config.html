@@ -82,100 +82,278 @@
         display: flex;
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .tab-container::-webkit-scrollbar {
+        display: none;
       }
 
       .tab {
-        padding: 16px 24px;
+        flex: 1;
+        min-width: 200px;
+        max-width: 300px;
+        padding: 20px 24px;
         background: none;
         border: none;
         cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
+        font-size: 15px;
+        font-weight: 600;
         color: #64748b;
-        border-bottom: 3px solid transparent;
-        transition: all 0.3s ease;
+        border-bottom: 4px solid transparent;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-align: center;
+        white-space: nowrap;
       }
 
       .tab:hover {
         color: #3730a3;
-        background: rgba(55, 48, 163, 0.05);
+        background: linear-gradient(
+          135deg,
+          rgba(55, 48, 163, 0.08) 0%,
+          rgba(99, 102, 241, 0.05) 100%
+        );
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(55, 48, 163, 0.15);
       }
 
       .tab.active {
         color: #3730a3;
-        background: white;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
         border-bottom-color: #3730a3;
+        box-shadow:
+          0 4px 12px rgba(55, 48, 163, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        transform: translateY(-2px);
+      }
+
+      .tab.active::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #3730a3, #6366f1);
+        border-radius: 0 0 3px 3px;
+      }
+
+      .tab-icon {
+        font-size: 18px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+      }
+
+      .tab-label {
+        font-weight: 600;
+        letter-spacing: 0.025em;
       }
 
       .tab-content {
-        padding: 32px;
+        padding: 40px 32px;
         min-height: 600px;
         display: none;
+        animation: fadeIn 0.4s ease-in-out;
       }
 
       .tab-content.active {
         display: block;
       }
 
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .portal-container {
+          margin: 10px;
+          border-radius: 12px;
+        }
+
+        .portal-header {
+          padding: 20px 24px;
+          flex-direction: column;
+          gap: 16px;
+          text-align: center;
+        }
+
+        .tab-container {
+          flex-direction: column;
+        }
+
+        .tab {
+          flex: none;
+          min-width: auto;
+          max-width: none;
+          padding: 16px 20px;
+          border-bottom: none;
+          border-left: 4px solid transparent;
+        }
+
+        .tab.active {
+          border-left-color: #3730a3;
+          border-bottom: none;
+        }
+
+        .tab-content {
+          padding: 24px 20px;
+        }
+
+        .section-header {
+          flex-direction: column;
+          gap: 20px;
+          align-items: flex-start;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .card {
+          padding: 20px;
+        }
+      }
+
       .section-header {
         display: flex;
-        justify-content: between;
-        align-items: center;
-        margin-bottom: 24px;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 32px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .section-info {
+        flex: 1;
       }
 
       .section-title {
-        font-size: 20px;
-        font-weight: 600;
+        font-size: 24px;
+        font-weight: 700;
         color: #1e293b;
         display: flex;
         align-items: center;
         gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .section-title .section-icon {
+        font-size: 28px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
       }
 
       .section-description {
         color: #64748b;
-        font-size: 14px;
-        margin-top: 4px;
+        font-size: 15px;
+        line-height: 1.6;
+        max-width: 600px;
       }
 
       .add-button {
-        background: #3730a3;
+        background: linear-gradient(135deg, #3730a3 0%, #4338ca 100%);
         color: white;
         border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
+        padding: 14px 24px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 8px;
-        transition: background 0.2s;
+        gap: 10px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow:
+          0 4px 6px -1px rgba(55, 48, 163, 0.3),
+          0 2px 4px -1px rgba(55, 48, 163, 0.1);
+        position: relative;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+      .add-button::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
       }
 
       .add-button:hover {
-        background: #312e81;
+        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+        transform: translateY(-2px);
+        box-shadow:
+          0 8px 12px -2px rgba(55, 48, 163, 0.4),
+          0 4px 6px -1px rgba(55, 48, 163, 0.2);
+      }
+
+      .add-button:hover::before {
+        left: 100%;
+      }
+
+      .add-button:active {
+        transform: translateY(0);
+        box-shadow:
+          0 4px 6px -1px rgba(55, 48, 163, 0.3),
+          0 2px 4px -1px rgba(55, 48, 163, 0.1);
       }
 
       .grid {
         display: grid;
-        gap: 20px;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        margin-top: 16px;
       }
 
       .card {
-        background: white;
+        background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
         border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        transition: all 0.2s;
+        border-radius: 16px;
+        padding: 24px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3730a3, #6366f1, #8b5cf6);
+        opacity: 0;
+        transition: opacity 0.3s ease;
       }
 
       .card:hover {
-        border-color: #cbd5e1;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-color: #c7d2fe;
+        box-shadow:
+          0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04),
+          0 0 0 1px rgba(99, 102, 241, 0.05);
+        transform: translateY(-4px);
+      }
+
+      .card:hover::before {
+        opacity: 1;
       }
 
       .card-header {
@@ -186,12 +364,13 @@
       }
 
       .card-title {
-        font-size: 16px;
-        font-weight: 600;
+        font-size: 18px;
+        font-weight: 700;
         color: #1e293b;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        margin-bottom: 4px;
       }
 
       .card-actions {
@@ -200,37 +379,54 @@
       }
 
       .action-button {
-        padding: 6px 8px;
+        padding: 8px 12px;
         border: 1px solid #e2e8f0;
         background: white;
-        border-radius: 6px;
+        border-radius: 8px;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         font-size: 12px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
       }
 
       .action-button:hover {
         background: #f8fafc;
         border-color: #cbd5e1;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .action-button.edit {
         color: #0369a1;
       }
 
+      .action-button.edit:hover {
+        background: #f0f9ff;
+        border-color: #0369a1;
+      }
+
       .action-button.delete {
         color: #dc2626;
+      }
+
+      .action-button.delete:hover {
+        background: #fef2f2;
+        border-color: #dc2626;
       }
 
       .badge {
         display: inline-flex;
         align-items: center;
-        padding: 4px 8px;
+        padding: 6px 12px;
         font-size: 11px;
-        font-weight: 500;
-        border-radius: 6px;
+        font-weight: 600;
+        border-radius: 8px;
         text-transform: uppercase;
-        letter-spacing: 0.025em;
+        letter-spacing: 0.05em;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
 
       .badge.risk-low {
@@ -265,9 +461,9 @@
 
       .card-description {
         color: #64748b;
-        font-size: 14px;
-        margin-bottom: 12px;
-        line-height: 1.5;
+        font-size: 15px;
+        margin-bottom: 16px;
+        line-height: 1.6;
       }
 
       .card-meta {
@@ -312,20 +508,40 @@
       .info-banner {
         background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
         border: 1px solid #bfdbfe;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 24px;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 32px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .info-banner::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #2563eb, #3b82f6, #6366f1);
       }
 
       .info-banner-content {
         display: flex;
-        align-items: start;
-        gap: 12px;
+        align-items: flex-start;
+        gap: 16px;
       }
 
       .info-icon {
         color: #2563eb;
-        font-size: 20px;
+        font-size: 24px;
+        background: rgba(37, 99, 235, 0.1);
+        padding: 8px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        height: 40px;
       }
 
       .info-text {
@@ -333,9 +549,10 @@
       }
 
       .info-title {
-        font-weight: 600;
+        font-weight: 700;
         color: #1e40af;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
+        font-size: 16px;
       }
 
       .info-description {
@@ -513,7 +730,7 @@
       .loading {
         display: none;
         text-align: center;
-        padding: 40px;
+        padding: 60px 40px;
         color: #64748b;
       }
 
@@ -523,19 +740,59 @@
 
       .spinner {
         display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 2px solid #e2e8f0;
+        width: 32px;
+        height: 32px;
+        border: 3px solid #f1f5f9;
         border-radius: 50%;
         border-top-color: #3730a3;
+        border-right-color: #6366f1;
         animation: spin 1s ease-in-out infinite;
-        margin-right: 8px;
+        margin-right: 12px;
       }
 
       @keyframes spin {
         to {
           transform: rotate(360deg);
         }
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 40px;
+        color: #64748b;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 16px;
+        border: 2px dashed #e2e8f0;
+        margin-top: 24px;
+      }
+
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.6;
+      }
+
+      .empty-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #374151;
+      }
+
+      .empty-description {
+        font-size: 15px;
+        line-height: 1.6;
+        max-width: 400px;
+        margin: 0 auto;
+        color: #6b7280;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .checkbox-with-margin {
+        margin-right: 8px;
       }
     </style>
   </head>
@@ -574,23 +831,37 @@
       <!-- Tabs -->
       <div class="tab-container">
         <button class="tab active" onclick="switchTab('permission-templates')">
-          🛡️ Permission Templates
+          <span class="tab-icon">🛡️</span>
+          <span class="tab-label">Permission Templates</span>
         </button>
-        <button class="tab" onclick="switchTab('business-types')">🏢 Business Types</button>
-        <button class="tab" onclick="switchTab('default-roles')">👥 Default Roles</button>
+        <button class="tab" onclick="switchTab('business-types')">
+          <span class="tab-icon">🏢</span>
+          <span class="tab-label">Business Types</span>
+        </button>
+        <button class="tab" onclick="switchTab('default-roles')">
+          <span class="tab-icon">👥</span>
+          <span class="tab-label">Default Roles</span>
+        </button>
       </div>
 
       <!-- Permission Templates Tab -->
       <div id="permission-templates" class="tab-content active">
         <div class="section-header">
-          <div>
-            <h2 class="section-title">🛡️ Permission Templates</h2>
+          <div class="section-info">
+            <h2 class="section-title">
+              <span class="section-icon">🛡️</span>
+              Permission Templates
+            </h2>
             <p class="section-description">
               Define reusable permission sets for different business scenarios. These appear as
-              options in the tenant onboarding wizard.
+              options in the tenant onboarding wizard and help standardize access control across
+              your platform.
             </p>
           </div>
-          <button class="add-button" onclick="openTemplateModal()">➕ Add Template</button>
+          <button class="add-button" onclick="openTemplateModal()">
+            <span>➕</span>
+            Add Template
+          </button>
         </div>
 
         <div class="loading" id="templates-loading">
@@ -602,7 +873,7 @@
           <!-- Templates will be loaded here -->
         </div>
 
-        <div class="empty-state" id="templates-empty" style="display: none">
+        <div class="empty-state hidden" id="templates-empty">
           <div class="empty-icon">🛡️</div>
           <div class="empty-title">No Permission Templates</div>
           <div class="empty-description">
@@ -615,14 +886,21 @@
       <!-- Business Types Tab -->
       <div id="business-types" class="tab-content">
         <div class="section-header">
-          <div>
-            <h2 class="section-title">🏢 Business Types</h2>
+          <div class="section-info">
+            <h2 class="section-title">
+              <span class="section-icon">🏢</span>
+              Business Types
+            </h2>
             <p class="section-description">
               Configure business types with specific compliance requirements and risk levels. These
-              determine available permission templates during onboarding.
+              determine available permission templates during onboarding and help categorize tenants
+              based on their industry and regulatory needs.
             </p>
           </div>
-          <button class="add-button" onclick="openBusinessTypeModal()">➕ Add Business Type</button>
+          <button class="add-button" onclick="openBusinessTypeModal()">
+            <span>➕</span>
+            Add Business Type
+          </button>
         </div>
 
         <div class="loading" id="business-types-loading">
@@ -634,7 +912,7 @@
           <!-- Business types will be loaded here -->
         </div>
 
-        <div class="empty-state" id="business-types-empty" style="display: none">
+        <div class="empty-state hidden" id="business-types-empty">
           <div class="empty-icon">🏢</div>
           <div class="empty-title">No Business Types</div>
           <div class="empty-description">
@@ -647,14 +925,21 @@
       <!-- Default Roles Tab -->
       <div id="default-roles" class="tab-content">
         <div class="section-header">
-          <div>
-            <h2 class="section-title">👥 Default Roles</h2>
+          <div class="section-info">
+            <h2 class="section-title">
+              <span class="section-icon">👥</span>
+              Default Roles
+            </h2>
             <p class="section-description">
               Configure default roles that are automatically created for new tenants based on their
-              business type and permission template.
+              business type and permission template. These roles provide a foundation for tenant
+              access control and can be customized by individual tenants.
             </p>
           </div>
-          <button class="add-button" onclick="openDefaultRoleModal()">➕ Add Default Role</button>
+          <button class="add-button" onclick="openDefaultRoleModal()">
+            <span>➕</span>
+            Add Default Role
+          </button>
         </div>
 
         <div class="loading" id="default-roles-loading">
@@ -666,7 +951,7 @@
           <!-- Default roles will be loaded here -->
         </div>
 
-        <div class="empty-state" id="default-roles-empty" style="display: none">
+        <div class="empty-state hidden" id="default-roles-empty">
           <div class="empty-icon">👥</div>
           <div class="empty-title">No Default Roles</div>
           <div class="empty-description">
@@ -728,7 +1013,7 @@
 
             <div class="form-group">
               <label class="form-label">
-                <input type="checkbox" id="template-is-default" style="margin-right: 8px" />
+                <input type="checkbox" id="template-is-default" class="checkbox-with-margin" />
                 Set as default template
               </label>
               <div class="form-helper">
@@ -849,7 +1134,7 @@
 
             <div class="form-group">
               <label class="form-label">
-                <input type="checkbox" id="bt-is-active" checked style="margin-right: 8px" />
+                <input type="checkbox" id="bt-is-active" checked class="checkbox-with-margin" />
                 Active business type
               </label>
               <div class="form-helper">
@@ -939,7 +1224,7 @@
 
             <div class="form-group">
               <label class="form-label">
-                <input type="checkbox" id="role-is-system" style="margin-right: 8px" />
+                <input type="checkbox" id="role-is-system" class="checkbox-with-margin" />
                 System role (cannot be modified by tenants)
               </label>
             </div>
