@@ -20,6 +20,8 @@ SaaS applications.
 npm install @saas-framework/email
 ```
 
+> **Base URL**: Email endpoints expect the `/api/v2` prefix. Include it in `baseUrl`.
+
 ## Quick Start
 
 ```typescript
@@ -27,7 +29,7 @@ import { SaaSEmail } from "@saas-framework/email";
 
 const emailService = new SaaSEmail({
   apiKey: "your-api-key",
-  baseUrl: "https://api.yoursaas.com",
+  baseUrl: "https://api.yoursaas.com/api/v2",
   smtpConfig: {
     host: "smtp.office365.com",
     port: 587,
@@ -56,7 +58,7 @@ await emailService.sendEmail({
 ```typescript
 const config = {
   apiKey: string;          // API key for authentication
-  baseUrl: string;         // Base URL for the SaaS API
+  baseUrl: string;         // Base URL for the SaaS API (include /api/v2)
   smtpConfig?: {           // Optional SMTP configuration
     host: string;
     port: number;
@@ -77,7 +79,7 @@ You can also configure using environment variables:
 
 ```bash
 SAAS_EMAIL_API_KEY=your-api-key
-SAAS_EMAIL_BASE_URL=https://api.yoursaas.com
+SAAS_EMAIL_BASE_URL=https://api.yoursaas.com/api/v2
 SAAS_EMAIL_SMTP_HOST=smtp.office365.com
 SAAS_EMAIL_SMTP_PORT=587
 SAAS_EMAIL_SMTP_USER=your-email@company.com

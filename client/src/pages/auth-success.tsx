@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Copy, ExternalLink } from "lucide-react";
 import { useLocation } from "wouter";
+import { handleSuccessFromUrl, setToken } from "@saas-framework/auth-client";
 
 export default function AuthSuccessPage() {
   const [, setLocation] = useLocation();
@@ -10,10 +11,36 @@ export default function AuthSuccessPage() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    const orgId = urlParams.get("tenant");
+
+    // If a platform JWT is present (tenant SSO success), store it and redirect
+    if (token && orgId) {
+      try {
+        // Store using SDK (uses 'tenant_token' by default)
+        setToken(token);
+        // Also ensure legacy key used by the portal is populated
+        localStorage.setItem("tenant_token", token);
+        // Store org-scoped token for multi-tenant admin devices
+        localStorage.setItem(`tenant_token_${orgId}`, token);
+      } catch {}
+      // Clean the URL and go to tenant dashboard
+      const pathOnly = window.location.pathname;
+      window.history.replaceState({}, document.title, pathOnly);
+      setLocation(`/tenant/${orgId}/dashboard`);
+      return;
+    }
+
+    // Fallback for earlier testing flows (authorization code display)
     setParams({
-      code: urlParams.get('code'),
-      provider: urlParams.get('provider')
+      code: urlParams.get("code"),
+      provider: urlParams.get("provider"),
     });
+
+    // Let SDK try to parse token if present in URL (harmless if not)
+    try {
+      handleSuccessFromUrl();
+    } catch {}
   }, []);
 
   const copyCode = () => {
@@ -32,7 +59,8 @@ export default function AuthSuccessPage() {
             </div>
             <CardTitle className="text-2xl text-green-800">Authentication Successful!</CardTitle>
             <CardDescription className="text-lg">
-              {params?.provider === 'azure-ad' ? 'Azure AD' : 'OAuth'} authentication completed successfully
+              {params?.provider === "azure-ad" ? "Azure AD" : "OAuth"} authentication completed
+              successfully
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -67,17 +95,10 @@ export default function AuthSuccessPage() {
             </div>
 
             <div className="flex gap-4">
-              <Button
-                onClick={() => setLocation("/test-azure")}
-                className="flex-1"
-              >
+              <Button onClick={() => setLocation("/test-azure")} className="flex-1">
                 Test Again
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setLocation("/admin")}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setLocation("/admin")} className="flex-1">
                 Back to Dashboard
               </Button>
             </div>

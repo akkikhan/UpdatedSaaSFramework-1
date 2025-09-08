@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .test-result {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #iframe-test {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔐 SaaS Framework Authentication Test</h1>
+        <p>This test will verify that the authentication redirect is working correctly.</p>
+        
+        <h2>Test Results:</h2>
+        <div id="test-results"></div>
+        
+        <h2>Actions:</h2>
+        <button onclick="clearTokenAndTest()">🧪 Test Without Token (Should Redirect to Login)</button>
+        <button onclick="testWithFakeToken()">🧪 Test With Invalid Token (Should Redirect to Login)</button>
+        <button onclick="clearLocalStorage()">🗑️ Clear All Tokens</button>
+        <button onclick="openMainApp()">🚀 Open Main App in New Tab</button>
+        
+        <h2>Live Test (iframe):</h2>
+        <p>The iframe below will show what happens when loading localhost:5000:</p>
+        <iframe id="iframe-test" src="http://localhost:5000"></iframe>
+        
+        <div id="iframe-analysis"></div>
+    </div>
+
+    <script>
+        function addTestResult(message, type = 'success') {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `${new Date().toLocaleTimeString()}: ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function clearTokenAndTest() {
+            // Remove any existing tokens
+            localStorage.removeItem('platformAdminToken');
+            addTestResult('🗑️ Removed any existing platform admin tokens', 'warning');
+            
+            // Reload iframe to test
+            document.getElementById('iframe-test').src = 'http://localhost:5000?t=' + Date.now();
+            addTestResult('🔄 Reloaded iframe - should redirect to login page', 'warning');
+            
+            setTimeout(() => {
+                analyzeIframe();
+            }, 3000);
+        }
+
+        function testWithFakeToken() {
+            // Set a fake/invalid token
+            localStorage.setItem('platformAdminToken', 'fake-invalid-token-12345');
+            addTestResult('🎭 Set fake/invalid token in localStorage', 'warning');
+            
+            // Reload iframe to test
+            document.getElementById('iframe-test').src = 'http://localhost:5000?t=' + Date.now();
+            addTestResult('🔄 Reloaded iframe - should verify token and redirect to login', 'warning');
+            
+            setTimeout(() => {
+                analyzeIframe();
+            }, 3000);
+        }
+
+        function clearLocalStorage() {
+            localStorage.clear();
+            addTestResult('🧹 Cleared all localStorage data', 'success');
+        }
+
+        function openMainApp() {
+            window.open('http://localhost:5000', '_blank');
+            addTestResult('🚀 Opened main app in new tab', 'success');
+        }
+
+        function analyzeIframe() {
+            try {
+                const iframe = document.getElementById('iframe-test');
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const currentUrl = iframe.contentWindow.location.href;
+                
+                const analysisDiv = document.getElementById('iframe-analysis');
+                analysisDiv.innerHTML = `
+                    <div class="test-result success">
+                        <strong>Iframe Analysis:</strong><br>
+                        Current URL: ${currentUrl}<br>
+                        ${currentUrl.includes('/admin/login') ? '✅ Successfully redirected to login page!' : 
+                          currentUrl.includes('localhost:5000') && !currentUrl.includes('/admin/login') ? 
+                          '⚠️ Still on main page - check if authentication logic is working' : 
+                          '❓ Unknown state'}
+                    </div>
+                `;
+                
+                if (currentUrl.includes('/admin/login')) {
+                    addTestResult('✅ SUCCESS: Authentication redirect is working! Users are being sent to login page.', 'success');
+                } else if (currentUrl.includes('localhost:5000')) {
+                    addTestResult('⚠️ WARNING: Users can still access main page. Authentication may not be working.', 'warning');
+                }
+                
+            } catch (e) {
+                document.getElementById('iframe-analysis').innerHTML = `
+                    <div class="test-result warning">
+                        <strong>Cross-origin restriction:</strong> Cannot analyze iframe content due to browser security.<br>
+                        Please manually check if the iframe shows the login page or dashboard.
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize test
+        window.onload = function() {
+            addTestResult('🚀 Authentication test initialized', 'success');
+            addTestResult('ℹ️ The iframe will load the main app. If authentication is working, it should show the login page.', 'warning');
+            
+            setTimeout(() => {
+                analyzeIframe();
+            }, 3000);
+        };
+
+        // Monitor iframe load events
+        document.getElementById('iframe-test').onload = function() {
+            addTestResult('📄 Iframe loaded', 'success');
+            setTimeout(() => {
+                analyzeIframe();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

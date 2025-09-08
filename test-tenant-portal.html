@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Portal Login Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-left: 4px solid #3b82f6;
+        }
+        .test-section h2 {
+            color: #555;
+            margin-top: 0;
+            font-size: 18px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .success {
+            color: #10b981;
+            font-weight: bold;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .info {
+            color: #6b7280;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        pre {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .link-list {
+            margin-top: 20px;
+        }
+        .link-list a {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .link-list a:hover {
+            text-decoration: underline;
+        }
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Tenant Portal Login Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Tenant Portals</h2>
+            <p class="info">Click on any link below to test the tenant login pages:</p>
+            <div class="link-list">
+                <a href="/tenant/acme/login" target="_blank">ACME Corporation Portal</a>
+                <a href="/tenant/test-company/login" target="_blank">Test Company Portal</a>
+                <a href="/tenant/demo/login" target="_blank">Demo Portal</a>
+                <a href="/tenant/example-org/login" target="_blank">Example Org Portal</a>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>API Endpoint Tests</h2>
+            <button onclick="testTenantExists()">Check Tenant Exists</button>
+            <button onclick="testLoginEndpoint()">Test Login API</button>
+            <button onclick="testVerifyEndpoint()">Test Verify API</button>
+            <button onclick="createTestTenant()">Create Test Tenant</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const BASE_URL = window.location.origin;
+        const TEST_ORG_ID = 'test-company';
+        const TEST_EMAIL = 'admin@test.com';
+        const TEST_PASSWORD = 'TestPassword123!';
+
+        function showResult(message, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+            if (!isError) {
+                setTimeout(() => {
+                    resultDiv.innerHTML += '<pre>' + JSON.stringify(message, null, 2) + '</pre>';
+                }, 100);
+            }
+        }
+
+        async function testTenantExists() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/tenants/by-org-id/${TEST_ORG_ID}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ Tenant "${TEST_ORG_ID}" exists! Details below:`);
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    showResult(`❌ Tenant "${TEST_ORG_ID}" not found: ${data.message}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ Error checking tenant: ${error.message}`, true);
+            }
+        }
+
+        async function testLoginEndpoint() {
+            try {
+                // First get tenant ID
+                const tenantResponse = await fetch(`${BASE_URL}/api/tenants/by-org-id/${TEST_ORG_ID}`);
+                if (!tenantResponse.ok) {
+                    showResult(`❌ Tenant "${TEST_ORG_ID}" not found. Create it first!`, true);
+                    return;
+                }
+                const tenant = await tenantResponse.json();
+
+                // Test login
+                const response = await fetch(`${BASE_URL}/api/v2/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: TEST_EMAIL,
+                        password: TEST_PASSWORD,
+                        tenantId: tenant.id
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ Login endpoint working! Token received.`);
+                    // Store token for verification test
+                    window.testToken = data.token;
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify({
+                        ...data,
+                        token: data.token.substring(0, 30) + '...'
+                    }, null, 2) + '</pre>';
+                } else {
+                    showResult(`❌ Login failed: ${data.message}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ Error testing login: ${error.message}`, true);
+            }
+        }
+
+        async function testVerifyEndpoint() {
+            if (!window.testToken) {
+                showResult('❌ No token available. Run the login test first!', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/v2/auth/verify`, {
+                    headers: {
+                        'Authorization': `Bearer ${window.testToken}`,
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ Token verification working!`);
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    showResult(`❌ Verification failed: ${data.message}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ Error verifying token: ${error.message}`, true);
+            }
+        }
+
+        async function createTestTenant() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'Test Company',
+                        orgId: TEST_ORG_ID,
+                        adminEmail: TEST_EMAIL,
+                        adminName: 'Test Admin',
+                        adminPassword: TEST_PASSWORD,
+                        enabledModules: ['auth', 'rbac']
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ Test tenant created successfully!`);
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    document.getElementById('result').innerHTML += `
+                        <div class="info" style="margin-top: 20px;">
+                            <p><strong>You can now login at:</strong></p>
+                            <p><a href="/tenant/${TEST_ORG_ID}/login" target="_blank">
+                                ${window.location.origin}/tenant/${TEST_ORG_ID}/login
+                            </a></p>
+                            <p><strong>Credentials:</strong></p>
+                            <p>Email: ${TEST_EMAIL}</p>
+                            <p>Password: ${TEST_PASSWORD}</p>
+                        </div>
+                    `;
+                } else {
+                    showResult(`❌ Failed to create tenant: ${data.message}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ Error creating tenant: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

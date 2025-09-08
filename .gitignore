@@ -4,3 +4,20 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Build artifacts
+**/bin/
+**/obj/
+**/.angular/
+**/package-lock.json
+
+# Development assets
+**/assets/
+client/vite.config.ts
+
+# .NET specific
+*.dll
+*.pdb
+*.cache
+*.deps.json
+*.runtimeconfig.json

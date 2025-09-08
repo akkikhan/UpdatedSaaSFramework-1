@@ -1,7 +1,7 @@
-import { ConfidentialClientApplication, CryptoProvider } from '@azure/msal-node';
-import { storage } from '../../storage';
-import { authService } from '../auth';
-import type { Tenant } from '@shared/schema';
+import { ConfidentialClientApplication, CryptoProvider } from "@azure/msal-node";
+import { storage } from "../../storage";
+import { authService } from "../auth";
+import type { Tenant } from "@shared/schema";
 
 export interface AzureADConfig {
   tenantId: string;
@@ -29,7 +29,7 @@ export class AzureADService {
    */
   async getAuthUrl(state: string): Promise<string> {
     const authCodeUrlParameters = {
-      scopes: ['openid', 'profile', 'email'],
+      scopes: ["openid", "profile", "email"],
       redirectUri: this.config.redirectUri,
       state: state,
     };
@@ -41,7 +41,11 @@ export class AzureADService {
   /**
    * Handle Azure AD callback and create/login user
    */
-  async handleCallback(code: string, state: string, tenant: Tenant): Promise<{
+  async handleCallback(
+    code: string,
+    state: string,
+    tenant: Tenant
+  ): Promise<{
     token: string;
     user: any;
     expiresAt: Date;
@@ -49,21 +53,21 @@ export class AzureADService {
     try {
       const tokenRequest = {
         code: code,
-        scopes: ['openid', 'profile', 'email'],
+        scopes: ["openid", "profile", "email"],
         redirectUri: this.config.redirectUri,
       };
 
       const response = await this.msalApp.acquireTokenByCode(tokenRequest);
-      
+
       if (!response || !response.account) {
-        throw new Error('Failed to get token from Azure AD');
+        throw new Error("Failed to get token from Azure AD");
       }
 
       const { account } = response;
       const email = account.username;
 
       if (!email) {
-        throw new Error('No email found in Azure AD response');
+        throw new Error("No email found in Azure AD response");
       }
 
       // Check if user exists
@@ -71,7 +75,7 @@ export class AzureADService {
 
       if (!user) {
         // Create new user
-        const bcrypt = await import('bcryptjs');
+        const bcrypt = await import("bcryptjs");
         const tempPassword = Math.random().toString(36).slice(-12);
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
@@ -94,10 +98,10 @@ export class AzureADService {
         permissions: [], // TODO: Get from RBAC
       };
 
-      const jwt = await import('jsonwebtoken');
-      const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-      
-      const token = jwt.sign(payload, jwtSecret, { expiresIn: '1h' });
+      const jwt = await import("jsonwebtoken");
+      const jwtSecret = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
+
+      const token = jwt.default.sign(payload, jwtSecret, { expiresIn: "1h" });
 
       // Store session
       await storage.createSession({
@@ -118,7 +122,7 @@ export class AzureADService {
         expiresAt,
       };
     } catch (error) {
-      console.error('Azure AD callback error:', error);
+      console.error("Azure AD callback error:", error);
       return null;
     }
   }
@@ -128,7 +132,7 @@ export class AzureADService {
    */
   generateState(tenantOrgId: string): string {
     const randomBytes = this.cryptoProvider.createNewGuid();
-    return Buffer.from(`${tenantOrgId}:${randomBytes}`).toString('base64');
+    return Buffer.from(`${tenantOrgId}:${randomBytes}`).toString("base64");
   }
 
   /**
@@ -136,8 +140,8 @@ export class AzureADService {
    */
   parseState(state: string): { tenantOrgId: string } | null {
     try {
-      const decoded = Buffer.from(state, 'base64').toString('utf-8');
-      const [tenantOrgId] = decoded.split(':');
+      const decoded = Buffer.from(state, "base64").toString("utf-8");
+      const [tenantOrgId] = decoded.split(":");
       return { tenantOrgId };
     } catch {
       return null;

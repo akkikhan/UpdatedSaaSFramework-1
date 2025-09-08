@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -62,7 +62,13 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
   }
 }
 
@@ -72,7 +78,8 @@
 }
 
 /* Fix scrolling and layout issues */
-html, body {
+html,
+body {
   height: 100%;
   overflow: hidden;
 }
@@ -93,11 +100,7 @@ html, body {
   overflow-x: hidden;
 }
 
-.tenant-portal {
-  min-height: 100vh;
-  max-height: 100vh;
-  overflow-y: auto;
-}
+/* removed legacy .tenant-portal container (admin-embedded portal) */
 
 .page-container {
   height: 100%;
@@ -186,6 +189,32 @@ html, body {
 
 .module-config-rbac {
   @apply bg-green-50 border-green-200;
+}
+
+/* Chart and tooltip styling */
+.chart-tooltip {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.chart-legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Module adoption legend colors */
+.legend-rbac {
+  background-color: #6366f1;
+}
+.legend-sso {
+  background-color: #06b6d4;
+}
+.legend-other {
+  background-color: #e5e7eb;
 }
 
 /* Disabled module styles */

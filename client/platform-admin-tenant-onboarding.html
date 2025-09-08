@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Platform Admin - Tenant Onboarding</title>
+    <link rel="stylesheet" href="assets/css/tenant-onboarding.css" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  </head>
+  <body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Main Container -->
+    <div class="onboarding-container">
+      <div class="onboarding-wrapper">
+        <!-- Header -->
+        <header class="onboarding-header">
+          <h1 class="onboarding-title">Create New Tenant</h1>
+          <p class="onboarding-subtitle">
+            Set up a new organization with admin access and module configuration
+          </p>
+        </header>
+
+        <!-- Progress Indicator -->
+        <div class="progress-container">
+          <div class="progress-steps">
+            <div class="progress-line" id="progressLine"></div>
+            <div class="progress-step active" data-step="1">
+              <div class="progress-step-circle">1</div>
+              <div class="progress-step-label">Basic Info</div>
+            </div>
+            <div class="progress-step" data-step="2">
+              <div class="progress-step-circle">2</div>
+              <div class="progress-step-label">Admin Config</div>
+            </div>
+            <div class="progress-step" data-step="3">
+              <div class="progress-step-circle">3</div>
+              <div class="progress-step-label">Module Selection</div>
+            </div>
+            <div class="progress-step" data-step="4">
+              <div class="progress-step-circle">4</div>
+              <div class="progress-step-label">Review & Deploy</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Content -->
+        <form id="tenantOnboardingForm" class="form-content">
+          <!-- Step 1: Basic Information -->
+          <div class="form-step active" data-step="1">
+            <h2 class="step-title">Basic Information</h2>
+            <p class="step-description">
+              Enter the organization's basic information and contact details.
+            </p>
+
+            <div class="form-row two-columns">
+              <div class="form-group">
+                <label for="orgName" class="form-label required">Organization Name</label>
+                <input
+                  type="text"
+                  id="orgName"
+                  name="orgName"
+                  class="form-input"
+                  required
+                  placeholder="Enter organization name"
+                  maxlength="100"
+                />
+                <div class="form-help">This will be displayed as the tenant's name</div>
+                <div class="form-error" id="orgNameError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="orgId" class="form-label required">Organization ID (Slug)</label>
+                <input
+                  type="text"
+                  id="orgId"
+                  name="orgId"
+                  class="form-input"
+                  required
+                  placeholder="organization-slug"
+                  pattern="^[a-z0-9-]+$"
+                  maxlength="50"
+                />
+                <div class="form-help">
+                  URL-friendly identifier (lowercase letters, numbers, hyphens)
+                </div>
+                <div class="form-error" id="orgIdError"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="description" class="form-label">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                class="form-input form-textarea"
+                placeholder="Brief description of the organization (optional)"
+                maxlength="500"
+              ></textarea>
+              <div class="form-help">Optional description for internal reference</div>
+            </div>
+
+            <div class="form-row two-columns">
+              <div class="form-group">
+                <label for="contactEmail" class="form-label required">Contact Email</label>
+                <input
+                  type="email"
+                  id="contactEmail"
+                  name="contactEmail"
+                  class="form-input"
+                  required
+                  placeholder="contact@organization.com"
+                />
+                <div class="form-help">Primary contact email for the organization</div>
+                <div class="form-error" id="contactEmailError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="industry" class="form-label">Industry</label>
+                <select id="industry" name="industry" class="form-input form-select">
+                  <option value="">Select industry (optional)</option>
+                  <option value="technology">Technology</option>
+                  <option value="healthcare">Healthcare</option>
+                  <option value="finance">Finance</option>
+                  <option value="education">Education</option>
+                  <option value="retail">Retail</option>
+                  <option value="manufacturing">Manufacturing</option>
+                  <option value="consulting">Consulting</option>
+                  <option value="non-profit">Non-Profit</option>
+                  <option value="government">Government</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row two-columns">
+              <div class="form-group">
+                <label for="timezone" class="form-label">Timezone</label>
+                <select id="timezone" name="timezone" class="form-input form-select">
+                  <option value="">Select timezone (optional)</option>
+                  <option value="America/New_York">Eastern Time (ET)</option>
+                  <option value="America/Chicago">Central Time (CT)</option>
+                  <option value="America/Denver">Mountain Time (MT)</option>
+                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                  <option value="Europe/London">London (GMT)</option>
+                  <option value="Europe/Paris">Paris (CET)</option>
+                  <option value="Asia/Tokyo">Tokyo (JST)</option>
+                  <option value="Asia/Shanghai">Shanghai (CST)</option>
+                  <option value="Asia/Kolkata">Mumbai (IST)</option>
+                  <option value="Australia/Sydney">Sydney (AEDT)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="employeeCount" class="form-label">Employee Count</label>
+                <select id="employeeCount" name="employeeCount" class="form-input form-select">
+                  <option value="">Select size (optional)</option>
+                  <option value="1-10">1-10 employees</option>
+                  <option value="11-50">11-50 employees</option>
+                  <option value="51-200">51-200 employees</option>
+                  <option value="201-500">201-500 employees</option>
+                  <option value="501-1000">501-1000 employees</option>
+                  <option value="1000+">1000+ employees</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Admin Configuration -->
+          <div class="form-step" data-step="2">
+            <h2 class="step-title">Admin Configuration</h2>
+            <p class="step-description">
+              Create the primary administrator account for this tenant.
+            </p>
+
+            <div class="form-row two-columns">
+              <div class="form-group">
+                <label for="adminFirstName" class="form-label required">First Name</label>
+                <input
+                  type="text"
+                  id="adminFirstName"
+                  name="adminFirstName"
+                  class="form-input"
+                  required
+                  placeholder="Enter first name"
+                  maxlength="50"
+                />
+                <div class="form-error" id="adminFirstNameError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="adminLastName" class="form-label required">Last Name</label>
+                <input
+                  type="text"
+                  id="adminLastName"
+                  name="adminLastName"
+                  class="form-input"
+                  required
+                  placeholder="Enter last name"
+                  maxlength="50"
+                />
+                <div class="form-error" id="adminLastNameError"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="adminEmail" class="form-label required">Admin Email</label>
+              <input
+                type="email"
+                id="adminEmail"
+                name="adminEmail"
+                class="form-input"
+                required
+                placeholder="admin@organization.com"
+              />
+              <div class="form-help">This will be the primary admin login email</div>
+              <div class="form-error" id="adminEmailError"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="adminPassword" class="form-label required">Temporary Password</label>
+              <input
+                type="password"
+                id="adminPassword"
+                name="adminPassword"
+                class="form-input"
+                required
+                placeholder="Enter temporary password"
+                minlength="8"
+              />
+              <div class="form-help">Admin will be required to change this on first login</div>
+              <div class="form-error" id="adminPasswordError"></div>
+
+              <div class="password-strength password-strength-hidden" id="passwordStrength">
+                <div class="password-strength-bar">
+                  <div class="password-strength-fill" id="passwordStrengthFill"></div>
+                </div>
+                <div class="password-strength-text" id="passwordStrengthText"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmPassword" class="form-label required">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                class="form-input"
+                required
+                placeholder="Confirm the password"
+              />
+              <div class="form-error" id="confirmPasswordError"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="adminPhone" class="form-label">Phone Number</label>
+              <input
+                type="tel"
+                id="adminPhone"
+                name="adminPhone"
+                class="form-input"
+                placeholder="+1 (555) 123-4567"
+              />
+              <div class="form-help">Optional contact phone number</div>
+            </div>
+
+            <div class="form-checkbox-group">
+              <input
+                type="checkbox"
+                id="sendWelcomeEmail"
+                name="sendWelcomeEmail"
+                class="form-checkbox"
+                checked
+              />
+              <label for="sendWelcomeEmail" class="checkbox-label">
+                <strong>Send Welcome Email</strong><br />
+                Send login credentials and onboarding information to the admin
+              </label>
+            </div>
+
+            <div class="form-checkbox-group">
+              <input
+                type="checkbox"
+                id="forcePasswordChange"
+                name="forcePasswordChange"
+                class="form-checkbox"
+                checked
+              />
+              <label for="forcePasswordChange" class="checkbox-label">
+                <strong>Force Password Change</strong><br />
+                Require the admin to change password on first login
+              </label>
+            </div>
+          </div>
+
+          <!-- Step 3: Module Selection -->
+          <div class="form-step" data-step="3">
+            <h2 class="step-title">Module Selection</h2>
+            <p class="step-description">
+              Choose which modules and features to enable for this tenant.
+            </p>
+
+            <div class="modules-grid" id="modulesGrid">
+              <!-- Core Modules -->
+              <div class="module-card selected" data-module="user-management">
+                <div class="module-badge required">Required</div>
+                <div class="module-header">
+                  <div class="module-icon">👥</div>
+                  <div class="module-title">User Management</div>
+                </div>
+                <div class="module-description">
+                  Manage users, roles, and permissions within the tenant organization. Essential for
+                  user authentication and access control.
+                </div>
+              </div>
+
+              <div class="module-card selected" data-module="authentication">
+                <div class="module-badge required">Required</div>
+                <div class="module-header">
+                  <div class="module-icon">🔐</div>
+                  <div class="module-title">Authentication</div>
+                </div>
+                <div class="module-description">
+                  Core authentication services including login, logout, and session management.
+                  Required for all tenant operations.
+                </div>
+              </div>
+
+              <!-- Optional Modules -->
+              <div class="module-card" data-module="billing">
+                <div class="module-header">
+                  <div class="module-icon">💳</div>
+                  <div class="module-title">Billing & Payments</div>
+                </div>
+                <div class="module-description">
+                  Subscription management, payment processing, and billing history. Enable for
+                  tenants requiring payment functionality.
+                </div>
+              </div>
+
+              <div class="module-card" data-module="analytics">
+                <div class="module-header">
+                  <div class="module-icon">📊</div>
+                  <div class="module-title">Analytics & Reporting</div>
+                </div>
+                <div class="module-description">
+                  Advanced analytics, custom reports, and data visualization tools. Provides
+                  insights into user behavior and system usage.
+                </div>
+              </div>
+
+              <div class="module-card" data-module="notifications">
+                <div class="module-header">
+                  <div class="module-icon">🔔</div>
+                  <div class="module-title">Notifications</div>
+                </div>
+                <div class="module-description">
+                  Email notifications, in-app alerts, and notification preferences. Keep users
+                  informed about important events and updates.
+                </div>
+              </div>
+
+              <div class="module-card" data-module="integrations">
+                <div class="module-header">
+                  <div class="module-icon">🔗</div>
+                  <div class="module-title">Third-party Integrations</div>
+                </div>
+                <div class="module-description">
+                  Connect with external services like Slack, Microsoft Teams, and other business
+                  tools. Enhance workflow with popular business applications.
+                </div>
+              </div>
+
+              <div class="module-card" data-module="audit-logs">
+                <div class="module-header">
+                  <div class="module-icon">📋</div>
+                  <div class="module-title">Audit Logs</div>
+                </div>
+                <div class="module-description">
+                  Comprehensive audit trail of all user actions and system events. Essential for
+                  compliance and security monitoring.
+                </div>
+              </div>
+
+              <div class="module-card" data-module="file-storage">
+                <div class="module-header">
+                  <div class="module-icon">📁</div>
+                  <div class="module-title">File Storage</div>
+                </div>
+                <div class="module-description">
+                  Secure file upload, storage, and sharing capabilities. Allow users to store and
+                  manage documents within the platform.
+                </div>
+              </div>
+
+              <div class="module-card" data-module="api-access">
+                <div class="module-header">
+                  <div class="module-icon">⚡</div>
+                  <div class="module-title">API Access</div>
+                </div>
+                <div class="module-description">
+                  REST API access with rate limiting and developer tools. Enable programmatic access
+                  to platform features.
+                </div>
+              </div>
+            </div>
+
+            <div class="form-help form-help-spaced">
+              <strong>Note:</strong> Required modules cannot be disabled and are essential for basic
+              tenant functionality. Optional modules can be enabled or disabled later from the
+              tenant settings.
+            </div>
+          </div>
+
+          <!-- Step 4: Review & Deploy -->
+          <div class="form-step" data-step="4">
+            <h2 class="step-title">Review & Deploy</h2>
+            <p class="step-description">
+              Review all configuration details before creating the tenant.
+            </p>
+
+            <div class="review-section">
+              <h3 class="review-section-title">
+                <span>🏢</span>
+                Organization Details
+              </h3>
+              <div class="review-item">
+                <span class="review-label">Organization Name:</span>
+                <span class="review-value" id="reviewOrgName">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Organization ID:</span>
+                <span class="review-value" id="reviewOrgId">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Contact Email:</span>
+                <span class="review-value" id="reviewContactEmail">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Industry:</span>
+                <span class="review-value" id="reviewIndustry">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Employee Count:</span>
+                <span class="review-value" id="reviewEmployeeCount">-</span>
+              </div>
+            </div>
+
+            <div class="review-section">
+              <h3 class="review-section-title">
+                <span>👤</span>
+                Administrator Account
+              </h3>
+              <div class="review-item">
+                <span class="review-label">Admin Name:</span>
+                <span class="review-value" id="reviewAdminName">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Admin Email:</span>
+                <span class="review-value" id="reviewAdminEmail">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Phone Number:</span>
+                <span class="review-value" id="reviewAdminPhone">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Welcome Email:</span>
+                <span class="review-value" id="reviewSendWelcomeEmail">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Force Password Change:</span>
+                <span class="review-value" id="reviewForcePasswordChange">-</span>
+              </div>
+            </div>
+
+            <div class="review-section">
+              <h3 class="review-section-title">
+                <span>⚙️</span>
+                Enabled Modules
+              </h3>
+              <div class="review-modules" id="reviewModules">
+                <!-- Modules will be populated here -->
+              </div>
+            </div>
+
+            <div class="form-checkbox-group">
+              <input
+                type="checkbox"
+                id="confirmCreation"
+                name="confirmCreation"
+                class="form-checkbox"
+                required
+              />
+              <label for="confirmCreation" class="checkbox-label">
+                <strong>I confirm that all information is correct</strong><br />
+                I understand that creating this tenant will set up a new organization with the
+                specified configuration. The administrator will receive login credentials if the
+                welcome email option is enabled.
+              </label>
+              <div class="form-error" id="confirmCreationError"></div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Navigation -->
+        <div class="form-navigation">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="prevBtn"
+            onclick="previousStep()"
+            disabled
+          >
+            ← Previous
+          </button>
+          <div class="navigation-spacer"></div>
+          <button type="button" class="btn btn-danger" onclick="cancelOnboarding()">Cancel</button>
+          <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+            Next →
+          </button>
+          <button
+            type="button"
+            class="btn btn-success btn-hidden"
+            id="createBtn"
+            onclick="createTenant()"
+          >
+            Create Tenant
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // State Management
+      let currentStep = 1;
+      const totalSteps = 4;
+      const formData = {};
+      const requiredModules = ["user-management", "authentication"];
+
+      // Form validation rules
+      const validationRules = {
+        orgName: { required: true, minLength: 2, maxLength: 100 },
+        orgId: { required: true, pattern: /^[a-z0-9-]+$/, minLength: 2, maxLength: 50 },
+        contactEmail: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+        adminFirstName: { required: true, minLength: 1, maxLength: 50 },
+        adminLastName: { required: true, minLength: 1, maxLength: 50 },
+        adminEmail: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+        adminPassword: { required: true, minLength: 8 },
+        confirmPassword: { required: true, mustMatch: "adminPassword" },
+      };
+
+      // Initialize the form
+      document.addEventListener("DOMContentLoaded", function () {
+        updateProgressIndicator();
+        setupEventListeners();
+        initializeModules();
+      });
+
+      // Event Listeners
+      function setupEventListeners() {
+        // Real-time validation
+        Object.keys(validationRules).forEach(fieldName => {
+          const field = document.getElementById(fieldName);
+          if (field) {
+            field.addEventListener("blur", () => validateField(fieldName));
+            field.addEventListener("input", () => clearFieldError(fieldName));
+          }
+        });
+
+        // Organization ID auto-generation
+        document.getElementById("orgName").addEventListener("input", function () {
+          const orgId = document.getElementById("orgId");
+          if (!orgId.value) {
+            orgId.value = this.value
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, "")
+              .replace(/\s+/g, "-")
+              .substring(0, 50);
+          }
+        });
+
+        // Password strength indicator
+        document.getElementById("adminPassword").addEventListener("input", function () {
+          updatePasswordStrength(this.value);
+        });
+
+        // Module selection
+        document.querySelectorAll(".module-card").forEach(card => {
+          if (!card.classList.contains("disabled")) {
+            card.addEventListener("click", () => toggleModule(card));
+          }
+        });
+      }
+
+      // Initialize modules
+      function initializeModules() {
+        requiredModules.forEach(moduleId => {
+          const card = document.querySelector(`[data-module="${moduleId}"]`);
+          if (card) {
+            card.classList.add("selected", "disabled");
+          }
+        });
+      }
+
+      // Step Navigation
+      function nextStep() {
+        if (validateCurrentStep()) {
+          if (currentStep < totalSteps) {
+            currentStep++;
+            showStep(currentStep);
+            updateProgressIndicator();
+            updateNavigationButtons();
+
+            if (currentStep === 4) {
+              updateReviewSection();
+            }
+          }
+        }
+      }
+
+      function previousStep() {
+        if (currentStep > 1) {
+          currentStep--;
+          showStep(currentStep);
+          updateProgressIndicator();
+          updateNavigationButtons();
+        }
+      }
+
+      function showStep(step) {
+        // Hide all steps
+        document.querySelectorAll(".form-step").forEach(stepEl => {
+          stepEl.classList.remove("active");
+        });
+
+        // Show current step
+        const currentStepEl = document.querySelector(`[data-step="${step}"]`);
+        if (currentStepEl) {
+          currentStepEl.classList.add("active");
+        }
+      }
+
+      function updateProgressIndicator() {
+        const progressSteps = document.querySelectorAll(".progress-step");
+        const progressLine = document.getElementById("progressLine");
+
+        progressSteps.forEach((step, index) => {
+          const stepNumber = index + 1;
+          step.classList.remove("active", "completed");
+
+          if (stepNumber < currentStep) {
+            step.classList.add("completed");
+          } else if (stepNumber === currentStep) {
+            step.classList.add("active");
+          }
+        });
+
+        // Update progress line
+        const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+        progressLine.style.width = `${progressPercentage}%`;
+      }
+
+      function updateNavigationButtons() {
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const createBtn = document.getElementById("createBtn");
+
+        prevBtn.disabled = currentStep === 1;
+
+        if (currentStep === totalSteps) {
+          nextBtn.classList.add("btn-hidden");
+          createBtn.classList.remove("btn-hidden");
+        } else {
+          nextBtn.classList.remove("btn-hidden");
+          createBtn.classList.add("btn-hidden");
+        }
+      }
+
+      // Validation
+      function validateCurrentStep() {
+        const stepFields = getFieldsForStep(currentStep);
+        let isValid = true;
+
+        stepFields.forEach(fieldName => {
+          if (!validateField(fieldName)) {
+            isValid = false;
+          }
+        });
+
+        return isValid;
+      }
+
+      function getFieldsForStep(step) {
+        switch (step) {
+          case 1:
+            return ["orgName", "orgId", "contactEmail"];
+          case 2:
+            return [
+              "adminFirstName",
+              "adminLastName",
+              "adminEmail",
+              "adminPassword",
+              "confirmPassword",
+            ];
+          case 3:
+            return []; // Module selection doesn't require validation
+          case 4:
+            return ["confirmCreation"];
+          default:
+            return [];
+        }
+      }
+
+      function validateField(fieldName) {
+        const field = document.getElementById(fieldName);
+        const rules = validationRules[fieldName];
+
+        if (!field || !rules) return true;
+
+        const value = field.value.trim();
+        let isValid = true;
+        let errorMessage = "";
+
+        // Required validation
+        if (rules.required && !value) {
+          isValid = false;
+          errorMessage = "This field is required";
+        }
+
+        // Pattern validation
+        else if (value && rules.pattern && !rules.pattern.test(value)) {
+          isValid = false;
+          errorMessage = getPatternErrorMessage(fieldName);
+        }
+
+        // Length validation
+        else if (value && rules.minLength && value.length < rules.minLength) {
+          isValid = false;
+          errorMessage = `Must be at least ${rules.minLength} characters`;
+        } else if (value && rules.maxLength && value.length > rules.maxLength) {
+          isValid = false;
+          errorMessage = `Must be no more than ${rules.maxLength} characters`;
+        }
+
+        // Match validation
+        else if (value && rules.mustMatch) {
+          const matchField = document.getElementById(rules.mustMatch);
+          if (matchField && value !== matchField.value) {
+            isValid = false;
+            errorMessage = "Passwords do not match";
+          }
+        }
+
+        // Custom validation for checkbox
+        if (fieldName === "confirmCreation") {
+          const checkbox = document.getElementById("confirmCreation");
+          if (!checkbox.checked) {
+            isValid = false;
+            errorMessage = "You must confirm the information is correct";
+          }
+        }
+
+        // Display validation result
+        displayFieldValidation(fieldName, isValid, errorMessage);
+        return isValid;
+      }
+
+      function getPatternErrorMessage(fieldName) {
+        switch (fieldName) {
+          case "orgId":
+            return "Only lowercase letters, numbers, and hyphens allowed";
+          case "contactEmail":
+          case "adminEmail":
+            return "Please enter a valid email address";
+          default:
+            return "Invalid format";
+        }
+      }
+
+      function displayFieldValidation(fieldName, isValid, errorMessage) {
+        const field = document.getElementById(fieldName);
+        const errorEl = document.getElementById(`${fieldName}Error`);
+
+        if (field) {
+          field.classList.toggle("error", !isValid);
+        }
+
+        if (errorEl) {
+          errorEl.textContent = isValid ? "" : errorMessage;
+        }
+      }
+
+      function clearFieldError(fieldName) {
+        const field = document.getElementById(fieldName);
+        const errorEl = document.getElementById(`${fieldName}Error`);
+
+        if (field) {
+          field.classList.remove("error");
+        }
+
+        if (errorEl) {
+          errorEl.textContent = "";
+        }
+      }
+
+      // Password Strength
+      function updatePasswordStrength(password) {
+        const strengthContainer = document.getElementById("passwordStrength");
+        const strengthFill = document.getElementById("passwordStrengthFill");
+        const strengthText = document.getElementById("passwordStrengthText");
+
+        if (!password) {
+          strengthContainer.classList.add("password-strength-hidden");
+          return;
+        }
+
+        strengthContainer.classList.remove("password-strength-hidden");
+
+        let score = 0;
+        let feedback = "";
+
+        // Length check
+        if (password.length >= 8) score += 1;
+        if (password.length >= 12) score += 1;
+
+        // Character variety checks
+        if (/[a-z]/.test(password)) score += 1;
+        if (/[A-Z]/.test(password)) score += 1;
+        if (/[0-9]/.test(password)) score += 1;
+        if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+
+        // Determine strength level
+        if (score < 3) {
+          feedback = "weak";
+          strengthFill.className = "password-strength-fill weak";
+          strengthText.className = "password-strength-text weak";
+          strengthText.textContent = "Weak";
+        } else if (score < 4) {
+          feedback = "fair";
+          strengthFill.className = "password-strength-fill fair";
+          strengthText.className = "password-strength-text fair";
+          strengthText.textContent = "Fair";
+        } else if (score < 5) {
+          feedback = "good";
+          strengthFill.className = "password-strength-fill good";
+          strengthText.className = "password-strength-text good";
+          strengthText.textContent = "Good";
+        } else {
+          feedback = "strong";
+          strengthFill.className = "password-strength-fill strong";
+          strengthText.className = "password-strength-text strong";
+          strengthText.textContent = "Strong";
+        }
+      }
+
+      // Module Selection
+      function toggleModule(card) {
+        const moduleId = card.dataset.module;
+
+        if (requiredModules.includes(moduleId)) {
+          return; // Cannot toggle required modules
+        }
+
+        card.classList.toggle("selected");
+      }
+
+      function getSelectedModules() {
+        const selectedCards = document.querySelectorAll(".module-card.selected");
+        return Array.from(selectedCards).map(card => card.dataset.module);
+      }
+
+      // Review Section
+      function updateReviewSection() {
+        // Organization Details
+        document.getElementById("reviewOrgName").textContent =
+          document.getElementById("orgName").value || "-";
+        document.getElementById("reviewOrgId").textContent =
+          document.getElementById("orgId").value || "-";
+        document.getElementById("reviewContactEmail").textContent =
+          document.getElementById("contactEmail").value || "-";
+        document.getElementById("reviewIndustry").textContent =
+          document.getElementById("industry").selectedOptions[0]?.text || "Not specified";
+        document.getElementById("reviewEmployeeCount").textContent =
+          document.getElementById("employeeCount").selectedOptions[0]?.text || "Not specified";
+
+        // Administrator Account
+        const firstName = document.getElementById("adminFirstName").value;
+        const lastName = document.getElementById("adminLastName").value;
+        document.getElementById("reviewAdminName").textContent =
+          firstName && lastName ? `${firstName} ${lastName}` : "-";
+        document.getElementById("reviewAdminEmail").textContent =
+          document.getElementById("adminEmail").value || "-";
+        document.getElementById("reviewAdminPhone").textContent =
+          document.getElementById("adminPhone").value || "Not provided";
+        document.getElementById("reviewSendWelcomeEmail").textContent = document.getElementById(
+          "sendWelcomeEmail"
+        ).checked
+          ? "Yes"
+          : "No";
+        document.getElementById("reviewForcePasswordChange").textContent = document.getElementById(
+          "forcePasswordChange"
+        ).checked
+          ? "Yes"
+          : "No";
+
+        // Enabled Modules
+        const modulesContainer = document.getElementById("reviewModules");
+        const selectedModules = getSelectedModules();
+
+        modulesContainer.innerHTML = "";
+        selectedModules.forEach(moduleId => {
+          const card = document.querySelector(`[data-module="${moduleId}"]`);
+          const moduleName = card?.querySelector(".module-title")?.textContent || moduleId;
+          const moduleTag = document.createElement("div");
+          moduleTag.className = "review-module-tag";
+          moduleTag.textContent = moduleName;
+          modulesContainer.appendChild(moduleTag);
+        });
+      }
+
+      // Tenant Creation
+      async function createTenant() {
+        if (!validateCurrentStep()) {
+          return;
+        }
+
+        const createBtn = document.getElementById("createBtn");
+        createBtn.classList.add("loading");
+        createBtn.disabled = true;
+
+        try {
+          const tenantData = {
+            // Organization details
+            orgName: document.getElementById("orgName").value.trim(),
+            orgId: document.getElementById("orgId").value.trim(),
+            description: document.getElementById("description").value.trim(),
+            contactEmail: document.getElementById("contactEmail").value.trim(),
+            industry: document.getElementById("industry").value,
+            timezone: document.getElementById("timezone").value,
+            employeeCount: document.getElementById("employeeCount").value,
+
+            // Admin details
+            adminFirstName: document.getElementById("adminFirstName").value.trim(),
+            adminLastName: document.getElementById("adminLastName").value.trim(),
+            adminEmail: document.getElementById("adminEmail").value.trim(),
+            adminPassword: document.getElementById("adminPassword").value,
+            adminPhone: document.getElementById("adminPhone").value.trim(),
+
+            // Configuration
+            sendWelcomeEmail: document.getElementById("sendWelcomeEmail").checked,
+            forcePasswordChange: document.getElementById("forcePasswordChange").checked,
+
+            // Modules
+            enabledModules: getSelectedModules(),
+          };
+
+          const response = await fetch("/api/tenants", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(tenantData),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to create tenant");
+          }
+
+          const result = await response.json();
+
+          showToast(
+            "success",
+            "Tenant Created Successfully!",
+            `Tenant "${tenantData.orgName}" has been created with ID: ${tenantData.orgId}`
+          );
+
+          // Redirect to tenant list or show success page
+          setTimeout(() => {
+            window.location.href = "/admin/tenants";
+          }, 2000);
+        } catch (error) {
+          showToast("error", "Creation Failed", error.message);
+          createBtn.classList.remove("loading");
+          createBtn.disabled = false;
+        }
+      }
+
+      function cancelOnboarding() {
+        if (confirm("Are you sure you want to cancel? All entered information will be lost.")) {
+          window.location.href = "/admin/tenants";
+        }
+      }
+
+      // Toast Notifications
+      function showToast(type, title, message) {
+        const toastContainer = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+
+        const iconMap = {
+          success: "✅",
+          error: "❌",
+          warning: "⚠️",
+          info: "ℹ️",
+        };
+
+        toast.innerHTML = `
+                <div class="toast-icon">${iconMap[type] || "ℹ️"}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+        toastContainer.appendChild(toast);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 5000);
+      }
+
+      // Utility Functions
+      function formatPhoneNumber(input) {
+        const value = input.value.replace(/\D/g, "");
+        const match = value.match(/^(\d{1,3})(\d{0,3})(\d{0,4})$/);
+
+        if (match) {
+          input.value = !match[2]
+            ? match[1]
+            : `(${match[1]}) ${match[2]}${match[3] ? "-" + match[3] : ""}`;
+        }
+      }
+
+      // Add phone formatting to admin phone field
+      document.getElementById("adminPhone").addEventListener("input", function () {
+        formatPhoneNumber(this);
+      });
+
+      // Keyboard Navigation
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && e.ctrlKey) {
+          if (currentStep < totalSteps) {
+            nextStep();
+          } else {
+            createTenant();
+          }
+        } else if (e.key === "Escape") {
+          cancelOnboarding();
+        }
+      });
+
+      // Initialize tooltips and accessibility
+      document.querySelectorAll("[data-tooltip]").forEach(el => {
+        el.setAttribute("title", el.dataset.tooltip);
+      });
+
+      // Form auto-save (optional - saves to localStorage)
+      function autoSaveForm() {
+        const formData = new FormData(document.getElementById("tenantOnboardingForm"));
+        const data = Object.fromEntries(formData);
+        localStorage.setItem("tenantOnboardingDraft", JSON.stringify(data));
+      }
+
+      function loadSavedForm() {
+        const saved = localStorage.getItem("tenantOnboardingDraft");
+        if (saved) {
+          try {
+            const data = JSON.parse(saved);
+            Object.keys(data).forEach(key => {
+              const field = document.getElementById(key);
+              if (field) {
+                if (field.type === "checkbox") {
+                  field.checked = data[key] === "on";
+                } else {
+                  field.value = data[key];
+                }
+              }
+            });
+          } catch (e) {
+            console.error("Failed to load saved form data:", e);
+          }
+        }
+      }
+
+      // Auto-save every 30 seconds
+      setInterval(autoSaveForm, 30000);
+
+      // Clear saved data on successful creation
+      function clearSavedForm() {
+        localStorage.removeItem("tenantOnboardingDraft");
+      }
+    </script>
+  </body>
+</html>

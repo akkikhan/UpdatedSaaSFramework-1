@@ -1,4 +1,11 @@
 import dotenv from "dotenv";
+// Prefer IPv4 DNS results first to avoid IPv6 connectivity issues (e.g., PG over IPv6 timeouts)
+import { setDefaultResultOrder } from "node:dns";
+try {
+  setDefaultResultOrder("ipv4first");
+  // eslint-disable-next-line no-console
+  console.log("Networking: DNS result order set to ipv4first");
+} catch {}
 
 // Load environment variables FIRST before any other imports
 dotenv.config();
@@ -13,6 +20,7 @@ try {
 }
 
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
@@ -50,10 +58,24 @@ app.use(
   })
 );
 
-// Rate Limiting - General API Protection
+// CORS - allowlist from env CORS_ORIGINS (comma-separated), default * in dev
+const corsOrigins = (process.env.CORS_ORIGINS || "*")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin: corsOrigins.length === 1 && corsOrigins[0] === "*" ? true : corsOrigins,
+    credentials: true,
+  })
+);
+
+// Rate Limiting - General API Protection (can be bypassed in development)
+const rateLimitBypass =
+  process.env.RATE_LIMIT_BYPASS === "true" || process.env.NODE_ENV === "development";
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: rateLimitBypass ? 100000 : 100, // Very high in dev/bypass
   message: {
     error: "Too many requests from this IP, please try again later.",
     retryAfter: "15 minutes",
@@ -62,10 +84,10 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Stricter Rate Limiting for Authentication Routes
+// Stricter Rate Limiting for Authentication Routes (relaxed in development)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 auth attempts per windowMs
+  max: rateLimitBypass ? 100000 : 5, // Relax in dev/bypass
   message: {
     error: "Too many authentication attempts, please try again later.",
     retryAfter: "15 minutes",
@@ -82,6 +104,7 @@ const speedLimiter = slowDown({
 });
 
 // Apply rate limiting to all API routes
+// Apply rate limiters (relaxed or effectively disabled if RATE_LIMIT_BYPASS=true)
 app.use("/api", generalLimiter);
 app.use("/api", speedLimiter);
 
@@ -89,7 +112,13 @@ app.use("/api", speedLimiter);
 app.use("/api/auth", authLimiter);
 app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
-app.use("/api/platform/auth", authLimiter); // Added Azure AD platform auth protection
+app.use("/api/platform/auth", authLimiter); // Azure AD platform auth protection
+
+if (rateLimitBypass) {
+  console.log(
+    "Rate limiting relaxed (development/bypass). Set RATE_LIMIT_BYPASS=false for strict limits."
+  );
+}
 
 app.use(express.json({ limit: "10mb" })); // Limit payload size
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
@@ -137,6 +166,14 @@ app.use((req, res, next) => {
       console.error("Express error handler:", err);
       res.status(status).json({ message });
       // DO NOT throw err here - it crashes the server!
+    });
+
+    // Ensure /api/* never falls through to Vite's HTML catch-all in development
+    // Any unmatched API route will return JSON 404 instead of index.html
+    app.use("/api", (_req: Request, res: Response) => {
+      if (!res.headersSent) {
+        return res.status(404).json({ message: "Not found" });
+      }
     });
 
     // importantly only setup vite in development and after

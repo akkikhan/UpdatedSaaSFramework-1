@@ -2,7 +2,11 @@
   "name": "rest-express",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx --no-warnings server/index.ts",
     "dev:no-check": "cross-env NODE_ENV=development tsx --no-warnings --tsconfig tsconfig.server.json server/index.ts",
@@ -18,26 +22,28 @@
     "test:integration": "jest --testPathPattern=integration",
     "test:server": "jest --selectProjects=\"Server Tests\"",
     "test:client": "jest --selectProjects=\"Client Tests\"",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx --config .eslintrc.cjs",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix --config .eslintrc.cjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up",
     "docker:test": "docker-compose -f docker-compose.test.yml up --abort-on-container-exit",
     "docker:build": "docker build -t saas-framework .",
     "prepare": "husky",
-    "packages:build": "npm run packages:build:email && npm run packages:build:auth && npm run packages:build:logging && npm run packages:build:rbac",
+    "packages:build": "npm run packages:build:email && npm run packages:build:auth && npm run packages:build:logging && npm run packages:build:rbac && npm run packages:build:auth-client",
     "packages:build:email": "cd packages/email && npm run build",
     "packages:build:auth": "cd packages/auth && npm run build",
     "packages:build:logging": "cd packages/logging && npm run build",
     "packages:build:rbac": "cd packages/rbac && npm run build",
-    "packages:publish": "npm run packages:publish:email && npm run packages:publish:auth && npm run packages:publish:logging && npm run packages:publish:rbac",
+    "packages:publish": "npm run packages:publish:email && npm run packages:publish:auth && npm run packages:publish:logging && npm run packages:publish:rbac && npm run packages:publish:auth-client",
     "packages:publish:email": "cd packages/email && npm run publish-package",
     "packages:publish:auth": "cd packages/auth && npm run publish-package",
     "packages:publish:logging": "cd packages/logging && npm run publish-package",
     "packages:publish:rbac": "cd packages/rbac && npm run publish-package",
     "packages:verify": "npm run packages:build && echo 'All packages built successfully!'",
-    "publish:dry-run": "npm run packages:build && echo 'Dry run completed - packages ready for publishing'"
+    "publish:dry-run": "npm run packages:build && echo 'Dry run completed - packages ready for publishing'",
+    "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'",
+    "seed:rbac": "node scripts/seed-rbac-config.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -50,7 +56,6 @@
   },
   "dependencies": {
     "@azure/mcp": "^0.5.10",
-    "@azure/mcp-win32-x64": "^0.5.10",
     "@azure/msal-node": "^3.7.2",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
@@ -131,10 +136,11 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0"
+    "zod-validation-error": "^3.4.0",
+    "@authenio/samlify-node-xmllint": "^2.0.1",
+    "samlify": "^2.8.11"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",
     "@testing-library/jest-dom": "^6.8.0",

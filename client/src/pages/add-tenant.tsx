@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,59 +19,102 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, Building2, Key, Mail, Settings } from "lucide-react";
 import { useCreateTenant } from "@/hooks/use-tenants";
+import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   name: z.string().min(2, "Organization name must be at least 2 characters"),
-  orgId: z.string().min(2, "Organization ID must be at least 2 characters")
-    .regex(/^[a-z0-9-]+$/, "Organization ID can only contain lowercase letters, numbers, and hyphens"),
+  orgId: z
+    .string()
+    .min(2, "Organization ID must be at least 2 characters")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Organization ID can only contain lowercase letters, numbers, and hyphens"
+    ),
   adminEmail: z.string().email("Please enter a valid email address"),
   sendEmail: z.boolean().default(true),
-  enabledModules: z.array(z.enum(["auth", "rbac", "azure-ad", "auth0", "saml", "logging", "notifications", "ai-copilot"])).default(["auth", "rbac"]),
-  moduleConfigs: z.object({
-    "rbac": z.object({
-      permissionTemplate: z.string().optional(),
-      businessType: z.string().optional(),
-      customPermissions: z.array(z.string()).optional(),
-      defaultRoles: z.array(z.string()).optional(),
-    }).optional(),
-    "azure-ad": z.object({
-      tenantId: z.string().optional(),
-      clientId: z.string().optional(),
-      clientSecret: z.string().optional(),
-      domain: z.string().optional(),
-      redirectUri: z.string().optional(),
-    }).optional(),
-    "auth0": z.object({
-      domain: z.string().optional(),
-      clientId: z.string().optional(),
-      clientSecret: z.string().optional(),
-      audience: z.string().optional(),
-      callbackUrl: z.string().optional(),
-      logoutUrl: z.string().optional(),
-    }).optional(),
-    "saml": z.object({
-      entryPoint: z.string().optional(),
-      issuer: z.string().optional(),
-      cert: z.string().optional(),
-      identifierFormat: z.string().optional(),
-      callbackUrl: z.string().optional(),
-    }).optional(),
-    "logging": z.object({
-      levels: z.array(z.string()).optional(),
-      destinations: z.array(z.string()).optional(),
-    }).optional(),
-    "notifications": z.object({
-      channels: z.array(z.string()).optional(),
-      emailProvider: z.string().optional(),
-    }).optional(),
-    "ai-copilot": z.object({
-      provider: z.string().optional(),
-      model: z.string().optional(),
-    }).optional(),
-  }).default({}),
+  enabledModules: z
+    .array(
+      z.enum([
+        "auth",
+        "rbac",
+        "azure-ad",
+        "auth0",
+        "saml",
+        "logging",
+        "notifications",
+        "ai-copilot",
+      ])
+    )
+    .default(["auth", "rbac"]),
+  moduleConfigs: z
+    .object({
+      rbac: z
+        .object({
+          permissionTemplate: z.string().optional(),
+          businessType: z.string().optional(),
+          customPermissions: z.array(z.string()).optional(),
+          defaultRoles: z.array(z.string()).optional(),
+        })
+        .optional(),
+      "azure-ad": z
+        .object({
+          tenantId: z.string().optional(),
+          clientId: z.string().optional(),
+          clientSecret: z.string().optional(),
+          domain: z.string().optional(),
+          redirectUri: z.string().optional(),
+        })
+        .optional(),
+      auth0: z
+        .object({
+          domain: z.string().optional(),
+          clientId: z.string().optional(),
+          clientSecret: z.string().optional(),
+          audience: z.string().optional(),
+          callbackUrl: z.string().optional(),
+          logoutUrl: z.string().optional(),
+        })
+        .optional(),
+      saml: z
+        .object({
+          entryPoint: z.string().optional(),
+          issuer: z.string().optional(),
+          cert: z.string().optional(),
+          identifierFormat: z.string().optional(),
+          callbackUrl: z.string().optional(),
+        })
+        .optional(),
+      logging: z
+        .object({
+          levels: z.array(z.string()).optional(),
+          destinations: z.array(z.string()).optional(),
+          retentionDays: z.number().optional(),
+          redactionEnabled: z.boolean().optional(),
+        })
+        .optional(),
+      notifications: z
+        .object({
+          channels: z.array(z.string()).optional(),
+          emailProvider: z.string().optional(),
+        })
+        .optional(),
+      "ai-copilot": z
+        .object({
+          provider: z.string().optional(),
+          model: z.string().optional(),
+        })
+        .optional(),
+    })
+    .default({}),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -79,7 +122,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function AddTenantPage() {
   const [, setLocation] = useLocation();
   const createTenant = useCreateTenant();
-  
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -94,6 +137,10 @@ export default function AddTenantPage() {
 
   const onSubmit = async (data: FormData) => {
     try {
+      // Ensure dependencies: Logging requires Auth
+      if (data.enabledModules.includes("logging") && !data.enabledModules.includes("auth")) {
+        data.enabledModules = Array.from(new Set([...(data.enabledModules || []), "auth"]));
+      }
       await createTenant.mutateAsync(data);
       setLocation("/tenants");
     } catch (error) {
@@ -105,11 +152,11 @@ export default function AddTenantPage() {
   const handleNameChange = (value: string) => {
     const autoOrgId = value
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
     if (!form.getValues("orgId") || form.getValues("orgId") === autoOrgId.slice(0, -1)) {
       form.setValue("orgId", autoOrgId);
     }
@@ -127,6 +174,7 @@ export default function AddTenantPage() {
     queryKey: ["/api/rbac-config/default-roles"],
   });
 
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -143,7 +191,9 @@ export default function AddTenantPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-slate-800">Add New Tenant</h1>
-            <p className="text-slate-600">Create a new tenant organization with authentication modules</p>
+            <p className="text-slate-600">
+              Create a new tenant organization with authentication modules
+            </p>
           </div>
         </div>
 
@@ -172,16 +222,14 @@ export default function AddTenantPage() {
                           <Input
                             placeholder="Acme Corporation"
                             {...field}
-                            onChange={(e) => {
+                            onChange={e => {
                               field.onChange(e);
                               handleNameChange(e.target.value);
                             }}
                             data-testid="input-org-name"
                           />
                         </FormControl>
-                        <FormDescription>
-                          The display name for this organization
-                        </FormDescription>
+                        <FormDescription>The display name for this organization</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -194,11 +242,7 @@ export default function AddTenantPage() {
                       <FormItem>
                         <FormLabel>Organization ID</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="acme-corp"
-                            {...field}
-                            data-testid="input-org-id"
-                          />
+                          <Input placeholder="acme-corp" {...field} data-testid="input-org-id" />
                         </FormControl>
                         <FormDescription>
                           Unique identifier (lowercase, numbers, hyphens only)
@@ -274,15 +318,55 @@ export default function AddTenantPage() {
                     <FormItem>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[
-                          { id: "auth", label: "Authentication", description: "Basic authentication with email/password", required: true },
-                          { id: "rbac", label: "Role-Based Access Control", description: "Permission management system", required: false },
-                          { id: "azure-ad", label: "Azure Active Directory", description: "Microsoft Azure AD integration", required: false },
-                          { id: "auth0", label: "Auth0", description: "Auth0 identity platform integration", required: false },
-                          { id: "saml", label: "SAML", description: "Security Assertion Markup Language integration", required: false },
-                          { id: "logging", label: "Logging & Monitoring", description: "Comprehensive audit trail and security monitoring", required: false },
-                          { id: "notifications", label: "Notifications", description: "Multi-channel messaging and alerts system", required: false },
-                          { id: "ai-copilot", label: "AI Copilot", description: "Intelligent automation and user assistance", required: false },
-                        ].map((module) => (
+                          {
+                            id: "auth",
+                            label: "Authentication",
+                            description: "Basic authentication with email/password",
+                            required: true,
+                          },
+                          {
+                            id: "rbac",
+                            label: "Role-Based Access Control",
+                            description: "Permission management system",
+                            required: false,
+                          },
+                          {
+                            id: "azure-ad",
+                            label: "Azure Active Directory",
+                            description: "Microsoft Azure AD integration",
+                            required: false,
+                          },
+                          {
+                            id: "auth0",
+                            label: "Auth0",
+                            description: "Auth0 identity platform integration",
+                            required: false,
+                          },
+                          {
+                            id: "saml",
+                            label: "SAML",
+                            description: "Security Assertion Markup Language integration",
+                            required: false,
+                          },
+                          {
+                            id: "logging",
+                            label: "Logging & Monitoring",
+                            description: "Comprehensive audit trail and security monitoring",
+                            required: false,
+                          },
+                          {
+                            id: "notifications",
+                            label: "Notifications",
+                            description: "Multi-channel messaging and alerts system",
+                            required: false,
+                          },
+                          {
+                            id: "ai-copilot",
+                            label: "AI Copilot",
+                            description: "Intelligent automation and user assistance",
+                            required: false,
+                          },
+                        ].map(module => (
                           <FormField
                             key={module.id}
                             control={form.control}
@@ -292,10 +376,14 @@ export default function AddTenantPage() {
                                 <FormControl>
                                   <Checkbox
                                     checked={field.value?.includes(module.id as any)}
-                                    onCheckedChange={(checked) => {
+                                    onCheckedChange={checked => {
                                       return checked
                                         ? field.onChange([...field.value, module.id])
-                                        : field.onChange(field.value?.filter((value: string) => value !== module.id))
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value: string) => value !== module.id
+                                            )
+                                          );
                                     }}
                                     disabled={module.required}
                                     data-testid={`checkbox-module-${module.id}`}
@@ -304,7 +392,9 @@ export default function AddTenantPage() {
                                 <div className="space-y-1 leading-none">
                                   <FormLabel className="text-sm font-medium">
                                     {module.label}
-                                    {module.required && <span className="text-red-500 ml-1">*</span>}
+                                    {module.required && (
+                                      <span className="text-red-500 ml-1">*</span>
+                                    )}
                                   </FormLabel>
                                   <FormDescription className="text-xs">
                                     {module.description}
@@ -321,6 +411,80 @@ export default function AddTenantPage() {
                 />
 
                 {/* Module Configurations */}
+                {watchedModules.includes("logging") && (
+                  <div className="space-y-3 border-t pt-4">
+                    <div className="text-sm text-slate-700">
+                      <div className="font-medium">Logging Dependencies</div>
+                      <ul className="list-disc pl-5 mt-1">
+                        <li>
+                          <span className="font-medium">Required:</span> Authentication (Auth)
+                        </li>
+                        <li>
+                          <span className="font-medium">Recommended:</span> RBAC (access control),
+                          Notifications (alerts)
+                        </li>
+                      </ul>
+                      {!watchedModules.includes("auth") && (
+                        <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                          Auth is not selected; it will be enabled automatically for Logging.
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-sm">Levels</Label>
+                        <Input
+                          placeholder="error,warning,info"
+                          onChange={e => {
+                            const current = form.getValues("moduleConfigs") || {};
+                            (current as any).logging = (current as any).logging || {};
+                            (current as any).logging.levels = (e.target.value || "")
+                              .split(",")
+                              .map(s => s.trim())
+                              .filter(Boolean);
+                            form.setValue("moduleConfigs", current);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Destinations</Label>
+                        <Input value="database" disabled />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Retention Days</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={365}
+                          onChange={e => {
+                            const current = form.getValues("moduleConfigs") || {};
+                            (current as any).logging = (current as any).logging || {};
+                            (current as any).logging.retentionDays = parseInt(
+                              e.target.value || "30",
+                              10
+                            );
+                            form.setValue("moduleConfigs", current);
+                          }}
+                        />
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            id="onboard-redaction"
+                            type="checkbox"
+                            onChange={e => {
+                              const current = form.getValues("moduleConfigs") || {};
+                              (current as any).logging = (current as any).logging || {};
+                              (current as any).logging.redactionEnabled = e.target.checked;
+                              form.setValue("moduleConfigs", current);
+                            }}
+                          />
+                          <Label htmlFor="onboard-redaction" className="text-xs">
+                            Enable PII redaction
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {watchedModules.includes("rbac") && (
                   <div className="space-y-4 border-t pt-4">
                     <h4 className="text-sm font-medium">RBAC Configuration</h4>
@@ -328,12 +492,16 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Permission Template</Label>
                         <Select
+
                           onValueChange={(value) => {
+
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
                               rbac: {
+
                                 ...currentConfigs.rbac,
+
                                 permissionTemplate: value,
                               },
                             });
@@ -343,6 +511,7 @@ export default function AddTenantPage() {
                             <SelectValue placeholder="Select template" />
                           </SelectTrigger>
                           <SelectContent>
+
                             {permissionTemplatesQuery.data?.map((template: any) => (
                               <SelectItem key={template.id} value={template.id}>
                                 {template.name}
@@ -354,12 +523,15 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Business Type</Label>
                         <Select
+
                           onValueChange={(value) => {
+
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
                               rbac: {
                                 ...currentConfigs.rbac,
+
                                 businessType: value,
                               },
                             });
@@ -372,6 +544,7 @@ export default function AddTenantPage() {
                             {businessTypesQuery.data?.map((type: any) => (
                               <SelectItem key={type.id} value={type.id}>
                                 {type.name}
+
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -426,7 +599,10 @@ export default function AddTenantPage() {
                           <FormItem>
                             <FormLabel>Tenant ID *</FormLabel>
                             <FormControl>
-                              <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                              <Input
+                                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -439,7 +615,10 @@ export default function AddTenantPage() {
                           <FormItem>
                             <FormLabel>Client ID *</FormLabel>
                             <FormControl>
-                              <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                              <Input
+                                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -515,7 +694,11 @@ export default function AddTenantPage() {
                             <FormItem>
                               <FormLabel>Client Secret *</FormLabel>
                               <FormControl>
-                                <Input type="password" placeholder="Your client secret" {...field} />
+                                <Input
+                                  type="password"
+                                  placeholder="Your client secret"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -579,9 +762,15 @@ export default function AddTenantPage() {
                               <SelectValue placeholder="Select format" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">Email Address</SelectItem>
-                              <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">Persistent</SelectItem>
-                              <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:transient">Transient</SelectItem>
+                              <SelectItem value="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">
+                                Email Address
+                              </SelectItem>
+                              <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">
+                                Persistent
+                              </SelectItem>
+                              <SelectItem value="urn:oasis:names:tc:SAML:2.0:nameid-format:transient">
+                                Transient
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

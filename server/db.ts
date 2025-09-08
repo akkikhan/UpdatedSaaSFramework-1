@@ -39,12 +39,20 @@ let db: NodePgDatabase<typeof schema> | null = null;
 if (DATABASE_URL && !DATABASE_URL.includes("demo:demo@localhost")) {
   try {
     // Use standard PostgreSQL driver with SSL configuration
+    const isLocal = /localhost|127\.0\.0\.1|@postgres(?::|\b)/i.test(DATABASE_URL);
     const connectionConfig = {
       connectionString: DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, // Handle certificate issues
-      },
-    };
+      ssl: isLocal
+        ? false
+        : {
+            rejectUnauthorized: false, // Handle certificate issues for cloud DBs
+          },
+      // Improve resilience and avoid slow IPv6 stalls
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+      connectionTimeoutMillis: 15000,
+      idleTimeoutMillis: 0,
+    } as const;
 
     pool = new Pool(connectionConfig);
     db = drizzle(pool, { schema });

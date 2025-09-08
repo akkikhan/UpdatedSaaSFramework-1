@@ -20,34 +20,22 @@ SAML support for SaaS applications.
 npm install @saas-framework/auth
 ```
 
+For frontend apps (React/Angular/etc.), use the client subpath to keep bundles
+light:
+
+```ts
+import {
+  startAzure,
+  handleSuccessFromUrl,
+  loginWithPassword,
+  fetchWithAuth,
+} from "@saas-framework/auth/client";
+```
+
 ## Quick Start
 
-```typescript
-import { SaaSAuth } from "@saas-framework/auth";
-
-const auth = new SaaSAuth({
-  apiKey: "your-api-key",
-  baseUrl: "https://api.yoursaas.com",
-  jwtSecret: "your-jwt-secret",
-  azureAD: {
-    clientId: "your-azure-client-id",
-    clientSecret: "your-azure-client-secret",
-    tenantId: "your-azure-tenant-id",
-  },
-});
-
-// Login with email/password
-const result = await auth.login({
-  tenantId: "tenant-123",
-  email: "user@example.com",
-  password: "user-password",
-});
-
-if (result.success) {
-  console.log("Access token:", result.accessToken);
-  console.log("Refresh token:", result.refreshToken);
-}
-```
+See INTEGRATION_GUIDE.md for Angular + .NET examples covering SSO (Azure AD),
+local login, and backend verification.
 
 ## Authentication Methods
 

@@ -1,20 +1,22 @@
-# @saas-factory/rbac
+# @saas-framework/rbac-sdk
 
-Role-based access control SDK for SaaS Factory platform.
+Role-based access control SDK for the SaaS Framework platform.
+
+> **Base URL**: All server requests should target your host with the `/api/v2` prefix, e.g. `https://your-saas-platform.com/api/v2`.
 
 ## Installation
 
 ```bash
-npm install @saas-factory/rbac
+npm install @saas-framework/rbac-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import SaaSFactoryRBAC from '@saas-factory/rbac';
+import SaaSFrameworkRBAC from '@saas-framework/rbac-sdk';
 
 // Initialize with your tenant configuration
-const rbac = new SaaSFactoryRBAC({
+const rbac = new SaaSFrameworkRBAC({
   apiKey: 'your-rbac-api-key',
   baseUrl: 'https://your-saas-platform.com',
   tenantId: 'your-tenant-id'
@@ -37,10 +39,10 @@ console.log('User roles:', roles);
 
 ```typescript
 import express from 'express';
-import SaaSFactoryRBAC from '@saas-factory/rbac';
+import SaaSFrameworkRBAC from '@saas-framework/rbac-sdk';
 
 const app = express();
-const rbac = new SaaSFactoryRBAC(config);
+const rbac = new SaaSFrameworkRBAC(config);
 
 // Protect routes with permission checks
 app.get('/admin/users', 
@@ -63,7 +65,7 @@ app.post('/admin/users',
 ## React Usage
 
 ```typescript
-import { useRBAC } from '@saas-factory/rbac';
+import { useRBAC } from '@saas-framework/rbac-sdk';
 
 function DocumentEditor({ userId }) {
   const rbac = useRBAC({
@@ -94,9 +96,9 @@ function DocumentEditor({ userId }) {
 ## Higher-Order Component
 
 ```typescript
-import SaaSFactoryRBAC from '@saas-factory/rbac';
+import SaaSFrameworkRBAC from '@saas-framework/rbac-sdk';
 
-const AdminPanel = SaaSFactoryRBAC.withPermission('admin', 'access')(
+const AdminPanel = SaaSFrameworkRBAC.withPermission('admin', 'access')(
   function AdminPanelComponent() {
     return <div>Admin Panel Content</div>;
   }
@@ -108,7 +110,7 @@ const AdminPanel = SaaSFactoryRBAC.withPermission('admin', 'access')(
 
 ## API Reference
 
-### `SaaSFactoryRBAC`
+### `SaaSFrameworkRBAC`
 
 #### Constructor
 - `config: RBACConfig` - Configuration object with apiKey, baseUrl, and tenantId

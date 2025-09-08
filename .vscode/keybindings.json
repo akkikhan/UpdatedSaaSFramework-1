@@ -1,0 +1,6 @@
+[
+  {
+    "key": "ctrl+alt+y",
+    "command": "codex.approvePendingRequest"
+  }
+]

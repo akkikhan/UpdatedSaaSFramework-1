@@ -1,59 +1,100 @@
-// Create demo tenant via API
-const http = require('http');
-
-const tenantData = {
-  name: "Demo Company",
-  orgId: "demo", 
-  adminEmail: "akki@primussoft.com",
-  enabledModules: ["user-management", "rbac"]
-};
-
-function createDemoTenant() {
-  const postData = JSON.stringify(tenantData);
+async function createSimpleTestUser() {
+  const BASE_URL = 'http://localhost:5000';
   
-  const options = {
-    hostname: 'localhost',
-    port: 5000,
-    path: '/api/tenants',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData)
-    }
-  };
-
-  console.log('🚀 Creating demo tenant...');
-  console.log('Data:', tenantData);
-
-  const req = http.request(options, (res) => {
-    let data = '';
+  console.log('🔍 Creating simple test user...\n');
+  
+  try {
+    // Get tenant ID
+    const tenantRes = await fetch(`${BASE_URL}/api/tenants/by-org-id/test-company`);
+    const tenant = await tenantRes.json();
     
-    res.on('data', (chunk) => {
-      data += chunk;
+    console.log('✅ Tenant found:', tenant.orgId);
+    
+    // Register a new simple user
+    const registerData = {
+      name: 'Demo Company',
+      orgId: 'demo',
+      adminEmail: 'demo@example.com',
+      adminName: 'Demo Admin',
+      adminPassword: 'demo123',
+      enabledModules: ['auth', 'rbac']
+    };
+    
+    console.log('\n📝 Creating demo tenant with simple password...');
+    const registerRes = await fetch(`${BASE_URL}/api/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(registerData)
     });
     
-    res.on('end', () => {
-      console.log(`📊 Response Status: ${res.statusCode}`);
-      console.log('📄 Response Body:', data);
+    const result = await registerRes.json();
+    
+    if (registerRes.ok) {
+      console.log('✅ Demo tenant created successfully!');
+      console.log('   ID:', result.tenant.id);
+      console.log('   OrgId:', result.tenant.orgId);
       
-      if (res.statusCode === 201 || res.statusCode === 200) {
-        console.log('✅ Demo tenant created successfully!');
-        console.log('🔗 You can now login at: http://localhost:5000/tenant/demo/login');
-        console.log('📧 Email: akki@primussoft.com');
-        console.log('🔑 Password: Demo123');
+      // Test login with new user
+      console.log('\n🔐 Testing login with demo user...');
+      const demoTenantRes = await fetch(`${BASE_URL}/api/tenants/by-org-id/demo`);
+      const demoTenant = await demoTenantRes.json();
+      
+      const loginRes = await fetch(`${BASE_URL}/api/v2/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: 'demo@example.com',
+          password: 'demo123',
+          tenantId: demoTenant.id
+        })
+      });
+      
+      const loginData = await loginRes.json();
+      
+      if (loginRes.ok) {
+        console.log('✅ Login successful with demo user!');
+        console.log('   Token:', loginData.token.substring(0, 30) + '...');
+        
+        console.log('\n====================');
+        console.log('✅ Demo Setup Complete!');
+        console.log('====================');
+        console.log('');
+        console.log('📱 You can now login at:');
+        console.log('   http://localhost:5000/tenant/demo/login');
+        console.log('');
+        console.log('🔑 Credentials:');
+        console.log('   Email: demo@example.com');
+        console.log('   Password: demo123');
+        console.log('');
+        console.log('Or try the original tenant:');
+        console.log('   http://localhost:5000/tenant/test-company/login');
+        console.log('   (Password issue needs to be fixed)');
       } else {
-        console.log('❌ Failed to create tenant');
+        console.log('❌ Login failed with demo user:', loginData.message);
       }
-    });
-  });
-
-  req.on('error', (error) => {
-    console.error('❌ Request failed:', error.message);
-    console.log('💡 Make sure the server is running on port 5000');
-  });
-
-  req.write(postData);
-  req.end();
+      
+    } else {
+      if (result.message && result.message.includes('already exists')) {
+        console.log('ℹ️  Demo tenant already exists');
+        console.log('');
+        console.log('📱 Try logging in at:');
+        console.log('   http://localhost:5000/tenant/demo/login');
+        console.log('');
+        console.log('🔑 Credentials:');
+        console.log('   Email: demo@example.com');
+        console.log('   Password: demo123');
+      } else {
+        console.log('❌ Failed to create demo tenant:', result.message);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  }
 }
 
-createDemoTenant();
+createSimpleTestUser().catch(console.error);
