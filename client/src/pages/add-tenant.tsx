@@ -123,6 +123,9 @@ export default function AddTenantPage() {
   const businessTypesQuery = useQuery({
     queryKey: ["/api/rbac-config/business-types"],
   });
+  const defaultRolesQuery = useQuery({
+    queryKey: ["/api/rbac-config/default-roles"],
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -375,6 +378,40 @@ export default function AddTenantPage() {
                         </Select>
                       </div>
                     </div>
+                    {defaultRolesQuery.data && (
+                      <div>
+                        <Label className="text-sm font-medium">Default Roles</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                          {defaultRolesQuery.data.map((role: any) => {
+                            const currentRoles =
+                              form.getValues("moduleConfigs")?.rbac?.defaultRoles || [];
+                            const checked = currentRoles.includes(role.id);
+                            return (
+                              <div key={role.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(isChecked) => {
+                                    const configs = form.getValues("moduleConfigs") || {};
+                                    const roles = configs.rbac?.defaultRoles || [];
+                                    const newRoles = isChecked
+                                      ? [...roles, role.id]
+                                      : roles.filter((r: string) => r !== role.id);
+                                    form.setValue("moduleConfigs", {
+                                      ...configs,
+                                      rbac: {
+                                        ...configs.rbac,
+                                        defaultRoles: newRoles,
+                                      },
+                                    });
+                                  }}
+                                />
+                                <span className="text-sm">{role.name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
