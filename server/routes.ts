@@ -841,8 +841,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send onboarding email automatically
       const shouldSendEmail = req.body.sendEmail !== false;
+      let emailSent = false;
       if (shouldSendEmail) {
-        const emailSent = await emailService.sendTenantOnboardingEmail({
+        emailSent = await emailService.sendTenantOnboardingEmail({
           id: tenant.id,
           name: tenant.name,
           orgId: tenant.orgId,
@@ -863,7 +864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Tenant created successfully: ${tenant.name} (${tenant.orgId})`);
       console.log(`Admin email: ${tenant.adminEmail}`);
 
-      res.status(201).json(tenant);
+      res.status(201).json({ ...tenant, emailSent });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -1016,7 +1017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tempPassword = Math.random().toString(36).slice(-8);
 
       // Send onboarding email
-      await emailService.sendTenantOnboardingEmail({
+      const emailSent = await emailService.sendTenantOnboardingEmail({
         id: tenant.id,
         name: tenant.name,
         orgId: tenant.orgId,
@@ -1026,6 +1027,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         loggingApiKey: tenant.loggingApiKey || undefined,
         notificationsApiKey: tenant.notificationsApiKey || undefined,
       });
+      if (!emailSent) {
+        console.warn(`Failed to resend onboarding email to ${tenant.adminEmail}`);
+        return res.status(500).json({ message: "Failed to resend email" });
+      }
 
       res.json({ message: "Onboarding email resent successfully" });
     } catch (error) {
