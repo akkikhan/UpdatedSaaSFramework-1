@@ -3382,6 +3382,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick test: verify Azure client credentials without tenant context
+  app.post("/api/azure-ad/verify-secret", async (req, res) => {
+    try {
+      const bodyCfg = req.body || {};
+      const tenantIdVal = sanitizeGuid(bodyCfg.tenantId);
+      const clientIdVal = sanitizeGuid(bodyCfg.clientId);
+      const clientSecretVal = String(bodyCfg.clientSecret ?? "").trim();
+
+      const errors: string[] = [];
+      if (!tenantIdVal || !GUID_CANON.test(tenantIdVal))
+        errors.push("tenantId must be a GUID from Azure AD (format: 8-4-4-4-12)");
+      if (!clientIdVal || !GUID_CANON.test(clientIdVal))
+        errors.push("clientId must be a GUID (Application ID) (format: 8-4-4-4-12)");
+      if (!clientSecretVal) errors.push("clientSecret is required");
+
+      if (errors.length) return res.status(400).json({ valid: false, message: errors.join("; ") });
+
+      try {
+        const { AzureADService } = await import("./services/azure-ad.js");
+        const svc = new AzureADService({
+          tenantId: tenantIdVal,
+          clientId: clientIdVal,
+          clientSecret: clientSecretVal,
+          redirectUri: `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+        });
+        const result = await svc.verifyClientCredentials();
+        if (result.ok) return res.json({ valid: true });
+        return res
+          .status(400)
+          .json({ valid: false, message: result.message || "Verification failed" });
+      } catch (e: any) {
+        return res.status(400).json({ valid: false, message: e?.message || "Verification failed" });
+      }
+    } catch (error) {
+      console.error("Azure verify-secret (platform) error:", error);
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
   // Quick test: verify Azure client credentials (no save)
   app.post("/api/tenant/:id/azure-ad/verify-secret", tenantMiddleware, async (req, res) => {
     try {

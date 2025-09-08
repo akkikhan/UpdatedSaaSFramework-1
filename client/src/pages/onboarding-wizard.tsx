@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -61,6 +61,13 @@ import { useCreateTenant } from "@/hooks/use-tenants";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
+const AzureAdSchema = z.object({
+  tenantId: z.string().uuid("Azure AD Tenant ID must be a valid GUID"),
+  clientId: z.string().uuid("Azure AD Client ID must be a valid GUID"),
+  clientSecret: z.string().min(1, "Azure AD Client Secret is required"),
+  redirectUri: z.string().url("Valid redirect URI required").optional(),
+});
+
 // Use a relaxed schema for the wizard to allow provider "string[]" during form filling
 // Some environments may not expose `.extend` on imported schemas; define a local schema explicitly.
 const WIZARD_FORM_SCHEMA = z.object({
@@ -73,7 +80,23 @@ const WIZARD_FORM_SCHEMA = z.object({
   adminName: z.string().min(1, "Admin name is required"),
   sendEmail: z.boolean().optional(),
   enabledModules: z.array(z.string()).optional(),
-  moduleConfigs: z.any().optional(),
+  moduleConfigs: z
+    .object({
+      auth: z
+        .object({
+          providers: z.array(z.string()).optional(),
+          azureAd: AzureAdSchema.optional(),
+          auth0: z.any().optional(),
+          saml: z.any().optional(),
+          local: z.any().optional(),
+        })
+        .optional(),
+      rbac: z.any().optional(),
+      logging: z.any().optional(),
+      notifications: z.any().optional(),
+      aiCopilot: z.any().optional(),
+    })
+    .optional(),
   metadata: z
     .object({
       adminName: z.string().optional(),
@@ -138,6 +161,7 @@ export default function OnboardingWizard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createTenant = useCreateTenant();
+  const [azureSecretVerified, setAzureSecretVerified] = useState(false);
   // Dynamic RBAC options from Platform Admin config APIs (hooks must be top-level)
   const { data: permissionTemplates = [] } = useQuery({
     queryKey: ["/api/rbac-config/permission-templates"],
@@ -161,6 +185,17 @@ export default function OnboardingWizard() {
       return res.json();
     },
   });
+  const { data: defaultRoles = [] } = useQuery({
+    queryKey: ["/api/rbac-config/default-roles"],
+    queryFn: async () => {
+      const token = localStorage.getItem("platformAdminToken") || "";
+      const res = await fetch("/api/rbac-config/default-roles", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(WIZARD_FORM_SCHEMA as any),
@@ -178,6 +213,13 @@ export default function OnboardingWizard() {
       },
     },
   });
+
+  const azureTenantId = form.watch("moduleConfigs.auth.azureAd.tenantId");
+  const azureClientId = form.watch("moduleConfigs.auth.azureAd.clientId");
+  const azureClientSecret = form.watch("moduleConfigs.auth.azureAd.clientSecret");
+  useEffect(() => {
+    setAzureSecretVerified(false);
+  }, [azureTenantId, azureClientId, azureClientSecret]);
 
   const watchedModules = form.watch("enabledModules") || [];
   // Align with shared schema key: "auth" (not "authentication")
@@ -215,19 +257,39 @@ export default function OnboardingWizard() {
         const roles =
           (form.getValues("moduleConfigs.rbac.defaultRoles") as string[] | undefined) || [];
         if (roles.length === 0) {
+          const names = (defaultRoles as any[]).map(r => r.name);
+          const fallback = ["Admin", "Manager", "Viewer"];
           form.setValue(
             "moduleConfigs.rbac.defaultRoles" as any,
-            ["Admin", "Manager", "Viewer"] as any
+            (names.length ? names : fallback) as any
           );
           toast({
             title: "Default roles added",
-            description: "We added Admin, Manager, Viewer to get you started.",
+            description: "We added default roles to get you started.",
           });
         }
       }
+      const providers = form.getValues("moduleConfigs.auth.providers") as any[] | undefined;
+      if (
+        mods.includes("auth") &&
+        providers?.includes("azure-ad") &&
+        !azureSecretVerified
+      ) {
+        toast({
+          title: "Azure AD secret not verified",
+          description: "Please verify the Azure AD client secret before continuing.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
-    const isValid = await form.trigger(fieldsToValidate as any);
+    let isValid;
+    if (fieldsToValidate.length > 0) {
+      isValid = await form.trigger(fieldsToValidate as any);
+    } else {
+      isValid = await form.trigger();
+    }
 
     if (isValid) {
       if (currentStep < STEPS.length - 1) {
@@ -589,12 +651,20 @@ export default function OnboardingWizard() {
                                     // Seed default RBAC config if missing
                                     const currentRBAC = form.getValues("moduleConfigs.rbac");
                                     if (!currentRBAC) {
+                                      const tpl =
+                                        (permissionTemplates as any[]).find((t: any) => t.isDefault) ||
+                                        (permissionTemplates as any[])[0];
+                                      const bt = (businessTypes as any[])[0];
+                                      const roleNames =
+                                        (defaultRoles as any[]).length > 0
+                                          ? (defaultRoles as any[]).map(r => r.name)
+                                          : ["Admin", "Manager", "Viewer"];
                                       form.setValue(
                                         "moduleConfigs.rbac" as any,
                                         {
-                                          permissionTemplate: "standard",
-                                          businessType: "general",
-                                          defaultRoles: ["Admin", "Manager", "Viewer"],
+                                          permissionTemplate: (tpl?.name || tpl?.id || "").toString().toLowerCase(),
+                                          businessType: (bt?.name || bt?.id || "").toString().toLowerCase(),
+                                          defaultRoles: roleNames,
                                         } as any
                                       );
                                     }
@@ -888,6 +958,82 @@ export default function OnboardingWizard() {
                                         </FormItem>
                                       )}
                                     />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.azureAd.redirectUri"
+                                      render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                          <FormLabel>Redirect URI</FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="https://yourapp.com/auth/callback"
+                                            />
+                                          </FormControl>
+                                          <FormDescription>
+                                            Optional: Will use default if not provided
+                                          </FormDescription>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <Button
+                                      type="button"
+                                      onClick={async () => {
+                                        const valid = await form.trigger([
+                                          "moduleConfigs.auth.azureAd.tenantId",
+                                          "moduleConfigs.auth.azureAd.clientId",
+                                          "moduleConfigs.auth.azureAd.clientSecret",
+                                          "moduleConfigs.auth.azureAd.redirectUri",
+                                        ]);
+                                        if (!valid) return;
+                                        try {
+                                          const res = await fetch(`/api/azure-ad/verify-secret`, {
+                                            method: "POST",
+                                            headers: {
+                                              "Content-Type": "application/json",
+                                              Accept: "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                              tenantId: azureTenantId,
+                                              clientId: azureClientId,
+                                              clientSecret: azureClientSecret,
+                                            }),
+                                          });
+                                          const data = await res.json();
+                                          if (res.ok && data?.valid) {
+                                            setAzureSecretVerified(true);
+                                            toast({
+                                              title: "Secret verified",
+                                              description: "Client credentials succeeded.",
+                                            });
+                                          } else {
+                                            setAzureSecretVerified(false);
+                                            toast({
+                                              title: "Secret invalid",
+                                              description:
+                                                data?.message || "Client credential flow failed",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        } catch (e: any) {
+                                          setAzureSecretVerified(false);
+                                          toast({
+                                            title: "Verification failed",
+                                            description: e?.message || "Unknown error",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Verify Secret
+                                    </Button>
+                                    {azureSecretVerified && (
+                                      <span className="text-sm text-green-600 flex items-center gap-1">
+                                        <CheckCircle className="w-4 h-4" /> Secret verified
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               )}
@@ -1094,11 +1240,10 @@ export default function OnboardingWizard() {
                                 control={form.control}
                                 name="moduleConfigs.rbac.defaultRoles"
                                 render={({ field }) => {
-                                  const roles: string[] = (field.value as any) || [
-                                    "Admin",
-                                    "Manager",
-                                    "Viewer",
-                                  ];
+                                  const base = (defaultRoles as any[]).map(r => r.name);
+                                  const roles: string[] =
+                                    (field.value as any) ||
+                                    (base.length ? base : ["Admin", "Manager", "Viewer"]);
                                   const [input, setInput] = React.useState("");
                                   const addRole = () => {
                                     const v = input.trim();
@@ -1417,14 +1562,19 @@ export default function OnboardingWizard() {
                                   <strong>
                                     {(form.getValues(
                                       "moduleConfigs.rbac.permissionTemplate"
-                                    ) as any) || "standard"}
+                                    ) as any) ||
+                                      ((permissionTemplates as any[])[0]?.name ||
+                                        (permissionTemplates as any[])[0]?.id ||
+                                        "")}
                                   </strong>
                                 </div>
                                 <div>
                                   Business Type:{" "}
                                   <strong>
                                     {(form.getValues("moduleConfigs.rbac.businessType") as any) ||
-                                      "general"}
+                                      ((businessTypes as any[])[0]?.name ||
+                                        (businessTypes as any[])[0]?.id ||
+                                        "")}
                                   </strong>
                                 </div>
                                 <div className="flex items-start gap-2">
