@@ -1,5 +1,7 @@
 import { config } from "dotenv";
 import * as nodemailer from "nodemailer";
+import fetch from "node-fetch";
+import { ConfidentialClientApplication } from "@azure/msal-node";
 import { storage } from "../storage";
 
 // Load environment variables before initialization
@@ -17,6 +19,8 @@ interface EmailConfig {
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private config: EmailConfig;
+  private msalClient?: ConfidentialClientApplication;
+  private useGraph = false;
 
   constructor() {
     // Use environment variables with fallbacks
@@ -50,7 +54,30 @@ export class EmailService {
       fromName: process.env.FROM_NAME || "SaaS Framework Platform",
     };
 
-    if (!this.config.smtpPassword) {
+    const graphClientId =
+      process.env.GRAPH_CLIENT_ID || process.env.AZURE_CLIENT_ID;
+    const graphClientSecret =
+      process.env.GRAPH_CLIENT_SECRET || process.env.AZURE_CLIENT_SECRET;
+    const graphTenantId =
+      process.env.GRAPH_TENANT_ID || process.env.AZURE_TENANT_ID;
+
+    const graphConfigured = !!(
+      graphClientId && graphClientSecret && graphTenantId
+    );
+
+    this.useGraph = graphConfigured;
+
+    if (graphConfigured) {
+      this.msalClient = new ConfidentialClientApplication({
+        auth: {
+          clientId: graphClientId!,
+          authority: `https://login.microsoftonline.com/${graphTenantId}`,
+          clientSecret: graphClientSecret!,
+        },
+      });
+    }
+
+    if (!this.config.smtpPassword && !graphConfigured) {
       console.warn(
         "⚠️  SMTP_PASSWORD, SMTP_PASS, or SMTP_APP_PASSWORD environment variable not set. Email functionality will be disabled."
       );
@@ -119,6 +146,95 @@ export class EmailService {
     return providers[domain] || { host: "smtp.gmail.com", port: 587, secure: false };
   }
 
+  private async sendViaGraph(
+    to: string[],
+    subject: string,
+    html: string
+  ): Promise<void> {
+    if (!this.msalClient) {
+      throw new Error("Microsoft Graph client not configured");
+    }
+
+    const token = await this.msalClient.acquireTokenByClientCredential({
+      scopes: ["https://graph.microsoft.com/.default"],
+    });
+
+    if (!token || !token.accessToken) {
+      throw new Error("Could not acquire Microsoft Graph access token");
+    }
+
+    const recipients = to.map(address => ({
+      emailAddress: { address },
+    }));
+
+    const message = {
+      message: {
+        subject,
+        body: { contentType: "HTML", content: html },
+        toRecipients: recipients,
+        from: { emailAddress: { address: this.config.fromEmail } },
+      },
+      saveToSentItems: false,
+    };
+
+    const options = {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(message),
+    } as const;
+
+    const encodedFrom = encodeURIComponent(this.config.fromEmail);
+    let response = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${encodedFrom}/sendMail`,
+      options
+    );
+
+    if (response.status === 401 || response.status === 403 || response.status === 404) {
+      response = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", options);
+    }
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(
+        `Microsoft Graph API error: ${response.status} ${response.statusText} ${body}`
+      );
+    }
+  }
+
+  private async deliver(
+    to: string | string[],
+    subject: string,
+    html: string
+  ): Promise<void> {
+    const recipients = Array.isArray(to) ? to : [to];
+
+    if (this.useGraph) {
+      try {
+        await this.sendViaGraph(recipients, subject, html);
+        return;
+      } catch (err) {
+        console.error("Failed to send email via Microsoft Graph:", err);
+        if (!this.config.smtpPassword) {
+          throw err;
+        }
+      }
+    }
+
+    if (this.config.smtpPassword) {
+      await this.transporter.sendMail({
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+        to: recipients.join(", "),
+        subject,
+        html,
+      });
+    } else {
+      throw new Error("Email service not configured");
+    }
+  }
+
   async sendModuleStatusEmail(
     tenant: {
       id: string;
@@ -135,12 +251,7 @@ export class EmailService {
     const html = this.generateModuleStatusEmailTemplate(tenant, changes);
 
     try {
-      await this.transporter.sendMail({
-        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
-        to: tenant.adminEmail,
-        subject,
-        html,
-      });
+      await this.deliver(tenant.adminEmail, subject, html);
 
       await storage.logEmail({
         tenantId: tenant.id,
@@ -221,7 +332,7 @@ export class EmailService {
     }
 
     // Temporarily skip email sending - just log as sent for now
-    if (!this.config.smtpPassword) {
+    if (!this.config.smtpPassword && !this.useGraph) {
       console.log(
         `📧 Email functionality disabled - would have sent onboarding email to ${tenant.adminEmail}`
       );
@@ -248,12 +359,7 @@ export class EmailService {
     }
 
     try {
-      await this.transporter.sendMail({
-        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
-        to: tenant.adminEmail,
-        subject,
-        html,
-      });
+      await this.deliver(tenant.adminEmail, subject, html);
 
       // Log successful email
       await storage.logEmail({
@@ -664,6 +770,18 @@ const me = await res.json();
   }
 
   async testConnection(): Promise<boolean> {
+    if (this.useGraph) {
+      try {
+        await this.msalClient?.acquireTokenByClientCredential({
+          scopes: ["https://graph.microsoft.com/.default"],
+        });
+        return true;
+      } catch (error) {
+        console.error("Microsoft Graph connection test failed:", error);
+        return false;
+      }
+    }
+
     // Skip connection test if no password configured
     if (!this.config.smtpPassword) {
       console.log("📧 SMTP connection test skipped - email functionality disabled");
@@ -703,13 +821,7 @@ const me = await res.json();
 </body>
 </html>
       `;
-
-      await this.transporter.sendMail({
-        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
-        to,
-        subject,
-        html,
-      });
+      await this.deliver(to, subject, html);
 
       console.log(`Test email sent successfully to ${to}`);
       return true;
