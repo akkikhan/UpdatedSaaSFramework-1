@@ -165,29 +165,9 @@ export const RBACModuleConfigSchema = z.object({
   permissionTemplate: z.string().default("standard"),
   businessType: z.string().default("general"),
 
-  defaultRoles: z
-    .array(
-      z.object({
-        name: z.string(),
-        description: z.string(),
-        permissions: z.array(z.string()),
-        isSystemRole: z.boolean().default(false),
-        inheritFrom: z.string().optional(), // Role inheritance
-      })
-    )
-    .optional(),
+  defaultRoles: z.array(z.string()).optional(),
 
-  customPermissions: z
-    .array(
-      z.object({
-        key: z.string(),
-        name: z.string(),
-        description: z.string(),
-        category: z.string(),
-        riskLevel: z.enum(["low", "medium", "high", "critical"]).default("medium"),
-      })
-    )
-    .optional(),
+  customPermissions: z.array(z.string()).optional(),
 
   permissionGroups: z
     .array(
