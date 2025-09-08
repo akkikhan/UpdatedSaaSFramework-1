@@ -65,7 +65,6 @@ const permissionSchema = z.object({
 });
 
 const rbacConfigSchema = z.object({
-
   permissionTemplate: z.string(),
   businessType: z.string(),
 });
@@ -73,7 +72,6 @@ const rbacConfigSchema = z.object({
 type RoleForm = z.infer<typeof roleSchema>;
 type PermissionForm = z.infer<typeof permissionSchema>;
 type RBACConfigForm = z.infer<typeof rbacConfigSchema>;
-
 
 
 export default function RBACManagementPage() {
@@ -158,8 +156,6 @@ export default function RBACManagementPage() {
   const defaultRolesQuery = useQuery({
     queryKey: ["/api/rbac-config/default-roles"],
   });
-
-
   const renderConfiguration = () => (
     <Card>
       <CardHeader>
@@ -207,7 +203,6 @@ export default function RBACManagementPage() {
                 </CardContent>
               </Card>
             ))}
-
           </div>
         </div>
 
@@ -368,7 +363,6 @@ export default function RBACManagementPage() {
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-
               </div>
             </CardContent>
           </Card>

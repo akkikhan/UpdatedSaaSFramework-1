@@ -169,9 +169,6 @@ export default function AddTenantPage() {
   const businessTypesQuery = useQuery({
     queryKey: ["/api/rbac-config/business-types"],
   });
-  const defaultRolesQuery = useQuery({
-    queryKey: ["/api/rbac-config/default-roles"],
-  });
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -490,13 +487,13 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Permission Template</Label>
                         <Select
-                          onValueChange={value => {
+                          onValueChange={(value) => {
+
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
                               rbac: {
                                 ...currentConfigs.rbac,
-
                                 permissionTemplate: value,
                               },
                             });
@@ -517,13 +514,12 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Business Type</Label>
                         <Select
-                          onValueChange={value => {
+                          onValueChange={(value) => {
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
                               rbac: {
                                 ...currentConfigs.rbac,
-
                                 businessType: value,
                               },
                             });

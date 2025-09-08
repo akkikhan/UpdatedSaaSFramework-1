@@ -761,29 +761,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get tenant by id (Platform Admin Only) - used by tenant portal view
   app.get("/api/tenants/:id", platformAdminMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       const tenant = await storage.getTenant(id);
+
       if (!tenant) {
         return res.status(404).json({ message: "Tenant not found" });
       }
-      // Normalize enabledModules by configured providers
-      try {
-        const mc = (tenant.moduleConfigs as any) || {};
-        const providers: any[] = (mc.auth?.providers || []) as any[];
-        if (providers?.length) {
-          const providerTypes = providers.map(p => p?.type).filter(Boolean);
-          const normalized = Array.from(
-            new Set([...((tenant.enabledModules as any[]) || []), ...providerTypes])
-          );
-          tenant.enabledModules = normalized as any;
-        }
-      } catch {}
+
       res.json(tenant);
     } catch (error) {
-      console.error("Error fetching tenant by id:", error);
+      console.error("Error fetching tenant:", error);
+
       res.status(500).json({ message: "Failed to fetch tenant" });
     }
   });

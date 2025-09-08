@@ -37,6 +37,11 @@ export const api = {
     return response.json();
   },
 
+  async getTenant(id: string): Promise<Tenant> {
+    const response = await apiRequest('GET', `/api/tenants/${id}`);
+    return response.json();
+  },
+
   async createTenant(data: CreateTenantData): Promise<Tenant> {
     const response = await apiRequest("POST", "/api/tenants", data);
     return response.json();
