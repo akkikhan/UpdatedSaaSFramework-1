@@ -151,11 +151,15 @@ export default function RBACConfigPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/permission-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tenant"] });
       toast({
         title: "Template Saved",
         description: "Permission template has been saved successfully.",
       });
       setEditingTemplate(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: String(err), variant: "destructive" });
     },
   });
 
@@ -173,11 +177,15 @@ export default function RBACConfigPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/business-types"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tenant"] });
       toast({
         title: "Business Type Saved",
         description: "Business type has been saved successfully.",
       });
       setEditingBusinessType(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: String(err), variant: "destructive" });
     },
   });
 
@@ -191,11 +199,15 @@ export default function RBACConfigPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/default-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tenant"] });
       toast({
         title: "Default Role Saved",
         description: "Default role has been saved successfully.",
       });
       setEditingRole(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: String(err), variant: "destructive" });
     },
   });
 
@@ -205,10 +217,14 @@ export default function RBACConfigPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/permission-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tenant"] });
       toast({
         title: "Template Deleted",
         description: "Permission template has been deleted successfully.",
       });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: String(err), variant: "destructive" });
     },
   });
 
@@ -218,10 +234,14 @@ export default function RBACConfigPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/business-types"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tenant"] });
       toast({
         title: "Business Type Deleted",
         description: "Business type has been deleted successfully.",
       });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: String(err), variant: "destructive" });
     },
   });
 
@@ -231,10 +251,14 @@ export default function RBACConfigPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/default-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tenant"] });
       toast({
         title: "Default Role Deleted",
         description: "Default role has been deleted successfully.",
       });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: String(err), variant: "destructive" });
     },
   });
 
