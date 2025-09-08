@@ -6,6 +6,7 @@ import {
   userRoles,
   permissions,
   emailLogs,
+  emailTemplates,
   systemLogs,
   complianceAuditLogs,
   securityEvents,
@@ -24,6 +25,7 @@ import {
   type Role,
   type Session,
   type EmailLog,
+  type EmailTemplate,
   type SystemLog,
   type ComplianceAuditLog,
   type SecurityEvent,
@@ -35,6 +37,7 @@ import {
   type InsertTenantUserRole,
   type TenantNotification,
   type InsertTenantNotification,
+  type InsertEmailTemplate,
   type PermissionTemplate,
   type InsertPermissionTemplate,
   type BusinessType,
@@ -72,6 +75,13 @@ export interface IStorage {
 
   // Email logging
   logEmail(emailLog: Omit<EmailLog, "id" | "sentAt">): Promise<EmailLog>;
+
+  // Email templates
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  getEmailTemplate(
+    templateType: string,
+    tenantId?: string
+  ): Promise<EmailTemplate | undefined>;
 
   // System logging
   logSystemActivity(data: {
@@ -249,6 +259,7 @@ export class DatabaseStorage implements IStorage {
       permissions: ["user.read"],
       isSystem: true,
     });
+    await this.applyDefaultEmailTemplates(tenant.id);
 
     return tenant;
   }
@@ -314,6 +325,47 @@ export class DatabaseStorage implements IStorage {
   async logEmail(emailLog: Omit<EmailLog, "id" | "sentAt">): Promise<EmailLog> {
     const [log] = await db.insert(emailLogs).values(emailLog).returning();
     return log;
+  }
+
+  async createEmailTemplate(
+    template: InsertEmailTemplate
+  ): Promise<EmailTemplate> {
+    const [result] = await db
+      .insert(emailTemplates)
+      .values(template)
+      .returning();
+    return result;
+  }
+
+  async getEmailTemplate(
+    templateType: string,
+    tenantId?: string
+  ): Promise<EmailTemplate | undefined> {
+    if (tenantId) {
+      const [template] = await db
+        .select()
+        .from(emailTemplates)
+        .where(
+          and(
+            eq(emailTemplates.templateType, templateType),
+            eq(emailTemplates.tenantId, tenantId)
+          )
+        )
+        .limit(1);
+      if (template) return template;
+    }
+
+    const [defaultTemplate] = await db
+      .select()
+      .from(emailTemplates)
+      .where(
+        and(
+          eq(emailTemplates.templateType, templateType),
+          sql`${emailTemplates.tenantId} IS NULL`
+        )
+      )
+      .limit(1);
+    return defaultTemplate;
   }
 
   // System activity logging
@@ -600,6 +652,24 @@ export class DatabaseStorage implements IStorage {
 
   async getRecentTenants(limit: number = 5): Promise<Tenant[]> {
     return await db.select().from(tenants).orderBy(desc(tenants.createdAt)).limit(limit);
+  }
+
+  private async applyDefaultEmailTemplates(tenantId: string): Promise<void> {
+    const defaults = await db
+      .select({
+        templateType: emailTemplates.templateType,
+        subject: emailTemplates.subject,
+        htmlContent: emailTemplates.htmlContent,
+        textContent: emailTemplates.textContent,
+      })
+      .from(emailTemplates)
+      .where(sql`${emailTemplates.tenantId} IS NULL`);
+
+    if (defaults.length === 0) return;
+
+    await db.insert(emailTemplates).values(
+      defaults.map(t => ({ ...t, tenantId }))
+    );
   }
 
   private async hashPassword(password: string): Promise<string> {

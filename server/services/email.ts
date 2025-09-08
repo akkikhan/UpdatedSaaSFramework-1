@@ -107,9 +107,54 @@ export class EmailService {
       disabled: string[];
     }
   ): Promise<boolean> {
-    const subject = `Module Access Updated - ${tenant.name}`;
+    const enabledHtml =
+      changes.enabled.length > 0
+        ? `
+            <div class="module-list">
+              <h3 class="enabled">✓ Modules Enabled:</h3>
+              <ul>
+                ${changes.enabled
+                  .map(module => `<li>${this.getModuleDisplayName(module)}</li>`)
+                  .join("")}
+              </ul>
+            </div>
+            `
+        : "";
+    const disabledHtml =
+      changes.disabled.length > 0
+        ? `
+            <div class="module-list">
+              <h3 class="disabled">✗ Modules Disabled:</h3>
+              <ul>
+                ${changes.disabled
+                  .map(module => `<li>${this.getModuleDisplayName(module)}</li>`)
+                  .join("")}
+              </ul>
+            </div>
+            `
+        : "";
+    const warningHtml =
+      changes.disabled.length > 0
+        ? `
+            <div class="warning">
+              <strong>⚠️ Important:</strong> Disabled modules will immediately restrict access to related features.
+              Users may receive "access denied" messages when trying to use these features.
+            </div>
+            `
+        : "";
 
-    const html = this.generateModuleStatusEmailTemplate(tenant, changes);
+    let subject = `Module Access Updated - ${tenant.name}`;
+    let html = this.generateModuleStatusEmailTemplate(tenant, changes);
+
+    const template = await storage.getEmailTemplate("module_status", tenant.id);
+    if (template) {
+      subject = template.subject.replace(/{{TENANT_NAME}}/g, tenant.name);
+      html = template.htmlContent
+        .replace(/{{TENANT_NAME}}/g, tenant.name)
+        .replace(/{{ENABLED_MODULES}}/g, enabledHtml)
+        .replace(/{{DISABLED_MODULES}}/g, disabledHtml)
+        .replace(/{{WARNING_BLOCK}}/g, warningHtml);
+    }
 
     try {
       await this.transporter.sendMail({
@@ -153,7 +198,27 @@ export class EmailService {
     authApiKey: string;
     rbacApiKey: string;
   }): Promise<boolean> {
-    const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    const baseUrl = process.env.BASE_URL || "https://localhost:5000";
+    const portalUrl = `${baseUrl}/tenant/${tenant.orgId}/login`;
+    const docsUrl = `${baseUrl}/docs`;
+
+    let subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    let html = this.generateOnboardingEmailTemplate(tenant);
+
+    const template = await storage.getEmailTemplate("onboarding", tenant.id);
+    if (template) {
+      subject = template.subject.replace(/{{TENANT_NAME}}/g, tenant.name);
+      html = template.htmlContent
+        .replace(/{{TENANT_NAME}}/g, tenant.name)
+        .replace(/{{PORTAL_URL}}/g, portalUrl)
+        .replace(/{{ADMIN_EMAIL}}/g, tenant.adminEmail)
+        .replace(/{{TEMP_PASSWORD}}/g, "temp123!")
+        .replace(/{{TENANT_ORG_ID}}/g, tenant.orgId)
+        .replace(/{{AUTH_API_KEY}}/g, tenant.authApiKey)
+        .replace(/{{RBAC_API_KEY}}/g, tenant.rbacApiKey)
+        .replace(/{{BASE_URL}}/g, baseUrl)
+        .replace(/{{DOCS_URL}}/g, docsUrl);
+    }
 
     // Temporarily skip email sending - just log as sent for now
     if (!this.config.smtpPassword) {
@@ -176,8 +241,6 @@ export class EmailService {
 
       return true;
     }
-
-    const html = this.generateOnboardingEmailTemplate(tenant);
 
     try {
       await this.transporter.sendMail({
