@@ -27,6 +27,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   ArrowLeft,
   ArrowRight,
@@ -48,100 +49,40 @@ import {
   Database,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  TENANT_CREATION_SCHEMA,
+  MODULES_INFO,
+  MODULE_IDS,
+  createAuthProviderObject,
+  type TenantCreationData,
+  type ModuleId,
+} from "../../../shared/types";
 import { useCreateTenant } from "@/hooks/use-tenants";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-const formSchema = z.object({
-  // Basic Information
-  name: z.string().min(2, "Organization name must be at least 2 characters"),
+// Use a relaxed schema for the wizard to allow provider "string[]" during form filling
+// Some environments may not expose `.extend` on imported schemas; define a local schema explicitly.
+const WIZARD_FORM_SCHEMA = z.object({
+  name: z.string().min(1, "Organization name is required"),
   orgId: z
     .string()
-    .min(2, "Organization ID must be at least 2 characters")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Organization ID can only contain lowercase letters, numbers, and hyphens"
-    ),
-  adminEmail: z.string().email("Please enter a valid email address"),
-  adminName: z.string().min(2, "Admin name must be at least 2 characters"),
-  companyWebsite: z.string().url().optional().or(z.literal("")),
-
-  // Modules
-  enabledModules: z.array(z.string()).default([]),
-
-  // Module Configurations
-  moduleConfigs: z
+    .min(1, "Organization ID is required")
+    .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
+  adminEmail: z.string().email("Valid email address required"),
+  adminName: z.string().min(1, "Admin name is required"),
+  sendEmail: z.boolean().optional(),
+  enabledModules: z.array(z.string()).optional(),
+  moduleConfigs: z.any().optional(),
+  metadata: z
     .object({
-      authentication: z
-        .object({
-          providers: z.array(z.enum(["auth0", "azure-ad", "local", "saml"])).default([]),
-          auth0: z
-            .object({
-              domain: z.string().optional(),
-              clientId: z.string().optional(),
-              clientSecret: z.string().optional(),
-              audience: z.string().optional(),
-            })
-            .optional(),
-          azureAd: z
-            .object({
-              tenantId: z.string().optional(),
-              clientId: z.string().optional(),
-              clientSecret: z.string().optional(),
-              redirectUri: z.string().optional(),
-            })
-            .optional(),
-          local: z
-            .object({
-              secretKey: z.string().optional(),
-              expirationTime: z.string().optional(),
-              algorithm: z.string().optional(),
-            })
-            .optional(),
-          saml: z
-            .object({
-              entryPoint: z.string().optional(),
-              issuer: z.string().optional(),
-              cert: z.string().optional(),
-            })
-            .optional(),
-        })
-        .optional(),
-      rbac: z
-        .object({
-          defaultRoles: z.array(z.string()).optional(),
-          customPermissions: z.array(z.string()).optional(),
-          inheritanceEnabled: z.boolean().optional(),
-        })
-        .optional(),
-      logging: z
-        .object({
-          levels: z.array(z.enum(["error", "warn", "info", "debug", "trace"])).optional(),
-          destinations: z.array(z.string()).optional(),
-          retentionDays: z.number().optional(),
-        })
-        .optional(),
-      notifications: z
-        .object({
-          channels: z.array(z.enum(["email", "sms", "push", "webhook"])).optional(),
-          emailProvider: z.string().optional(),
-          webhookUrl: z.string().optional(),
-        })
-        .optional(),
-      aiCopilot: z
-        .object({
-          provider: z.enum(["openai", "azure-openai", "anthropic", "google"]).optional(),
-          apiKey: z.string().optional(),
-          model: z.string().optional(),
-          features: z.array(z.string()).optional(),
-        })
-        .optional(),
+      adminName: z.string().optional(),
+      companyWebsite: z.string().optional(),
     })
-    .default({}),
-
-  sendEmail: z.boolean().default(true),
+    .optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = TenantCreationData;
 
 const STEPS = [
   {
@@ -170,79 +111,120 @@ const STEPS = [
   },
 ];
 
-const MODULES = [
-  {
-    id: "authentication",
-    name: "Authentication Module",
-    description: "Multiple authentication providers including Auth0, Azure AD, JWT, and SAML",
-    icon: Lock,
-    color: "bg-blue-500",
-    providers: ["Auth0", "Azure AD", "JWT", "SAML"],
-  },
-  {
-    id: "rbac",
-    name: "RBAC (Role-Based Access Control)",
-    description: "Advanced permission management with roles and policies",
-    icon: Users,
-    color: "bg-green-500",
-  },
-  {
-    id: "logging",
-    name: "Logging and Monitoring",
-    description: "Comprehensive audit trails and system monitoring",
-    icon: Activity,
-    color: "bg-orange-500",
-  },
-  {
-    id: "notifications",
-    name: "Notifications",
-    description: "Multi-channel notification system (Email, SMS, Push, Webhooks)",
-    icon: Bell,
-    color: "bg-purple-500",
-  },
-  {
-    id: "aiCopilot",
-    name: "AI Copilot",
-    description: "AI-powered assistance and automation features",
-    icon: Bot,
-    color: "bg-indigo-500",
-  },
-];
+// Use shared module definitions - ensures consistency with backend
+const MODULES = Object.values(MODULES_INFO);
+
+// Map string icon names from MODULES_INFO to actual Lucide components
+const ICONS: Record<string, React.ComponentType<any>> = {
+  Lock,
+  Shield,
+  FileText,
+  Bell,
+  Bot,
+  Users,
+  Activity,
+  Globe,
+  Zap,
+  Key,
+  Cloud,
+  Database,
+  Building2,
+  Settings,
+  CheckCircle,
+};
 
 export default function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createTenant = useCreateTenant();
+  // Dynamic RBAC options from Platform Admin config APIs (hooks must be top-level)
+  const { data: permissionTemplates = [] } = useQuery({
+    queryKey: ["/api/rbac-config/permission-templates"],
+    queryFn: async () => {
+      const token = localStorage.getItem("platformAdminToken") || "";
+      const res = await fetch("/api/rbac-config/permission-templates", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
+  const { data: businessTypes = [] } = useQuery({
+    queryKey: ["/api/rbac-config/business-types"],
+    queryFn: async () => {
+      const token = localStorage.getItem("platformAdminToken") || "";
+      const res = await fetch("/api/rbac-config/business-types", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(WIZARD_FORM_SCHEMA as any),
     defaultValues: {
       name: "",
       orgId: "",
       adminEmail: "",
       adminName: "",
-      companyWebsite: "",
-      enabledModules: [],
-      moduleConfigs: {
-        authentication: { providers: [] },
-        rbac: {},
-        logging: { levels: [] },
-        notifications: { channels: [] },
-        aiCopilot: {},
-      },
       sendEmail: true,
+      enabledModules: [],
+      moduleConfigs: {},
+      metadata: {
+        adminName: "",
+        companyWebsite: "",
+      },
     },
   });
 
   const watchedModules = form.watch("enabledModules") || [];
-  const watchedAuthProviders = form.watch("moduleConfigs.authentication.providers");
+  // Align with shared schema key: "auth" (not "authentication")
+  const watchedAuthProviders = form.watch("moduleConfigs.auth.providers");
+  const watchedRBAC = watchedModules.includes("rbac");
 
   const handleNext = async () => {
     let fieldsToValidate: (keyof FormData)[] = [];
 
     if (currentStep === 0) {
       fieldsToValidate = ["name", "orgId", "adminEmail", "adminName"];
+    }
+
+    // Inter-step validations and auto-fixes
+    if (currentStep === 1) {
+      const mods = (form.getValues("enabledModules") || []) as string[];
+      if (mods.includes("rbac") && !mods.includes("auth")) {
+        // Auto-enable auth if RBAC selected
+        form.setValue("enabledModules", Array.from(new Set([...mods, "auth"])));
+        toast({
+          title: "RBAC requires Authentication",
+          description: "Authentication has been enabled automatically.",
+        });
+      }
+      // Ensure auth has at least one provider for smoother start
+      const providers = form.getValues("moduleConfigs.auth.providers") as any[] | undefined;
+      const hasAuth = (form.getValues("enabledModules") || []).includes("auth");
+      if (hasAuth && (!providers || providers.length === 0)) {
+        form.setValue("moduleConfigs.auth.providers", ["local"] as any);
+      }
+    }
+    if (currentStep === 2) {
+      const mods = (form.getValues("enabledModules") || []) as string[];
+      if (mods.includes("rbac")) {
+        const roles =
+          (form.getValues("moduleConfigs.rbac.defaultRoles") as string[] | undefined) || [];
+        if (roles.length === 0) {
+          form.setValue(
+            "moduleConfigs.rbac.defaultRoles" as any,
+            ["Admin", "Manager", "Viewer"] as any
+          );
+          toast({
+            title: "Default roles added",
+            description: "We added Admin, Manager, Viewer to get you started.",
+          });
+        }
+      }
     }
 
     const isValid = await form.trigger(fieldsToValidate as any);
@@ -262,36 +244,24 @@ export default function OnboardingWizard() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      // Transform module names from frontend format to backend format
-      const moduleNameMap: Record<string, string> = {
-        authentication: "auth",
-        rbac: "rbac",
-        logging: "logging",
-        notifications: "notifications",
-        aiCopilot: "ai-copilot",
-      };
-
-      const transformedModules = data.enabledModules.map(module => moduleNameMap[module] || module);
-
-      // Transform moduleConfigs object keys to match backend expectations
+      // Module configs transformation: keep keys aligned with shared schema
       const transformedModuleConfigs: any = {};
-      Object.entries(data.moduleConfigs).forEach(([key, value]) => {
-        const transformedKey = moduleNameMap[key] || key;
+      Object.entries(data.moduleConfigs || {}).forEach(([key, value]) => {
+        // Normalize internal form keys to shared schema keys
+        const transformedKey = key === "aiCopilot" ? ("ai-copilot" as const) : (key as string);
 
-        // Special handling for authentication module
         if (transformedKey === "auth" && value && typeof value === "object") {
           const authConfig = value as any;
-          const transformedAuth = { ...authConfig };
+          const transformedAuth: any = { ...authConfig };
 
           // Transform providers from simple strings to complex objects
           if (authConfig.providers && Array.isArray(authConfig.providers)) {
             transformedAuth.providers = authConfig.providers.map(
               (providerType: string, index: number) => {
                 // Get provider-specific config
-                let config = {};
-                const providerKey = providerType.replace("-", "").replace("_", ""); // "azure-ad" -> "azuread"
+                let config: any = {};
 
-                // Map provider keys to form field names
+                // Map provider keys to form field names within moduleConfigs.auth
                 const configKeyMap: Record<string, string> = {
                   "azure-ad": "azureAd",
                   auth0: "auth0",
@@ -304,15 +274,14 @@ export default function OnboardingWizard() {
                   config = authConfig[formConfigKey];
                 }
 
-                // Create provider object structure expected by backend
                 return {
                   type: providerType,
                   name: providerType
                     .split("-")
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(" "), // "azure-ad" -> "Azure Ad"
+                    .join(" "),
                   priority: index + 1,
-                  config: config,
+                  config,
                   userMapping: {
                     emailField: "email",
                     nameField: "name",
@@ -329,9 +298,18 @@ export default function OnboardingWizard() {
             delete transformedAuth.saml;
           }
 
+          transformedModuleConfigs[transformedKey] = transformedAuth;
+        } else {
+          // Pass-through other module configs (rbac, logging, etc.)
           transformedModuleConfigs[transformedKey] = value;
         }
       });
+
+      // Enforce dependency at submit time as well
+      const selected = Array.from(new Set([...(data.enabledModules || [])])) as string[];
+      if (selected.includes("rbac") && !selected.includes("auth")) {
+        selected.push("auth");
+      }
 
       // Transform the data to match the API format
       const transformedData = {
@@ -340,7 +318,7 @@ export default function OnboardingWizard() {
         adminEmail: data.adminEmail,
         adminName: data.adminName,
         sendEmail: data.sendEmail,
-        enabledModules: data.enabledModules,
+        enabledModules: selected,
         moduleConfigs: transformedModuleConfigs,
         metadata: {
           adminName: data.adminName,
@@ -355,8 +333,8 @@ export default function OnboardingWizard() {
         description: `Onboarding email has been sent to ${data.adminEmail}`,
       });
 
-      // Redirect to success page
-      setLocation("/tenants/success");
+      // Redirect back to tenant listing so the new record is visible
+      setLocation("/tenants");
     } catch (error) {
       toast({
         title: "Failed to create tenant",
@@ -581,7 +559,10 @@ export default function OnboardingWizard() {
                           <FormItem>
                             <div className="space-y-4">
                               {MODULES.map(module => {
-                                const Icon = module.icon;
+                                const Icon =
+                                  typeof module.icon === "string"
+                                    ? ICONS[module.icon] || Settings
+                                    : (module.icon as any);
                                 const isSelected = field.value?.includes(module.id) || false;
 
                                 const handleToggle = () => {
@@ -590,6 +571,49 @@ export default function OnboardingWizard() {
                                     ? currentValue.filter(v => v !== module.id)
                                     : [...currentValue, module.id];
                                   field.onChange(newValue);
+
+                                  // Dependency handling: RBAC -> Auth
+                                  if (!isSelected && module.id === "rbac") {
+                                    const mods = newValue as string[];
+                                    if (!mods.includes("auth")) {
+                                      const withAuth = Array.from(
+                                        new Set([...(mods as string[]), "auth"])
+                                      );
+                                      field.onChange(withAuth);
+                                      toast({
+                                        title: "Authentication enabled",
+                                        description:
+                                          "RBAC depends on Authentication. Enabled automatically.",
+                                      });
+                                    }
+                                    // Seed default RBAC config if missing
+                                    const currentRBAC = form.getValues("moduleConfigs.rbac");
+                                    if (!currentRBAC) {
+                                      form.setValue(
+                                        "moduleConfigs.rbac" as any,
+                                        {
+                                          permissionTemplate: "standard",
+                                          businessType: "general",
+                                          defaultRoles: ["Admin", "Manager", "Viewer"],
+                                        } as any
+                                      );
+                                    }
+                                  }
+
+                                  // Prevent disabling Auth when RBAC is selected
+                                  if (
+                                    isSelected &&
+                                    module.id === "auth" &&
+                                    (form.getValues("enabledModules") || []).includes("rbac")
+                                  ) {
+                                    toast({
+                                      title: "Cannot disable Authentication",
+                                      description:
+                                        "RBAC requires Authentication. Disable RBAC first.",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
                                 };
 
                                 return (
@@ -647,6 +671,14 @@ export default function OnboardingWizard() {
                                 );
                               })}
                             </div>
+                            {watchedRBAC && !watchedModules.includes("auth") && (
+                              <Alert className="mt-3">
+                                <AlertDescription>
+                                  RBAC requires Authentication. The wizard will enable Auth
+                                  automatically.
+                                </AlertDescription>
+                              </Alert>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -665,16 +697,21 @@ export default function OnboardingWizard() {
                       ) : (
                         <div className="space-y-6">
                           {/* Authentication Module Configuration */}
-                          {watchedModules.includes("authentication") && (
+                          {watchedModules.includes("auth") && (
                             <div className="space-y-4">
                               <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <Lock className="w-5 h-5" />
                                 Authentication Configuration
                               </h3>
+                              <p className="text-sm text-slate-600 -mt-2">
+                                Optional during onboarding. You can configure providers later in the
+                                tenant portal. Fields marked "SSO-required" are needed for SSO to
+                                work immediately.
+                              </p>
 
                               <FormField
                                 control={form.control}
-                                name="moduleConfigs.authentication.providers"
+                                name="moduleConfigs.auth.providers"
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Select Authentication Providers</FormLabel>
@@ -734,10 +771,15 @@ export default function OnboardingWizard() {
                                   <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.auth0.domain"
+                                      name="moduleConfigs.auth.auth0.domain"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Domain</FormLabel>
+                                          <FormLabel>
+                                            Domain{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="your-tenant.auth0.com" />
                                           </FormControl>
@@ -746,12 +788,38 @@ export default function OnboardingWizard() {
                                     />
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.auth0.clientId"
+                                      name="moduleConfigs.auth.auth0.clientId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Client ID</FormLabel>
+                                          <FormLabel>
+                                            Client ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Auth0 Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.auth0.clientSecret"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Client Secret{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              type="password"
+                                              placeholder="Your Auth0 Client Secret"
+                                            />
                                           </FormControl>
                                         </FormItem>
                                       )}
@@ -767,10 +835,15 @@ export default function OnboardingWizard() {
                                   <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.azureAd.tenantId"
+                                      name="moduleConfigs.auth.azureAd.tenantId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Tenant ID</FormLabel>
+                                          <FormLabel>
+                                            Tenant ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Tenant ID" />
                                           </FormControl>
@@ -779,12 +852,38 @@ export default function OnboardingWizard() {
                                     />
                                     <FormField
                                       control={form.control}
-                                      name="moduleConfigs.authentication.azureAd.clientId"
+                                      name="moduleConfigs.auth.azureAd.clientId"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Client ID</FormLabel>
+                                          <FormLabel>
+                                            Client ID{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Client ID" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.azureAd.clientSecret"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Client Secret{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              type="password"
+                                              placeholder="Your Azure Client Secret"
+                                            />
                                           </FormControl>
                                         </FormItem>
                                       )}
@@ -792,36 +891,295 @@ export default function OnboardingWizard() {
                                   </div>
                                 </div>
                               )}
+
+                              {/* SAML Configuration */}
+                              {watchedAuthProviders?.includes("saml") && (
+                                <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                                  <h4 className="font-medium">SAML Configuration</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.saml.entryPoint"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Entry Point URL{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="https://idp.example.com/sso"
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.saml.issuer"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            Issuer{" "}
+                                            <Badge className="ml-2" variant="secondary">
+                                              SSO-required
+                                            </Badge>
+                                          </FormLabel>
+                                          <FormControl>
+                                            <Input {...field} placeholder="urn:your-app" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <FormField
+                                    control={form.control}
+                                    name="moduleConfigs.auth.saml.cert"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Certificate (PEM)</FormLabel>
+                                        <FormControl>
+                                          <Textarea
+                                            {...field}
+                                            placeholder="-----BEGIN CERTIFICATE-----..."
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                              )}
                             </div>
                           )}
 
                           {/* RBAC Configuration */}
                           {watchedModules.includes("rbac") && (
-                            <div className="space-y-4">
+                            <div className="space-y-5">
                               <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <Users className="w-5 h-5" />
                                 RBAC Configuration
                               </h3>
 
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name="moduleConfigs.rbac.permissionTemplate"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Permission Template</FormLabel>
+                                      <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value as any}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select a template" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(permissionTemplates as any[]).length > 0 ? (
+                                            (permissionTemplates as any[]).map(t => (
+                                              <SelectItem
+                                                key={t.id}
+                                                value={(
+                                                  t.name ||
+                                                  t.id ||
+                                                  `template-${Math.random()}`
+                                                )
+                                                  .toString()
+                                                  .toLowerCase()}
+                                              >
+                                                {t.name || t.id}
+                                              </SelectItem>
+                                            ))
+                                          ) : (
+                                            <SelectItem value="no-templates" disabled>
+                                              No templates configured
+                                            </SelectItem>
+                                          )}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormDescription>
+                                        Choose a base set of permissions for default roles
+                                      </FormDescription>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="moduleConfigs.rbac.businessType"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Business Type</FormLabel>
+                                      <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value as any}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select business type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(businessTypes as any[]).length > 0 ? (
+                                            (businessTypes as any[]).map(bt => (
+                                              <SelectItem
+                                                key={bt.id}
+                                                value={(
+                                                  bt.name ||
+                                                  bt.id ||
+                                                  `business-type-${Math.random()}`
+                                                )
+                                                  .toString()
+                                                  .toLowerCase()}
+                                              >
+                                                {bt.name}
+                                              </SelectItem>
+                                            ))
+                                          ) : (
+                                            <SelectItem value="no-business-types" disabled>
+                                              No business types defined
+                                            </SelectItem>
+                                          )}
+                                        </SelectContent>
+                                      </Select>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              {/* Template preview */}
+                              <div className="border rounded-lg p-4 bg-slate-50">
+                                <p className="text-sm text-slate-700 mb-2">Template Preview</p>
+                                {Array.isArray(permissionTemplates) &&
+                                permissionTemplates.length > 0 ? (
+                                  (() => {
+                                    const selected =
+                                      (form.getValues(
+                                        "moduleConfigs.rbac.permissionTemplate"
+                                      ) as string) || "";
+                                    const match = (permissionTemplates as any[]).find(
+                                      t =>
+                                        (t.name || t.id || "").toString().toLowerCase() === selected
+                                    );
+                                    const perms: string[] = (match?.permissions || []).slice(0, 12);
+                                    return perms.length ? (
+                                      <div className="flex flex-wrap gap-2">
+                                        {perms.map(p => (
+                                          <Badge key={p} variant="outline" className="text-xs">
+                                            {p}
+                                          </Badge>
+                                        ))}
+                                        {(match?.permissions || []).length > perms.length && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            +{(match?.permissions || []).length - perms.length} more
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="text-slate-500 text-sm">
+                                        No permissions listed for this template.
+                                      </div>
+                                    );
+                                  })()
+                                ) : (
+                                  <div className="text-slate-500 text-sm">
+                                    Templates will appear here.
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Default Roles tag editor */}
                               <FormField
                                 control={form.control}
                                 name="moduleConfigs.rbac.defaultRoles"
+                                render={({ field }) => {
+                                  const roles: string[] = (field.value as any) || [
+                                    "Admin",
+                                    "Manager",
+                                    "Viewer",
+                                  ];
+                                  const [input, setInput] = React.useState("");
+                                  const addRole = () => {
+                                    const v = input.trim();
+                                    if (!v) return;
+                                    const next = Array.from(new Set([...(roles as string[]), v]));
+                                    field.onChange(next);
+                                    setInput("");
+                                  };
+                                  const removeRole = (name: string) => {
+                                    field.onChange((roles as string[]).filter(r => r !== name));
+                                  };
+                                  return (
+                                    <FormItem>
+                                      <FormLabel>Default Roles</FormLabel>
+                                      <div className="flex flex-wrap gap-2">
+                                        {roles.map(r => (
+                                          <Badge key={r} variant="secondary" className="px-2 py-1">
+                                            <span className="mr-2">{r}</span>
+                                            <button
+                                              type="button"
+                                              className="text-slate-500 hover:text-slate-700"
+                                              onClick={() => removeRole(r)}
+                                              aria-label={`Remove ${r}`}
+                                            >
+                                              ×
+                                            </button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-2 mt-2">
+                                        <Input
+                                          value={input}
+                                          onChange={e => setInput(e.target.value)}
+                                          placeholder="Add a role (e.g., Auditor)"
+                                          onKeyDown={e => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              addRole();
+                                            }
+                                          }}
+                                        />
+                                        <Button type="button" onClick={addRole} variant="secondary">
+                                          Add
+                                        </Button>
+                                      </div>
+                                      <FormDescription>
+                                        These roles will be created for the tenant. Permissions come
+                                        from the selected template and can be refined later.
+                                      </FormDescription>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+
+                              {/* Optional custom permissions */}
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.rbac.customPermissions"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Default Roles</FormLabel>
+                                    <FormLabel>Custom Permissions (optional)</FormLabel>
                                     <FormControl>
-                                      <Textarea
-                                        placeholder="Enter default roles (one per line)&#10;admin&#10;user&#10;viewer"
-                                        onChange={e => {
-                                          const roles = e.target.value
-                                            .split("\n")
-                                            .filter(r => r.trim());
-                                          field.onChange(roles);
-                                        }}
+                                      <Input
+                                        placeholder="comma,separated,permissions"
+                                        value={
+                                          (Array.isArray(field.value)
+                                            ? field.value.join(",")
+                                            : "") as any
+                                        }
+                                        onChange={e =>
+                                          field.onChange(
+                                            e.target.value
+                                              .split(",")
+                                              .map(s => s.trim())
+                                              .filter(Boolean)
+                                          )
+                                        }
                                       />
                                     </FormControl>
                                     <FormDescription>
-                                      Define default roles for this tenant
+                                      Extra permissions to add during creation
                                     </FormDescription>
                                   </FormItem>
                                 )}
@@ -1035,21 +1393,57 @@ export default function OnboardingWizard() {
                             </div>
                           </div>
 
-                          {watchedModules.includes("authentication") &&
-                            watchedAuthProviders?.length > 0 && (
-                              <div>
-                                <span className="text-sm text-slate-600">
-                                  Authentication Providers:
-                                </span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {watchedAuthProviders.map(provider => (
-                                    <Badge key={provider} variant="outline">
-                                      {provider.replace("-", " ").toUpperCase()}
-                                    </Badge>
-                                  ))}
+                          {watchedModules.includes("auth") && watchedAuthProviders?.length > 0 && (
+                            <div>
+                              <span className="text-sm text-slate-600">
+                                Authentication Providers:
+                              </span>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {watchedAuthProviders.map(provider => (
+                                  <Badge key={provider} variant="outline">
+                                    {provider.replace("-", " ").toUpperCase()}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {watchedModules.includes("rbac") && (
+                            <div>
+                              <span className="text-sm text-slate-600">RBAC:</span>
+                              <div className="mt-2 space-y-1 text-sm">
+                                <div>
+                                  Template:{" "}
+                                  <strong>
+                                    {(form.getValues(
+                                      "moduleConfigs.rbac.permissionTemplate"
+                                    ) as any) || "standard"}
+                                  </strong>
+                                </div>
+                                <div>
+                                  Business Type:{" "}
+                                  <strong>
+                                    {(form.getValues("moduleConfigs.rbac.businessType") as any) ||
+                                      "general"}
+                                  </strong>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <span>Default Roles:</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {(
+                                      form.getValues("moduleConfigs.rbac.defaultRoles") as
+                                        | any[]
+                                        | undefined
+                                    )?.map((r: any) => (
+                                      <Badge key={r} variant="secondary">
+                                        {r}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
-                            )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1092,16 +1486,6 @@ export default function OnboardingWizard() {
               </Button>
             ) : (
               <div className="flex items-center gap-3">
-                {/* Extra affordance to go back to Modules and tweak selections ("Back & Mix") */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentStep(1)}
-                  className="flex items-center gap-2"
-                >
-                  Back & Mix
-                </Button>
-
                 <Button
                   type="submit"
                   disabled={createTenant.isPending}

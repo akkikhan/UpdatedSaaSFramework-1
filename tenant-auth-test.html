@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tenant Portal Authentication Test</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        border-bottom: 3px solid #007acc;
+        padding-bottom: 10px;
+      }
+      h2 {
+        color: #555;
+        margin-top: 30px;
+      }
+      .step {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background: #fafafa;
+      }
+      .step h3 {
+        margin: 0 0 10px 0;
+        color: #007acc;
+      }
+      button {
+        background: #007acc;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #005999;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .result {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .input-group {
+        margin: 10px 0;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: inherit;
+      }
+      .progress {
+        margin: 20px 0;
+        padding: 15px;
+        background: #e9ecef;
+        border-radius: 5px;
+      }
+      .progress-item {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
+      }
+      .status-icon {
+        width: 20px;
+        margin-right: 10px;
+        text-align: center;
+      }
+      .tenant-info {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+      .test-scenario {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔐 Tenant Portal Authentication Test</h1>
+      <p>Test tenant portal login functionality and authentication flows.</p>
+
+      <div class="progress">
+        <h3>📊 Test Progress</h3>
+        <div class="progress-item">
+          <span class="status-icon" id="health-status">⏳</span>
+          <span>Server Health Check</span>
+        </div>
+        <div class="progress-item">
+          <span class="status-icon" id="tenant-verify-status">⏳</span>
+          <span>Verify Tenant Exists</span>
+        </div>
+        <div class="progress-item">
+          <span class="status-icon" id="login-success-status">⏳</span>
+          <span>Valid Login Test</span>
+        </div>
+        <div class="progress-item">
+          <span class="status-icon" id="login-fail-status">⏳</span>
+          <span>Invalid Login Test</span>
+        </div>
+        <div class="progress-item">
+          <span class="status-icon" id="portal-access-status">⏳</span>
+          <span>Portal Access Test</span>
+        </div>
+      </div>
+
+      <div class="test-scenario">
+        <h3>🎯 Test Scenario</h3>
+        <p>
+          Testing authentication for existing tenant: <strong>akki-test-638923509655646643</strong>
+        </p>
+        <p>
+          Expected user: <strong>akki@primussoft.com</strong> with password
+          <strong>temp123!</strong>
+        </p>
+      </div>
+
+      <div class="step">
+        <h3>🏥 Step 1: Health Check</h3>
+        <button onclick="checkHealth()">Test Server Health</button>
+        <div id="health-result" class="result"></div>
+      </div>
+
+      <div class="step">
+        <h3>🏢 Step 2: Verify Tenant</h3>
+        <button onclick="verifyTenant()">Verify Tenant Exists</button>
+        <div id="tenant-result" class="result"></div>
+      </div>
+
+      <div class="step">
+        <h3>✅ Step 3: Valid Login Test</h3>
+        <div class="input-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" value="akki@primussoft.com" />
+        </div>
+        <div class="input-group">
+          <label for="password">Password:</label>
+          <input type="password" id="password" value="temp123!" />
+        </div>
+        <div class="input-group">
+          <label for="orgId">Organization ID:</label>
+          <input type="text" id="orgId" value="akki-test-638923509655646643" />
+        </div>
+        <button onclick="testValidLogin()">Test Valid Login</button>
+        <div id="login-success-result" class="result"></div>
+      </div>
+
+      <div class="step">
+        <h3>❌ Step 4: Invalid Login Test</h3>
+        <button onclick="testInvalidLogin()">Test Invalid Password</button>
+        <div id="login-fail-result" class="result"></div>
+      </div>
+
+      <div class="step">
+        <h3>🚪 Step 5: Portal Access Test</h3>
+        <button onclick="testPortalAccess()">Test Portal Access</button>
+        <div id="portal-result" class="result"></div>
+      </div>
+
+      <div class="step">
+        <h3>🔄 Step 6: Run All Tests</h3>
+        <button onclick="runAllTests()" style="background: #28a745">Run Complete Test Suite</button>
+        <div id="all-tests-result" class="result"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:5000/api";
+      let currentToken = null;
+
+      function updateStatus(stepId, status) {
+        const statusIcon = document.getElementById(`${stepId}-status`);
+        if (!statusIcon) return;
+
+        switch (status) {
+          case "loading":
+            statusIcon.textContent = "⏳";
+            break;
+          case "success":
+            statusIcon.textContent = "✅";
+            break;
+          case "error":
+            statusIcon.textContent = "❌";
+            break;
+        }
+      }
+
+      async function apiRequest(endpoint, options = {}) {
+        try {
+          const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+          const response = await fetch(url, {
+            headers: {
+              "Content-Type": "application/json",
+              ...(currentToken && { Authorization: `Bearer ${currentToken}` }),
+              ...options.headers,
+            },
+            ...options,
+          });
+
+          const contentType = response.headers.get("content-type");
+          let data;
+
+          if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+          } else {
+            data = await response.text();
+          }
+
+          return {
+            success: response.ok,
+            status: response.status,
+            data: data,
+            headers: response.headers,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message,
+            status: 0,
+          };
+        }
+      }
+
+      async function checkHealth() {
+        updateStatus("health", "loading");
+        const result = await apiRequest("/health");
+        const resultDiv = document.getElementById("health-result");
+
+        if (result.success) {
+          resultDiv.className = "result success";
+          resultDiv.textContent =
+            `✅ Server Status: ${result.data.status}\n` +
+            `Database: ${result.data.services?.database ? "Connected" : "Disconnected"}\n` +
+            `Email: ${result.data.services?.email}\n` +
+            `Timestamp: ${result.data.timestamp}`;
+          updateStatus("health", "success");
+          return true;
+        } else {
+          resultDiv.className = "result error";
+          resultDiv.textContent = `❌ Health check failed: ${result.error || result.status}`;
+          updateStatus("health", "error");
+          return false;
+        }
+      }
+
+      async function verifyTenant() {
+        updateStatus("tenant-verify", "loading");
+        const orgId = document.getElementById("orgId").value;
+        const result = await apiRequest(`/tenants/${orgId}`);
+        const resultDiv = document.getElementById("tenant-result");
+
+        if (result.success) {
+          resultDiv.className = "result success";
+          resultDiv.textContent =
+            `✅ Tenant Found!\n` +
+            `ID: ${result.data.id}\n` +
+            `Name: ${result.data.name}\n` +
+            `Org ID: ${result.data.orgId}\n` +
+            `Status: ${result.data.status}\n` +
+            `Admin Email: ${result.data.adminEmail}`;
+          updateStatus("tenant-verify", "success");
+          return true;
+        } else {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            `❌ Tenant not found: ${result.error || result.status}\n` +
+            `Response: ${JSON.stringify(result.data, null, 2)}`;
+          updateStatus("tenant-verify", "error");
+          return false;
+        }
+      }
+
+      async function testValidLogin() {
+        updateStatus("login-success", "loading");
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const orgId = document.getElementById("orgId").value;
+
+        const loginData = {
+          email: email,
+          password: password,
+        };
+
+        const result = await apiRequest(`/v2/auth/login?orgId=${orgId}`, {
+          method: "POST",
+          body: JSON.stringify(loginData),
+        });
+
+        const resultDiv = document.getElementById("login-success-result");
+
+        if (result.success) {
+          currentToken = result.data.token;
+          resultDiv.className = "result success";
+          resultDiv.textContent =
+            `✅ Login Successful!\n` +
+            `Token: ${result.data.token.substring(0, 50)}...\n` +
+            `User ID: ${result.data.user.id}\n` +
+            `Email: ${result.data.user.email}\n` +
+            `Tenant ID: ${result.data.user.tenantId}`;
+          updateStatus("login-success", "success");
+          return true;
+        } else {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            `❌ Login Failed: ${result.error || result.status}\n` +
+            `Response: ${JSON.stringify(result.data, null, 2)}`;
+          updateStatus("login-success", "error");
+          return false;
+        }
+      }
+
+      async function testInvalidLogin() {
+        updateStatus("login-fail", "loading");
+        const email = document.getElementById("email").value;
+        const orgId = document.getElementById("orgId").value;
+
+        const loginData = {
+          email: email,
+          password: "wrongpassword123",
+        };
+
+        const result = await apiRequest(`/v2/auth/login?orgId=${orgId}`, {
+          method: "POST",
+          body: JSON.stringify(loginData),
+        });
+
+        const resultDiv = document.getElementById("login-fail-result");
+
+        if (!result.success && result.status === 401) {
+          resultDiv.className = "result success";
+          resultDiv.textContent =
+            `✅ Invalid login correctly rejected!\n` +
+            `Status: ${result.status}\n` +
+            `Response: ${JSON.stringify(result.data, null, 2)}`;
+          updateStatus("login-fail", "success");
+          return true;
+        } else {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            `❌ Invalid login test failed - should have been rejected!\n` +
+            `Status: ${result.status}\n` +
+            `Response: ${JSON.stringify(result.data, null, 2)}`;
+          updateStatus("login-fail", "error");
+          return false;
+        }
+      }
+
+      async function testPortalAccess() {
+        updateStatus("portal-access", "loading");
+        const orgId = document.getElementById("orgId").value;
+
+        // Test accessing the tenant portal page
+        const result = await apiRequest(`http://localhost:5000/tenant/${orgId}/login`);
+        const resultDiv = document.getElementById("portal-result");
+
+        if (result.success) {
+          resultDiv.className = "result success";
+          resultDiv.textContent =
+            `✅ Portal page accessible!\n` +
+            `Status: ${result.status}\n` +
+            `Content type: ${result.headers.get("content-type")}\n` +
+            `Response length: ${result.data.length} characters`;
+          updateStatus("portal-access", "success");
+
+          // Also test opening the portal in a new tab
+          const portalUrl = `http://localhost:5000/tenant/${orgId}/login`;
+          window.open(portalUrl, "_blank");
+          return true;
+        } else {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            `❌ Portal access failed: ${result.error || result.status}\n` +
+            `Response: ${JSON.stringify(result.data, null, 2)}`;
+          updateStatus("portal-access", "error");
+          return false;
+        }
+      }
+
+      async function runAllTests() {
+        const resultDiv = document.getElementById("all-tests-result");
+        resultDiv.className = "result info";
+        resultDiv.textContent = "🚀 Running complete test suite...\n";
+
+        const tests = [
+          { name: "Health Check", func: checkHealth },
+          { name: "Tenant Verification", func: verifyTenant },
+          { name: "Valid Login", func: testValidLogin },
+          { name: "Invalid Login", func: testInvalidLogin },
+          { name: "Portal Access", func: testPortalAccess },
+        ];
+
+        let passed = 0;
+        let failed = 0;
+
+        for (const test of tests) {
+          resultDiv.textContent += `\n🔄 Running ${test.name}...`;
+          const success = await test.func();
+
+          if (success) {
+            passed++;
+            resultDiv.textContent += ` ✅ PASSED`;
+          } else {
+            failed++;
+            resultDiv.textContent += ` ❌ FAILED`;
+          }
+
+          // Wait a bit between tests
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        resultDiv.textContent += `\n\n📊 Test Results Summary:`;
+        resultDiv.textContent += `\n✅ Passed: ${passed}`;
+        resultDiv.textContent += `\n❌ Failed: ${failed}`;
+        resultDiv.textContent += `\n📈 Success Rate: ${Math.round((passed / (passed + failed)) * 100)}%`;
+
+        if (failed === 0) {
+          resultDiv.className = "result success";
+          resultDiv.textContent += `\n\n🎉 All tests passed! Tenant authentication is working correctly.`;
+        } else {
+          resultDiv.className = "result error";
+          resultDiv.textContent += `\n\n⚠️ Some tests failed. Check individual test results above.`;
+        }
+      }
+
+      // Auto-run health check on page load
+      window.addEventListener("load", () => {
+        setTimeout(checkHealth, 1000);
+      });
+    </script>
+  </body>
+</html>

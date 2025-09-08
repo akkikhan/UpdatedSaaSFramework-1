@@ -49,6 +49,7 @@ export default function TenantAttentionPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-600">No pending requests</p>
+
           </CardContent>
         </Card>
 
@@ -94,4 +95,3 @@ export default function TenantAttentionPage() {
     </div>
   );
 }
-

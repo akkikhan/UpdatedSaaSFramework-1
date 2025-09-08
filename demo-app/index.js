@@ -128,8 +128,8 @@ class RBACDK {
 }
 
 // Initialize SDKs
-const authSDK = new AuthSDK(TENANT_CONFIG);
-const rbacSDK = new RBACDK(TENANT_CONFIG);
+// const authSDK = new AuthSDK(TENANT_CONFIG); // Available for auth operations
+// const rbacSDK = new RBACDK(TENANT_CONFIG); // Available for RBAC operations
 
 // Demo app routes
 app.get('/', (req, res) => {
@@ -137,10 +137,11 @@ app.get('/', (req, res) => {
 });
 
 app.post('/demo/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email } = req.body; // password available but using mock auth
   
   try {
-    const authResult = await authSDK.authenticate(email, password);
+    // Note: Using mock data for demo purposes
+    // const authResult = await authSDK.authenticate(email, password);
     
     // For demo, we'll mock a successful response since we don't have the full auth endpoints
     const mockUser = {

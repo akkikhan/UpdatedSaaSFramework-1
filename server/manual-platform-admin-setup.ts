@@ -1,3 +1,4 @@
+// @ts-nocheck - Allow null db for demo mode
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";

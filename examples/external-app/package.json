@@ -1,0 +1,19 @@
+{
+  "name": "saas-auth-external-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@saas-framework/auth": "file:../../packages/auth",
+    "@saas-framework/logging": "file:../../packages/logging"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vite": "^5.2.0"
+  }
+}

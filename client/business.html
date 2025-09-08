@@ -1,0 +1,1252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tenant Business Portal</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .portal-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow:
+          0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+      }
+
+      .portal-header {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        color: white;
+        padding: 24px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .portal-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .tab-container {
+        display: flex;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .tab {
+        padding: 16px 24px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #64748b;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .tab:hover {
+        color: #3730a3;
+        background: rgba(55, 48, 163, 0.05);
+      }
+
+      .tab.active {
+        color: #3730a3;
+        border-bottom-color: #3730a3;
+        background: white;
+      }
+
+      .tab-content {
+        display: none;
+        padding: 32px;
+        background: #f8fafc;
+        min-height: 600px;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .section-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 24px;
+        overflow: hidden;
+        transition: box-shadow 0.3s ease;
+      }
+
+      .section-card:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .card-header {
+        padding: 20px 24px;
+        background: white;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+      }
+
+      .card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+      }
+
+      .card-subtitle {
+        font-size: 14px;
+        color: #64748b;
+        margin-top: 4px;
+      }
+
+      .card-content {
+        padding: 24px;
+      }
+
+      .module-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+      }
+
+      .module-card {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .module-card.enabled {
+        border-color: #10b981;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      }
+
+      .module-card.disabled {
+        border-color: #e2e8f0;
+        background: #f8fafc;
+      }
+
+      .module-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .module-info {
+        flex: 1;
+      }
+
+      .module-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .module-description {
+        font-size: 14px;
+        color: #64748b;
+        line-height: 1.5;
+      }
+
+      .module-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-badge.active {
+        background: #10b981;
+        color: white;
+      }
+
+      .status-badge.disabled {
+        background: #64748b;
+        color: white;
+      }
+
+      .status-badge.required {
+        background: #f59e0b;
+        color: white;
+      }
+
+      .module-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .btn-primary {
+        background: #3730a3;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #312e81;
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+
+      .btn-secondary:hover {
+        background: #e2e8f0;
+      }
+
+      .btn-danger {
+        background: #ef4444;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #dc2626;
+      }
+
+      .btn-success {
+        background: #10b981;
+        color: white;
+      }
+
+      .btn-success:hover {
+        background: #059669;
+      }
+
+      .auth-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+      }
+
+      .provider-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .provider-header {
+        padding: 16px 20px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .provider-name {
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .provider-content {
+        padding: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #3730a3;
+        box-shadow: 0 0 0 3px rgba(55, 48, 163, 0.1);
+      }
+
+      .form-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+      }
+
+      .logs-container {
+        background: #1e293b;
+        border-radius: 12px;
+        padding: 24px;
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+      }
+
+      .logs-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .logs-title {
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .logs-controls {
+        display: flex;
+        gap: 12px;
+      }
+
+      .log-entry {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        font-size: 12px;
+      }
+
+      .log-timestamp {
+        color: #94a3b8;
+        margin-right: 12px;
+      }
+
+      .log-level {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-right: 8px;
+        text-transform: uppercase;
+      }
+
+      .log-level.error {
+        background: #ef4444;
+        color: white;
+      }
+      .log-level.warning {
+        background: #f59e0b;
+        color: white;
+      }
+      .log-level.info {
+        background: #3b82f6;
+        color: white;
+      }
+      .log-level.debug {
+        background: #6b7280;
+        color: white;
+      }
+
+      .log-message {
+        color: #f1f5f9;
+      }
+
+      .alert {
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      .alert-warning {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+      }
+
+      .alert-info {
+        background: #dbeafe;
+        border: 1px solid #3b82f6;
+        color: #1d4ed8;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+      }
+
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f4f6;
+        border-top: 2px solid #3730a3;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .api-key-container {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .api-key-text {
+        flex: 1;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 12px;
+        color: #475569;
+        background: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        word-break: break-all;
+      }
+
+      .breadcrumb {
+        padding: 16px 32px;
+        background: white;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 14px;
+        color: #64748b;
+      }
+
+      .breadcrumb a {
+        color: #3730a3;
+        text-decoration: none;
+      }
+
+      .module-config {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+      }
+
+      .config-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .config-row:last-child {
+        border-bottom: none;
+      }
+
+      .config-key {
+        font-weight: 500;
+        color: #374151;
+      }
+
+      .config-value {
+        color: #6b7280;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="portal-container">
+      <!-- Header -->
+      <div class="portal-header">
+        <h1 class="portal-title">Business Portal</h1>
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span>Live Monitoring</span>
+        </div>
+      </div>
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb"><a href="/">Dashboard</a> / <span>Business Portal</span></div>
+
+      <!-- Tabs -->
+      <div class="tab-container">
+        <button class="tab active" onclick="showTab('modules')">📦 Modules</button>
+        <button class="tab" onclick="showTab('authentication')">🔐 Authentication</button>
+        <button class="tab" onclick="showTab('logs')">📊 Logs & Monitoring</button>
+        <button class="tab" onclick="showTab('api-keys')">🔑 API Keys</button>
+      </div>
+
+      <!-- Modules Tab -->
+      <div id="modules" class="tab-content active">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Available Modules</h2>
+              <p class="card-subtitle">Manage your application modules and request changes</p>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="module-grid">
+              <!-- Core Authentication Module -->
+              <div class="module-card enabled">
+                <div class="module-header">
+                  <div class="module-info">
+                    <div class="module-name">Core Authentication</div>
+                    <div class="module-description">
+                      Basic JWT authentication and user management system
+                    </div>
+                  </div>
+                  <div class="module-status">
+                    <span class="status-badge required">Required</span>
+                  </div>
+                </div>
+                <div class="module-config">
+                  <div class="config-row">
+                    <span class="config-key">Status</span>
+                    <span class="config-value">✅ Active</span>
+                  </div>
+                  <div class="config-row">
+                    <span class="config-key">Users</span>
+                    <span class="config-value">12 registered</span>
+                  </div>
+                  <div class="config-row">
+                    <span class="config-key">JWT Expiry</span>
+                    <span class="config-value">24 hours</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RBAC Module -->
+              <div class="module-card enabled">
+                <div class="module-header">
+                  <div class="module-info">
+                    <div class="module-name">Role-Based Access Control</div>
+                    <div class="module-description">
+                      Advanced role and permission management system
+                    </div>
+                  </div>
+                  <div class="module-status">
+                    <span class="status-badge required">Required</span>
+                  </div>
+                </div>
+                <div class="module-config">
+                  <div class="config-row">
+                    <span class="config-key">Roles</span>
+                    <span class="config-value">5 configured</span>
+                  </div>
+                  <div class="config-row">
+                    <span class="config-key">Permissions</span>
+                    <span class="config-value">23 defined</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Logging Module -->
+              <div class="module-card enabled">
+                <div class="module-header">
+                  <div class="module-info">
+                    <div class="module-name">Logging & Monitoring</div>
+                    <div class="module-description">
+                      Application logs, search functionality, and basic alerts
+                    </div>
+                  </div>
+                  <div class="module-status">
+                    <span class="status-badge active">Active</span>
+                  </div>
+                </div>
+                <div class="module-actions">
+                  <button class="btn btn-secondary" onclick="showTab('logs')">View Logs</button>
+                  <button
+                    class="btn btn-danger"
+                    onclick="requestModuleChange('logging', 'disable')"
+                  >
+                    Request Disable
+                  </button>
+                </div>
+              </div>
+
+              <!-- Azure AD Module -->
+              <div class="module-card disabled">
+                <div class="module-header">
+                  <div class="module-info">
+                    <div class="module-name">Azure Active Directory</div>
+                    <div class="module-description">
+                      Single sign-on integration with Microsoft Azure AD
+                    </div>
+                  </div>
+                  <div class="module-status">
+                    <span class="status-badge disabled">Disabled</span>
+                  </div>
+                </div>
+                <div class="module-actions">
+                  <button
+                    class="btn btn-primary"
+                    onclick="requestModuleChange('azure-ad', 'enable')"
+                  >
+                    Request Enable
+                  </button>
+                </div>
+              </div>
+
+              <!-- Auth0 Module -->
+              <div class="module-card disabled">
+                <div class="module-header">
+                  <div class="module-info">
+                    <div class="module-name">Auth0 Integration</div>
+                    <div class="module-description">
+                      Universal authentication platform integration
+                    </div>
+                  </div>
+                  <div class="module-status">
+                    <span class="status-badge disabled">Disabled</span>
+                  </div>
+                </div>
+                <div class="module-actions">
+                  <button class="btn btn-primary" onclick="requestModuleChange('auth0', 'enable')">
+                    Request Enable
+                  </button>
+                </div>
+              </div>
+
+              <!-- SAML Module -->
+              <div class="module-card disabled">
+                <div class="module-header">
+                  <div class="module-info">
+                    <div class="module-name">SAML SSO</div>
+                    <div class="module-description">
+                      SAML-based single sign-on for enterprise integration
+                    </div>
+                  </div>
+                  <div class="module-status">
+                    <span class="status-badge disabled">Disabled</span>
+                  </div>
+                </div>
+                <div class="module-actions">
+                  <button class="btn btn-primary" onclick="requestModuleChange('saml', 'enable')">
+                    Request Enable
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Authentication Tab -->
+      <div id="authentication" class="tab-content">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Authentication Settings</h2>
+              <p class="card-subtitle">Configure authentication providers and security settings</p>
+            </div>
+          </div>
+          <div class="card-content">
+            <!-- Global Auth Settings -->
+            <div class="section-card">
+              <div class="card-header">
+                <h3 class="card-title" style="font-size: 16px">Global Settings</h3>
+              </div>
+              <div class="card-content">
+                <div class="form-group">
+                  <label class="form-label">Default Authentication Provider</label>
+                  <select class="form-select" id="defaultProvider">
+                    <option value="local">Local (JWT)</option>
+                    <option value="azure-ad" disabled>Azure AD (Module Required)</option>
+                    <option value="auth0" disabled>Auth0 (Module Required)</option>
+                    <option value="saml" disabled>SAML (Module Required)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Security Policy</label>
+                  <select class="form-select">
+                    <option value="mixed">Allow Multiple Methods</option>
+                    <option value="sso-only">SSO Only (Disable Local Login)</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary">Save Global Settings</button>
+              </div>
+            </div>
+
+            <!-- Provider Configurations -->
+            <div class="auth-section">
+              <!-- Local JWT Provider -->
+              <div class="provider-card">
+                <div class="provider-header">
+                  <span class="provider-name">Local Authentication (JWT)</span>
+                  <span class="status-badge active">Active</span>
+                </div>
+                <div class="provider-content">
+                  <div class="form-group">
+                    <label class="form-label">JWT Secret Rotation</label>
+                    <button class="btn btn-secondary">Rotate Secret</button>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Token Expiration</label>
+                    <select class="form-select">
+                      <option value="24h" selected>24 Hours</option>
+                      <option value="7d">7 Days</option>
+                      <option value="30d">30 Days</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Password Policy</label>
+                    <select class="form-select">
+                      <option value="basic">Basic (8+ chars)</option>
+                      <option value="strong" selected>
+                        Strong (8+ chars, mixed case, numbers, symbols)
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Azure AD Provider -->
+              <div class="provider-card">
+                <div class="provider-header">
+                  <span class="provider-name">Azure Active Directory</span>
+                  <span class="status-badge disabled">Module Disabled</span>
+                </div>
+                <div class="provider-content">
+                  <div class="alert alert-warning">
+                    <strong>Module Required:</strong> Enable the Azure AD module to configure this
+                    provider.
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tenant ID</label>
+                    <input type="text" class="form-input" disabled placeholder="Azure tenant ID" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Client ID</label>
+                    <input
+                      type="text"
+                      class="form-input"
+                      disabled
+                      placeholder="Azure application ID"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Client Secret</label>
+                    <input
+                      type="password"
+                      class="form-input"
+                      disabled
+                      placeholder="Client secret"
+                    />
+                  </div>
+                  <button class="btn btn-primary" disabled>Configure Azure AD</button>
+                </div>
+              </div>
+
+              <!-- Auth0 Provider -->
+              <div class="provider-card">
+                <div class="provider-header">
+                  <span class="provider-name">Auth0</span>
+                  <span class="status-badge disabled">Module Disabled</span>
+                </div>
+                <div class="provider-content">
+                  <div class="alert alert-warning">
+                    <strong>Module Required:</strong> Enable the Auth0 module to configure this
+                    provider.
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Domain</label>
+                    <input
+                      type="text"
+                      class="form-input"
+                      disabled
+                      placeholder="your-tenant.auth0.com"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Client ID</label>
+                    <input type="text" class="form-input" disabled placeholder="Auth0 client ID" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Client Secret</label>
+                    <input
+                      type="password"
+                      class="form-input"
+                      disabled
+                      placeholder="Client secret"
+                    />
+                  </div>
+                  <button class="btn btn-primary" disabled>Configure Auth0</button>
+                </div>
+              </div>
+
+              <!-- SAML Provider -->
+              <div class="provider-card">
+                <div class="provider-header">
+                  <span class="provider-name">SAML SSO</span>
+                  <span class="status-badge disabled">Module Disabled</span>
+                </div>
+                <div class="provider-content">
+                  <div class="alert alert-warning">
+                    <strong>Module Required:</strong> Enable the SAML module to configure this
+                    provider.
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">SSO URL</label>
+                    <input
+                      type="text"
+                      class="form-input"
+                      disabled
+                      placeholder="Identity provider SSO URL"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Entity ID</label>
+                    <input
+                      type="text"
+                      class="form-input"
+                      disabled
+                      placeholder="Identity provider entity ID"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">X.509 Certificate</label>
+                    <textarea
+                      class="form-input"
+                      style="min-height: 100px"
+                      disabled
+                      placeholder="X.509 certificate content"
+                    ></textarea>
+                  </div>
+                  <button class="btn btn-primary" disabled>Configure SAML</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs & Monitoring Tab -->
+      <div id="logs" class="tab-content">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Logging & Monitoring</h2>
+              <p class="card-subtitle">Configure logging settings and view application logs</p>
+            </div>
+          </div>
+          <div class="card-content">
+            <!-- Logging Settings -->
+            <div class="section-card">
+              <div class="card-header">
+                <h3 class="card-title" style="font-size: 16px">Logging Configuration</h3>
+              </div>
+              <div class="card-content">
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 20px;
+                  "
+                >
+                  <div class="form-group">
+                    <label class="form-label">Log Levels</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px">
+                      <label style="display: flex; align-items: center; gap: 6px">
+                        <input type="checkbox" checked /> <span>Error</span>
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 6px">
+                        <input type="checkbox" checked /> <span>Warning</span>
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 6px">
+                        <input type="checkbox" checked /> <span>Info</span>
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 6px">
+                        <input type="checkbox" /> <span>Debug</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Retention Period</label>
+                    <select class="form-select">
+                      <option value="7">7 Days</option>
+                      <option value="30" selected>30 Days</option>
+                      <option value="90">90 Days</option>
+                      <option value="365">1 Year</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">PII Redaction</label>
+                    <label style="display: flex; align-items: center; gap: 8px">
+                      <input type="checkbox" /> Enable automatic PII redaction
+                    </label>
+                  </div>
+                </div>
+                <button class="btn btn-primary">Save Logging Settings</button>
+              </div>
+            </div>
+
+            <!-- Log Viewer -->
+            <div class="logs-container">
+              <div class="logs-header">
+                <div class="logs-title">Application Logs</div>
+                <div class="logs-controls">
+                  <select class="form-select" style="width: auto">
+                    <option value="all">All Levels</option>
+                    <option value="error">Error</option>
+                    <option value="warning">Warning</option>
+                    <option value="info">Info</option>
+                    <option value="debug">Debug</option>
+                  </select>
+                  <input
+                    type="text"
+                    class="form-input"
+                    placeholder="Filter by category..."
+                    style="width: 200px"
+                  />
+                  <button class="btn btn-secondary">Refresh</button>
+                  <button class="btn btn-secondary">Export</button>
+                </div>
+              </div>
+              <div style="max-height: 400px; overflow-y: auto">
+                <div class="log-entry">
+                  <span class="log-timestamp">2024-01-20 10:30:45</span>
+                  <span class="log-level info">INFO</span>
+                  <span class="log-message"
+                    >User authentication successful for user@example.com</span
+                  >
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2024-01-20 10:29:12</span>
+                  <span class="log-level warning">WARNING</span>
+                  <span class="log-message"
+                    >Rate limit approaching for API endpoint /api/users (80% of limit)</span
+                  >
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2024-01-20 10:25:33</span>
+                  <span class="log-level error">ERROR</span>
+                  <span class="log-message"
+                    >Failed to connect to external service: timeout after 30s</span
+                  >
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2024-01-20 10:22:15</span>
+                  <span class="log-level info">INFO</span>
+                  <span class="log-message">New user registration: user123@domain.com</span>
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2024-01-20 10:18:47</span>
+                  <span class="log-level info">INFO</span>
+                  <span class="log-message"
+                    >RBAC policy updated: added permission 'user.read' to role 'viewer'</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Keys Tab -->
+      <div id="api-keys" class="tab-content">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">API Keys</h2>
+              <p class="card-subtitle">Manage your application API keys for different services</p>
+            </div>
+          </div>
+          <div class="card-content">
+            <div style="display: grid; gap: 24px">
+              <!-- Authentication API Key -->
+              <div class="section-card">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title" style="font-size: 16px">🔐 Authentication API Key</h3>
+                    <p class="card-subtitle">
+                      Used for user authentication and JWT token management
+                    </p>
+                  </div>
+                  <button
+                    class="btn btn-secondary"
+                    id="toggleAuthKey"
+                    onclick="toggleApiKey('auth')"
+                  >
+                    👁️ Show Key
+                  </button>
+                </div>
+                <div class="card-content">
+                  <div class="api-key-container">
+                    <div class="api-key-text" id="authApiKey">••••••••••••••••••••••••••••••••</div>
+                    <button class="btn btn-secondary" onclick="copyApiKey('auth')">📋 Copy</button>
+                  </div>
+                  <div style="margin-top: 12px">
+                    <small style="color: #64748b">
+                      Last used: 2 hours ago | Created: Jan 15, 2024
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RBAC API Key -->
+              <div class="section-card">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title" style="font-size: 16px">👥 RBAC API Key</h3>
+                    <p class="card-subtitle">Used for role and permission management operations</p>
+                  </div>
+                  <button
+                    class="btn btn-secondary"
+                    id="toggleRbacKey"
+                    onclick="toggleApiKey('rbac')"
+                  >
+                    👁️ Show Key
+                  </button>
+                </div>
+                <div class="card-content">
+                  <div class="api-key-container">
+                    <div class="api-key-text" id="rbacApiKey">••••••••••••••••••••••••••••••••</div>
+                    <button class="btn btn-secondary" onclick="copyApiKey('rbac')">📋 Copy</button>
+                  </div>
+                  <div style="margin-top: 12px">
+                    <small style="color: #64748b">
+                      Last used: 1 day ago | Created: Jan 15, 2024
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Logging API Key -->
+              <div class="section-card">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title" style="font-size: 16px">📊 Logging API Key</h3>
+                    <p class="card-subtitle">
+                      Used to ingest and query logs via /logging/* endpoints
+                    </p>
+                  </div>
+                  <button
+                    class="btn btn-secondary"
+                    id="toggleLogKey"
+                    onclick="toggleApiKey('logging')"
+                  >
+                    👁️ Show Key
+                  </button>
+                </div>
+                <div class="card-content">
+                  <div class="api-key-container">
+                    <div class="api-key-text" id="loggingApiKey">
+                      ••••••••••••••••••••••••••••••••
+                    </div>
+                    <button class="btn btn-secondary" onclick="copyApiKey('logging')">
+                      📋 Copy
+                    </button>
+                  </div>
+                  <div style="margin-top: 12px">
+                    <small style="color: #64748b">
+                      Last used: 30 minutes ago | Created: Jan 15, 2024
+                    </small>
+                  </div>
+                  <div class="alert alert-info" style="margin-top: 16px">
+                    <strong>Usage Example:</strong>
+                    <pre
+                      style="
+                        background: white;
+                        padding: 12px;
+                        border-radius: 6px;
+                        margin-top: 8px;
+                        font-size: 11px;
+                        overflow-x: auto;
+                      "
+                    >
+curl -X POST \
+  -H "X-API-Key: logging_..." \
+  -H "Content-Type: application/json" \
+  ${window.location.origin}/api/v2/logging/events \
+  -d '{"level":"info","message":"hello","category":"app"}'</pre
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Sample data - would be loaded from API in real implementation
+      const apiKeys = {
+        auth: "auth_1234567890abcdef1234567890abcdef",
+        rbac: "rbac_abcdef1234567890abcdef1234567890",
+        logging: "logging_fedcba0987654321fedcba0987654321",
+      };
+
+      const keyVisibility = {
+        auth: false,
+        rbac: false,
+        logging: false,
+      };
+
+      function showTab(tabName) {
+        // Hide all tab contents
+        const contents = document.querySelectorAll(".tab-content");
+        contents.forEach(content => content.classList.remove("active"));
+
+        // Remove active class from all tabs
+        const tabs = document.querySelectorAll(".tab");
+        tabs.forEach(tab => tab.classList.remove("active"));
+
+        // Show selected tab content
+        document.getElementById(tabName).classList.add("active");
+
+        // Add active class to clicked tab
+        event.target.classList.add("active");
+      }
+
+      function requestModuleChange(moduleId, action) {
+        // In real implementation, this would make an API call
+        const actionText = action === "enable" ? "enable" : "disable";
+        const message = `Request to ${actionText} ${moduleId} module has been sent to the Platform Administrator. You'll receive an email notification once it's processed.`;
+
+        if (confirm(`Are you sure you want to request to ${actionText} the ${moduleId} module?`)) {
+          alert(message);
+
+          // Update UI to show request pending
+          const moduleCard = event.target.closest(".module-card");
+          const actionsDiv = moduleCard.querySelector(".module-actions");
+          actionsDiv.innerHTML = `
+                    <div class="alert alert-info" style="margin: 0; padding: 12px;">
+                        <strong>Request Pending:</strong> Your ${actionText} request is being reviewed by the Platform Administrator.
+                    </div>
+                `;
+        }
+      }
+
+      function toggleApiKey(keyType) {
+        const isVisible = keyVisibility[keyType];
+        const keyElement = document.getElementById(`${keyType}ApiKey`);
+        const toggleButton = document.getElementById(
+          `toggle${keyType.charAt(0).toUpperCase() + keyType.slice(1)}Key`
+        );
+
+        if (isVisible) {
+          keyElement.textContent = "••••••••••••••••••••••••••••••••";
+          toggleButton.textContent = "👁️ Show Key";
+          keyVisibility[keyType] = false;
+        } else {
+          keyElement.textContent = apiKeys[keyType];
+          toggleButton.textContent = "🙈 Hide Key";
+          keyVisibility[keyType] = true;
+        }
+      }
+
+      function copyApiKey(keyType) {
+        const keyValue = apiKeys[keyType];
+        navigator.clipboard.writeText(keyValue).then(() => {
+          // Visual feedback
+          const button = event.target;
+          const originalText = button.textContent;
+          button.textContent = "✅ Copied!";
+          button.style.background = "#10b981";
+          button.style.color = "white";
+
+          setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = "";
+            button.style.color = "";
+          }, 2000);
+        });
+      }
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Set initial tab
+        showTab("modules");
+      });
+    </script>
+  </body>
+</html>

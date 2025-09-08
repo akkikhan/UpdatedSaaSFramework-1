@@ -1,0 +1,1613 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RBAC Configuration - Platform Admin</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .portal-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow:
+          0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+      }
+
+      .portal-header {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        color: white;
+        padding: 24px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .portal-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .portal-subtitle {
+        font-size: 14px;
+        opacity: 0.9;
+        margin-top: 4px;
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .tab-container {
+        display: flex;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .tab {
+        padding: 16px 24px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #64748b;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .tab:hover {
+        color: #3730a3;
+        background: rgba(55, 48, 163, 0.05);
+      }
+
+      .tab.active {
+        color: #3730a3;
+        background: white;
+        border-bottom-color: #3730a3;
+      }
+
+      .tab-content {
+        padding: 32px;
+        min-height: 600px;
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+
+      .section-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .section-description {
+        color: #64748b;
+        font-size: 14px;
+        margin-top: 4px;
+      }
+
+      .add-button {
+        background: #3730a3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s;
+      }
+
+      .add-button:hover {
+        background: #312e81;
+      }
+
+      .grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      }
+
+      .card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s;
+      }
+
+      .card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+
+      .card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .card-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .action-button {
+        padding: 6px 8px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 12px;
+      }
+
+      .action-button:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+
+      .action-button.edit {
+        color: #0369a1;
+      }
+
+      .action-button.delete {
+        color: #dc2626;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-weight: 500;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+      }
+
+      .badge.risk-low {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .badge.risk-medium {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .badge.risk-high {
+        background: #fed7d7;
+        color: #991b1b;
+      }
+
+      .badge.risk-critical {
+        background: #fecaca;
+        color: #7f1d1d;
+      }
+
+      .badge.active {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .badge.default {
+        background: #f3f4f6;
+        color: #374151;
+      }
+
+      .card-description {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+
+      .card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .card-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .permissions-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 8px;
+      }
+
+      .permission-tag {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-family: monospace;
+      }
+
+      .more-permissions {
+        background: #e2e8f0;
+        color: #64748b;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+      }
+
+      .info-banner {
+        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+
+      .info-banner-content {
+        display: flex;
+        align-items: start;
+        gap: 12px;
+      }
+
+      .info-icon {
+        color: #2563eb;
+        font-size: 20px;
+      }
+
+      .info-text {
+        flex: 1;
+      }
+
+      .info-title {
+        font-weight: 600;
+        color: #1e40af;
+        margin-bottom: 4px;
+      }
+
+      .info-description {
+        color: #1e40af;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal.show {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .modal-body {
+        padding: 24px;
+      }
+
+      .modal-footer {
+        padding: 20px 24px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: end;
+        gap: 12px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+
+      .form-input:focus,
+      .form-select:focus,
+      .form-textarea:focus {
+        outline: none;
+        border-color: #3730a3;
+        box-shadow: 0 0 0 3px rgba(55, 48, 163, 0.1);
+      }
+
+      .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      .form-helper {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 4px;
+      }
+
+      .checkbox-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .checkbox-item input {
+        margin: 0;
+      }
+
+      .checkbox-item label {
+        font-size: 13px;
+        color: #374151;
+        cursor: pointer;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+      }
+
+      .btn-primary {
+        background: #3730a3;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #312e81;
+      }
+
+      .btn-secondary {
+        background: #f8fafc;
+        color: #374151;
+        border-color: #e2e8f0;
+      }
+
+      .btn-secondary:hover {
+        background: #f1f5f9;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #64748b;
+      }
+
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .empty-title {
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+
+      .empty-description {
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 40px;
+        color: #64748b;
+      }
+
+      .loading.show {
+        display: block;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #e2e8f0;
+        border-radius: 50%;
+        border-top-color: #3730a3;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="portal-container">
+      <!-- Header -->
+      <header class="portal-header">
+        <div>
+          <h1 class="portal-title">RBAC Configuration</h1>
+          <p class="portal-subtitle">
+            Manage permission templates, business types, and default roles for tenant onboarding
+          </p>
+        </div>
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          Platform Admin Portal
+        </div>
+      </header>
+
+      <!-- Information Banner -->
+      <div class="info-banner">
+        <div class="info-banner-content">
+          <div class="info-icon">ℹ️</div>
+          <div class="info-text">
+            <div class="info-title">RBAC Configuration System</div>
+            <div class="info-description">
+              This system allows Platform Admins to define templates, business types, and default
+              roles. When tenants are onboarded, they inherit these configurations and can customize
+              their tenant-specific roles and permissions through their tenant portal. Changes here
+              affect the onboarding wizard options.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-container">
+        <button class="tab active" onclick="switchTab('permission-templates')">
+          🛡️ Permission Templates
+        </button>
+        <button class="tab" onclick="switchTab('business-types')">🏢 Business Types</button>
+        <button class="tab" onclick="switchTab('default-roles')">👥 Default Roles</button>
+      </div>
+
+      <!-- Permission Templates Tab -->
+      <div id="permission-templates" class="tab-content active">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🛡️ Permission Templates</h2>
+            <p class="section-description">
+              Define reusable permission sets for different business scenarios. These appear as
+              options in the tenant onboarding wizard.
+            </p>
+          </div>
+          <button class="add-button" onclick="openTemplateModal()">➕ Add Template</button>
+        </div>
+
+        <div class="loading" id="templates-loading">
+          <div class="spinner"></div>
+          Loading permission templates...
+        </div>
+
+        <div class="grid" id="templates-grid">
+          <!-- Templates will be loaded here -->
+        </div>
+
+        <div class="empty-state" id="templates-empty" style="display: none">
+          <div class="empty-icon">🛡️</div>
+          <div class="empty-title">No Permission Templates</div>
+          <div class="empty-description">
+            Create your first permission template to define reusable permission sets for tenant
+            onboarding.
+          </div>
+        </div>
+      </div>
+
+      <!-- Business Types Tab -->
+      <div id="business-types" class="tab-content">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🏢 Business Types</h2>
+            <p class="section-description">
+              Configure business types with specific compliance requirements and risk levels. These
+              determine available permission templates during onboarding.
+            </p>
+          </div>
+          <button class="add-button" onclick="openBusinessTypeModal()">➕ Add Business Type</button>
+        </div>
+
+        <div class="loading" id="business-types-loading">
+          <div class="spinner"></div>
+          Loading business types...
+        </div>
+
+        <div class="grid" id="business-types-grid">
+          <!-- Business types will be loaded here -->
+        </div>
+
+        <div class="empty-state" id="business-types-empty" style="display: none">
+          <div class="empty-icon">🏢</div>
+          <div class="empty-title">No Business Types</div>
+          <div class="empty-description">
+            Define business types to categorize tenants and apply appropriate compliance
+            requirements and default permissions.
+          </div>
+        </div>
+      </div>
+
+      <!-- Default Roles Tab -->
+      <div id="default-roles" class="tab-content">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">👥 Default Roles</h2>
+            <p class="section-description">
+              Configure default roles that are automatically created for new tenants based on their
+              business type and permission template.
+            </p>
+          </div>
+          <button class="add-button" onclick="openDefaultRoleModal()">➕ Add Default Role</button>
+        </div>
+
+        <div class="loading" id="default-roles-loading">
+          <div class="spinner"></div>
+          Loading default roles...
+        </div>
+
+        <div class="grid" id="default-roles-grid">
+          <!-- Default roles will be loaded here -->
+        </div>
+
+        <div class="empty-state" id="default-roles-empty" style="display: none">
+          <div class="empty-icon">👥</div>
+          <div class="empty-title">No Default Roles</div>
+          <div class="empty-description">
+            Create default roles that will be automatically assigned to new tenants during
+            onboarding.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permission Template Modal -->
+    <div class="modal" id="template-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title" id="template-modal-title">Add Permission Template</h3>
+        </div>
+        <div class="modal-body">
+          <form id="template-form">
+            <div class="form-group">
+              <label class="form-label" for="template-name">Template Name</label>
+              <input
+                type="text"
+                id="template-name"
+                class="form-input"
+                placeholder="e.g., Standard, Enterprise"
+                required
+              />
+              <div class="form-helper">
+                Choose a descriptive name that explains the permission level
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="template-description">Description</label>
+              <textarea
+                id="template-description"
+                class="form-textarea"
+                placeholder="Describe what this template provides..."
+                required
+              ></textarea>
+              <div class="form-helper">Explain when this template should be used</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Business Types</label>
+              <div class="checkbox-group" id="template-business-types">
+                <!-- Business types will be loaded here -->
+              </div>
+              <div class="form-helper">Select which business types can use this template</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Permissions</label>
+              <div class="checkbox-group" id="template-permissions">
+                <!-- Available permissions will be loaded here -->
+              </div>
+              <div class="form-helper">Select the permissions included in this template</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <input type="checkbox" id="template-is-default" style="margin-right: 8px" />
+                Set as default template
+              </label>
+              <div class="form-helper">
+                Default templates are pre-selected in the onboarding wizard
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeTemplateModal()">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" onclick="saveTemplate()">
+            Save Template
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Business Type Modal -->
+    <div class="modal" id="business-type-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title" id="business-type-modal-title">Add Business Type</h3>
+        </div>
+        <div class="modal-body">
+          <form id="business-type-form">
+            <div class="form-group">
+              <label class="form-label" for="bt-name">Business Type Name</label>
+              <input
+                type="text"
+                id="bt-name"
+                class="form-input"
+                placeholder="e.g., Healthcare, Finance, Education"
+                required
+              />
+              <div class="form-helper">Choose a clear category name</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="bt-description">Description</label>
+              <textarea
+                id="bt-description"
+                class="form-textarea"
+                placeholder="Describe this business type..."
+                required
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="bt-risk-level">Risk Level</label>
+              <select id="bt-risk-level" class="form-select" required>
+                <option value="low">Low Risk</option>
+                <option value="medium">Medium Risk</option>
+                <option value="high">High Risk</option>
+                <option value="critical">Critical Risk</option>
+              </select>
+              <div class="form-helper">
+                Higher risk levels require additional compliance measures
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="bt-max-tenants">Maximum Tenants (optional)</label>
+              <input
+                type="number"
+                id="bt-max-tenants"
+                class="form-input"
+                placeholder="Leave blank for unlimited"
+              />
+              <div class="form-helper">
+                Set a limit on how many tenants can use this business type
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Required Compliance Frameworks</label>
+              <div class="checkbox-group">
+                <div class="checkbox-item">
+                  <input type="checkbox" id="compliance-gdpr" value="gdpr" />
+                  <label for="compliance-gdpr">GDPR</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="compliance-hipaa" value="hipaa" />
+                  <label for="compliance-hipaa">HIPAA</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="compliance-sox" value="sox" />
+                  <label for="compliance-sox">SOX</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="compliance-pci" value="pci" />
+                  <label for="compliance-pci">PCI-DSS</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="compliance-ferpa" value="ferpa" />
+                  <label for="compliance-ferpa">FERPA</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="compliance-fisma" value="fisma" />
+                  <label for="compliance-fisma">FISMA</label>
+                </div>
+              </div>
+              <div class="form-helper">
+                Select compliance frameworks required for this business type
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Default Permissions</label>
+              <div class="checkbox-group" id="bt-default-permissions">
+                <!-- Available permissions will be loaded here -->
+              </div>
+              <div class="form-helper">
+                Base permissions automatically granted to this business type
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <input type="checkbox" id="bt-is-active" checked style="margin-right: 8px" />
+                Active business type
+              </label>
+              <div class="form-helper">
+                Only active business types appear in the onboarding wizard
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeBusinessTypeModal()">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" onclick="saveBusinessType()">
+            Save Business Type
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Default Role Modal -->
+    <div class="modal" id="default-role-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title" id="default-role-modal-title">Add Default Role</h3>
+        </div>
+        <div class="modal-body">
+          <form id="default-role-form">
+            <div class="form-group">
+              <label class="form-label" for="role-name">Role Name</label>
+              <input
+                type="text"
+                id="role-name"
+                class="form-input"
+                placeholder="e.g., Admin, Manager, User"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="role-description">Description</label>
+              <textarea
+                id="role-description"
+                class="form-textarea"
+                placeholder="Describe this role's responsibilities..."
+                required
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="role-business-type">Business Type</label>
+              <select id="role-business-type" class="form-select">
+                <option value="">All Business Types</option>
+                <!-- Business types will be loaded here -->
+              </select>
+              <div class="form-helper">Leave blank to apply to all business types</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="role-permission-template">Permission Template</label>
+              <select id="role-permission-template" class="form-select">
+                <option value="">No Template</option>
+                <!-- Permission templates will be loaded here -->
+              </select>
+              <div class="form-helper">Choose a template to inherit base permissions from</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Additional Permissions</label>
+              <div class="checkbox-group" id="role-permissions">
+                <!-- Available permissions will be loaded here -->
+              </div>
+              <div class="form-helper">Add specific permissions beyond the template</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="role-priority">Priority</label>
+              <input
+                type="number"
+                id="role-priority"
+                class="form-input"
+                value="1"
+                min="1"
+                max="100"
+              />
+              <div class="form-helper">Higher priority roles are applied first (1-100)</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <input type="checkbox" id="role-is-system" style="margin-right: 8px" />
+                System role (cannot be modified by tenants)
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeDefaultRoleModal()">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" onclick="saveDefaultRole()">
+            Save Default Role
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global state
+      let permissionTemplates = [];
+      let businessTypes = [];
+      let defaultRoles = [];
+      let availablePermissions = [
+        "user.create",
+        "user.read",
+        "user.update",
+        "user.delete",
+        "role.create",
+        "role.read",
+        "role.update",
+        "role.delete",
+        "audit.read",
+        "system.config",
+        "tenant.admin",
+        "document.create",
+        "document.read",
+        "document.update",
+        "document.delete",
+        "report.create",
+        "report.read",
+        "account.read",
+        "transaction.create",
+        "transaction.read",
+        "compliance.read",
+        "patient.read",
+        "patient.update",
+        "medical.record.read",
+        "appointment.create",
+        "appointment.read",
+      ];
+      let editingItem = null;
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        loadData();
+      });
+
+      // API helpers
+      async function apiRequest(url, method = "GET", data = null) {
+        const token = localStorage.getItem("platformAdminToken");
+        const options = {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        };
+
+        if (data && method !== "GET") {
+          options.body = JSON.stringify(data);
+        }
+
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          if (response.status === 204) return null;
+          return await response.json();
+        } catch (error) {
+          console.error("API request failed:", error);
+          alert("Request failed: " + error.message);
+          throw error;
+        }
+      }
+
+      // Data loading
+      async function loadData() {
+        try {
+          showLoading("templates");
+          showLoading("business-types");
+          showLoading("default-roles");
+
+          const [templates, types, roles] = await Promise.all([
+            apiRequest("/api/rbac-config/permission-templates"),
+            apiRequest("/api/rbac-config/business-types"),
+            apiRequest("/api/rbac-config/default-roles"),
+          ]);
+
+          permissionTemplates = templates || [];
+          businessTypes = types || [];
+          defaultRoles = roles || [];
+
+          renderPermissionTemplates();
+          renderBusinessTypes();
+          renderDefaultRoles();
+        } catch (error) {
+          console.error("Failed to load data:", error);
+          hideLoading("templates");
+          hideLoading("business-types");
+          hideLoading("default-roles");
+        }
+      }
+
+      // Loading states
+      function showLoading(section) {
+        document.getElementById(`${section}-loading`).classList.add("show");
+        document.getElementById(`${section}-grid`).style.display = "none";
+        document.getElementById(`${section}-empty`).style.display = "none";
+      }
+
+      function hideLoading(section) {
+        document.getElementById(`${section}-loading`).classList.remove("show");
+        document.getElementById(`${section}-grid`).style.display = "grid";
+      }
+
+      // Tab switching
+      function switchTab(tabId) {
+        // Update tab buttons
+        document.querySelectorAll(".tab").forEach(tab => {
+          tab.classList.remove("active");
+        });
+        event.target.classList.add("active");
+
+        // Update tab content
+        document.querySelectorAll(".tab-content").forEach(content => {
+          content.classList.remove("active");
+        });
+        document.getElementById(tabId).classList.add("active");
+      }
+
+      // Permission Templates
+      function renderPermissionTemplates() {
+        const grid = document.getElementById("templates-grid");
+        const empty = document.getElementById("templates-empty");
+
+        if (permissionTemplates.length === 0) {
+          grid.style.display = "none";
+          empty.style.display = "block";
+          return;
+        }
+
+        grid.style.display = "grid";
+        empty.style.display = "none";
+
+        grid.innerHTML = permissionTemplates
+          .map(
+            template => `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                ${template.name}
+                ${template.isDefault ? '<span class="badge default">Default</span>' : ""}
+                ${template.isActive ? '<span class="badge active">Active</span>' : ""}
+              </div>
+              <div class="card-actions">
+                <button class="action-button edit" onclick="editTemplate('${template.id}')">
+                  ✏️ Edit
+                </button>
+                ${
+                  !template.isDefault
+                    ? `
+                  <button class="action-button delete" onclick="deleteTemplate('${template.id}')">
+                    🗑️ Delete
+                  </button>
+                `
+                    : ""
+                }
+              </div>
+            </div>
+            <div class="card-description">
+              ${template.description}
+            </div>
+            <div class="permissions-preview">
+              ${(template.permissions || [])
+                .slice(0, 6)
+                .map(perm => `<span class="permission-tag">${perm}</span>`)
+                .join("")}
+              ${
+                (template.permissions || []).length > 6
+                  ? `<span class="more-permissions">+${(template.permissions || []).length - 6} more</span>`
+                  : ""
+              }
+            </div>
+            <div class="card-meta">
+              <div class="card-meta-item">
+                📊 ${(template.permissions || []).length} permissions
+              </div>
+              <div class="card-meta-item">
+                🏢 ${(template.businessTypes || []).length} business types
+              </div>
+              <div class="card-meta-item">
+                📅 ${new Date(template.createdAt || Date.now()).toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+        `
+          )
+          .join("");
+
+        hideLoading("templates");
+      }
+
+      // Business Types
+      function renderBusinessTypes() {
+        const grid = document.getElementById("business-types-grid");
+        const empty = document.getElementById("business-types-empty");
+
+        if (businessTypes.length === 0) {
+          grid.style.display = "none";
+          empty.style.display = "block";
+          return;
+        }
+
+        grid.style.display = "grid";
+        empty.style.display = "none";
+
+        grid.innerHTML = businessTypes
+          .map(
+            type => `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                ${type.name}
+                <span class="badge risk-${type.riskLevel}">${type.riskLevel}</span>
+                ${type.isActive ? '<span class="badge active">Active</span>' : ""}
+              </div>
+              <div class="card-actions">
+                <button class="action-button edit" onclick="editBusinessType('${type.id}')">
+                  ✏️ Edit
+                </button>
+                <button class="action-button delete" onclick="deleteBusinessType('${type.id}')">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+            <div class="card-description">
+              ${type.description}
+            </div>
+            <div class="permissions-preview">
+              ${(type.requiredCompliance || [])
+                .map(comp => `<span class="permission-tag">${comp.toUpperCase()}</span>`)
+                .join("")}
+            </div>
+            <div class="card-meta">
+              <div class="card-meta-item">
+                🛡️ ${(type.defaultPermissions || []).length} default permissions
+              </div>
+              <div class="card-meta-item">
+                📋 ${(type.requiredCompliance || []).length} compliance
+              </div>
+              <div class="card-meta-item">
+                ${type.maxTenants ? `👥 Max: ${type.maxTenants}` : "👥 Unlimited"}
+              </div>
+            </div>
+          </div>
+        `
+          )
+          .join("");
+
+        hideLoading("business-types");
+      }
+
+      // Default Roles
+      function renderDefaultRoles() {
+        const grid = document.getElementById("default-roles-grid");
+        const empty = document.getElementById("default-roles-empty");
+
+        if (defaultRoles.length === 0) {
+          grid.style.display = "none";
+          empty.style.display = "block";
+          return;
+        }
+
+        grid.style.display = "grid";
+        empty.style.display = "none";
+
+        grid.innerHTML = defaultRoles
+          .map(
+            role => `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                ${role.name}
+                ${role.isSystemRole ? '<span class="badge default">System</span>' : ""}
+                ${role.isActive ? '<span class="badge active">Active</span>' : ""}
+              </div>
+              <div class="card-actions">
+                <button class="action-button edit" onclick="editDefaultRole('${role.id}')">
+                  ✏️ Edit
+                </button>
+                ${
+                  !role.isSystemRole
+                    ? `
+                  <button class="action-button delete" onclick="deleteDefaultRole('${role.id}')">
+                    🗑️ Delete
+                  </button>
+                `
+                    : ""
+                }
+              </div>
+            </div>
+            <div class="card-description">
+              ${role.description}
+            </div>
+            <div class="permissions-preview">
+              ${(role.permissions || [])
+                .slice(0, 6)
+                .map(perm => `<span class="permission-tag">${perm}</span>`)
+                .join("")}
+              ${
+                (role.permissions || []).length > 6
+                  ? `<span class="more-permissions">+${(role.permissions || []).length - 6} more</span>`
+                  : ""
+              }
+            </div>
+            <div class="card-meta">
+              <div class="card-meta-item">
+                🛡️ ${(role.permissions || []).length} permissions
+              </div>
+              <div class="card-meta-item">
+                📊 Priority: ${role.priority || 1}
+              </div>
+              <div class="card-meta-item">
+                ${role.businessTypeId ? "🏢 Business-specific" : "🌐 All types"}
+              </div>
+            </div>
+          </div>
+        `
+          )
+          .join("");
+
+        hideLoading("default-roles");
+      }
+
+      // Modal management
+      function openTemplateModal(templateId = null) {
+        editingItem = templateId ? permissionTemplates.find(t => t.id === templateId) : null;
+        const modal = document.getElementById("template-modal");
+        const title = document.getElementById("template-modal-title");
+
+        title.textContent = editingItem ? "Edit Permission Template" : "Add Permission Template";
+
+        // Populate form
+        document.getElementById("template-name").value = editingItem?.name || "";
+        document.getElementById("template-description").value = editingItem?.description || "";
+        document.getElementById("template-is-default").checked = editingItem?.isDefault || false;
+
+        // Load business types checkboxes
+        loadBusinessTypesCheckboxes("template-business-types", editingItem?.businessTypes || []);
+
+        // Load permissions checkboxes
+        loadPermissionsCheckboxes("template-permissions", editingItem?.permissions || []);
+
+        modal.classList.add("show");
+      }
+
+      function closeTemplateModal() {
+        document.getElementById("template-modal").classList.remove("show");
+        editingItem = null;
+      }
+
+      function openBusinessTypeModal(typeId = null) {
+        editingItem = typeId ? businessTypes.find(t => t.id === typeId) : null;
+        const modal = document.getElementById("business-type-modal");
+        const title = document.getElementById("business-type-modal-title");
+
+        title.textContent = editingItem ? "Edit Business Type" : "Add Business Type";
+
+        // Populate form
+        document.getElementById("bt-name").value = editingItem?.name || "";
+        document.getElementById("bt-description").value = editingItem?.description || "";
+        document.getElementById("bt-risk-level").value = editingItem?.riskLevel || "low";
+        document.getElementById("bt-max-tenants").value = editingItem?.maxTenants || "";
+        document.getElementById("bt-is-active").checked = editingItem?.isActive !== false;
+
+        // Set compliance checkboxes
+        const compliance = editingItem?.requiredCompliance || [];
+        ["gdpr", "hipaa", "sox", "pci", "ferpa", "fisma"].forEach(comp => {
+          document.getElementById(`compliance-${comp}`).checked = compliance.includes(comp);
+        });
+
+        // Load permissions checkboxes
+        loadPermissionsCheckboxes("bt-default-permissions", editingItem?.defaultPermissions || []);
+
+        modal.classList.add("show");
+      }
+
+      function closeBusinessTypeModal() {
+        document.getElementById("business-type-modal").classList.remove("show");
+        editingItem = null;
+      }
+
+      function openDefaultRoleModal(roleId = null) {
+        editingItem = roleId ? defaultRoles.find(r => r.id === roleId) : null;
+        const modal = document.getElementById("default-role-modal");
+        const title = document.getElementById("default-role-modal-title");
+
+        title.textContent = editingItem ? "Edit Default Role" : "Add Default Role";
+
+        // Populate form
+        document.getElementById("role-name").value = editingItem?.name || "";
+        document.getElementById("role-description").value = editingItem?.description || "";
+        document.getElementById("role-business-type").value = editingItem?.businessTypeId || "";
+        document.getElementById("role-permission-template").value =
+          editingItem?.permissionTemplateId || "";
+        document.getElementById("role-priority").value = editingItem?.priority || 1;
+        document.getElementById("role-is-system").checked = editingItem?.isSystemRole || false;
+
+        // Load business type dropdown
+        loadBusinessTypeDropdown();
+        loadPermissionTemplateDropdown();
+
+        // Load permissions checkboxes
+        loadPermissionsCheckboxes("role-permissions", editingItem?.permissions || []);
+
+        modal.classList.add("show");
+      }
+
+      function closeDefaultRoleModal() {
+        document.getElementById("default-role-modal").classList.remove("show");
+        editingItem = null;
+      }
+
+      // Helper functions
+      function loadBusinessTypesCheckboxes(containerId, selectedTypes) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = businessTypes
+          .map(
+            type => `
+          <div class="checkbox-item">
+            <input type="checkbox" id="bt-${type.id}" value="${type.id}" 
+              ${selectedTypes.includes(type.name) || selectedTypes.includes(type.id) ? "checked" : ""}>
+            <label for="bt-${type.id}">${type.name}</label>
+          </div>
+        `
+          )
+          .join("");
+      }
+
+      function loadPermissionsCheckboxes(containerId, selectedPermissions) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = availablePermissions
+          .map(
+            perm => `
+          <div class="checkbox-item">
+            <input type="checkbox" id="perm-${containerId}-${perm}" value="${perm}"
+              ${selectedPermissions.includes(perm) ? "checked" : ""}>
+            <label for="perm-${containerId}-${perm}">${perm}</label>
+          </div>
+        `
+          )
+          .join("");
+      }
+
+      function loadBusinessTypeDropdown() {
+        const select = document.getElementById("role-business-type");
+        select.innerHTML = `
+          <option value="">All Business Types</option>
+          ${businessTypes
+            .map(
+              type => `
+            <option value="${type.id}">${type.name}</option>
+          `
+            )
+            .join("")}
+        `;
+      }
+
+      function loadPermissionTemplateDropdown() {
+        const select = document.getElementById("role-permission-template");
+        select.innerHTML = `
+          <option value="">No Template</option>
+          ${permissionTemplates
+            .map(
+              template => `
+            <option value="${template.id}">${template.name}</option>
+          `
+            )
+            .join("")}
+        `;
+      }
+
+      // Save functions
+      async function saveTemplate() {
+        try {
+          const formData = {
+            name: document.getElementById("template-name").value,
+            description: document.getElementById("template-description").value,
+            isDefault: document.getElementById("template-is-default").checked,
+            isActive: true,
+            businessTypes: Array.from(
+              document.querySelectorAll("#template-business-types input:checked")
+            ).map(input => businessTypes.find(bt => bt.id === input.value)?.name || input.value),
+            permissions: Array.from(
+              document.querySelectorAll("#template-permissions input:checked")
+            ).map(input => input.value),
+          };
+
+          let result;
+          if (editingItem) {
+            result = await apiRequest(
+              `/api/rbac-config/permission-templates/${editingItem.id}`,
+              "PUT",
+              formData
+            );
+          } else {
+            result = await apiRequest("/api/rbac-config/permission-templates", "POST", formData);
+          }
+
+          await loadData();
+          closeTemplateModal();
+          alert("Template saved successfully!");
+        } catch (error) {
+          console.error("Save failed:", error);
+        }
+      }
+
+      async function saveBusinessType() {
+        try {
+          const formData = {
+            name: document.getElementById("bt-name").value,
+            description: document.getElementById("bt-description").value,
+            riskLevel: document.getElementById("bt-risk-level").value,
+            maxTenants: document.getElementById("bt-max-tenants").value
+              ? parseInt(document.getElementById("bt-max-tenants").value)
+              : null,
+            isActive: document.getElementById("bt-is-active").checked,
+            requiredCompliance: Array.from(
+              document.querySelectorAll('#business-type-modal input[type="checkbox"]:checked')
+            )
+              .filter(input => input.id.startsWith("compliance-"))
+              .map(input => input.value),
+            defaultPermissions: Array.from(
+              document.querySelectorAll("#bt-default-permissions input:checked")
+            ).map(input => input.value),
+          };
+
+          let result;
+          if (editingItem) {
+            result = await apiRequest(
+              `/api/rbac-config/business-types/${editingItem.id}`,
+              "PUT",
+              formData
+            );
+          } else {
+            result = await apiRequest("/api/rbac-config/business-types", "POST", formData);
+          }
+
+          await loadData();
+          closeBusinessTypeModal();
+          alert("Business type saved successfully!");
+        } catch (error) {
+          console.error("Save failed:", error);
+        }
+      }
+
+      async function saveDefaultRole() {
+        try {
+          const formData = {
+            name: document.getElementById("role-name").value,
+            description: document.getElementById("role-description").value,
+            businessTypeId: document.getElementById("role-business-type").value || null,
+            permissionTemplateId: document.getElementById("role-permission-template").value || null,
+            priority: parseInt(document.getElementById("role-priority").value) || 1,
+            isSystemRole: document.getElementById("role-is-system").checked,
+            isActive: true,
+            canBeModified: !document.getElementById("role-is-system").checked,
+            permissions: Array.from(
+              document.querySelectorAll("#role-permissions input:checked")
+            ).map(input => input.value),
+          };
+
+          let result;
+          if (editingItem) {
+            result = await apiRequest(
+              `/api/rbac-config/default-roles/${editingItem.id}`,
+              "PUT",
+              formData
+            );
+          } else {
+            result = await apiRequest("/api/rbac-config/default-roles", "POST", formData);
+          }
+
+          await loadData();
+          closeDefaultRoleModal();
+          alert("Default role saved successfully!");
+        } catch (error) {
+          console.error("Save failed:", error);
+        }
+      }
+
+      // Edit functions
+      function editTemplate(id) {
+        openTemplateModal(id);
+      }
+
+      function editBusinessType(id) {
+        openBusinessTypeModal(id);
+      }
+
+      function editDefaultRole(id) {
+        openDefaultRoleModal(id);
+      }
+
+      // Delete functions
+      async function deleteTemplate(id) {
+        if (!confirm("Are you sure you want to delete this template?")) return;
+
+        try {
+          await apiRequest(`/api/rbac-config/permission-templates/${id}`, "DELETE");
+          await loadData();
+          alert("Template deleted successfully!");
+        } catch (error) {
+          console.error("Delete failed:", error);
+        }
+      }
+
+      async function deleteBusinessType(id) {
+        if (!confirm("Are you sure you want to delete this business type?")) return;
+
+        try {
+          await apiRequest(`/api/rbac-config/business-types/${id}`, "DELETE");
+          await loadData();
+          alert("Business type deleted successfully!");
+        } catch (error) {
+          console.error("Delete failed:", error);
+        }
+      }
+
+      async function deleteDefaultRole(id) {
+        if (!confirm("Are you sure you want to delete this default role?")) return;
+
+        try {
+          await apiRequest(`/api/rbac-config/default-roles/${id}`, "DELETE");
+          await loadData();
+          alert("Default role deleted successfully!");
+        } catch (error) {
+          console.error("Delete failed:", error);
+        }
+      }
+
+      // Close modal when clicking outside
+      window.addEventListener("click", function (event) {
+        if (event.target.classList.contains("modal")) {
+          event.target.classList.remove("show");
+          editingItem = null;
+        }
+      });
+
+      // Close modal with Escape key
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          document.querySelectorAll(".modal").forEach(modal => {
+            modal.classList.remove("show");
+          });
+          editingItem = null;
+        }
+      });
+    </script>
+  </body>
+</html>

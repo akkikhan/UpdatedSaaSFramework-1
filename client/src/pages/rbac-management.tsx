@@ -3,13 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +46,7 @@ import {
   Settings,
   Building2,
   CheckCircle
+
 } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -81,7 +76,7 @@ type RBACConfigForm = z.infer<typeof rbacConfigSchema>;
 
 export default function RBACManagementPage() {
   const { tenantId } = useParams();
-  const [activeSection, setActiveSection] = useState('configuration');
+  const [activeSection, setActiveSection] = useState("configuration");
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
@@ -105,6 +100,15 @@ export default function RBACManagementPage() {
     enabled: !!tenantId,
   });
 
+  // Pull RBAC configuration options from platform admin APIs
+  const { data: permissionTemplates = [] } = useQuery({
+    queryKey: ["/api/rbac-config/permission-templates"],
+  });
+
+  const { data: businessTypes = [] } = useQuery({
+    queryKey: ["/api/rbac-config/business-types"],
+  });
+
   // Forms
   const roleForm = useForm<RoleForm>({
     resolver: zodResolver(roleSchema),
@@ -119,8 +123,8 @@ export default function RBACManagementPage() {
   const configForm = useForm<RBACConfigForm>({
     resolver: zodResolver(rbacConfigSchema),
     defaultValues: {
-      permissionTemplate: "standard",
-      businessType: "general",
+      permissionTemplate: "",
+      businessType: "",
     },
   });
 
@@ -132,7 +136,7 @@ export default function RBACManagementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to create role');
+      if (!response.ok) throw new Error("Failed to create role");
       return response.json();
     },
     onSuccess: () => {
@@ -152,7 +156,6 @@ export default function RBACManagementPage() {
   const defaultRolesQuery = useQuery({
     queryKey: ["/api/rbac-config/default-roles"],
   });
-
   const renderConfiguration = () => (
     <Card>
       <CardHeader>
@@ -180,6 +183,7 @@ export default function RBACManagementPage() {
                 </CardContent>
               </Card>
             ))}
+
           </div>
         </div>
 
@@ -187,9 +191,6 @@ export default function RBACManagementPage() {
 
         <div>
           <h3 className="text-lg font-semibold mb-4">Business Type</h3>
-          <p className="text-sm text-slate-600 mb-4">
-            Choose your business type to get industry-specific role templates and permission sets that match your operational needs.
-          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {businessTypesQuery.data?.map((bt: any) => (
               <Card key={bt.id} className="cursor-pointer hover:shadow-md transition-shadow">
@@ -211,10 +212,12 @@ export default function RBACManagementPage() {
             <div>
               <h4 className="font-semibold text-blue-900">Current Configuration</h4>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Permission Template:</strong> Standard - Provides essential user management and role-based permissions suitable for most applications.
+                <strong>Permission Template:</strong>{" "}
+                {tenant?.moduleConfigs?.rbac?.permissionTemplate || "N/A"}
               </p>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Business Type:</strong> General - Standard business operations with Admin, Manager, and User roles.
+                <strong>Business Type:</strong>{" "}
+                {tenant?.moduleConfigs?.rbac?.businessType || "N/A"}
               </p>
             </div>
           </div>
@@ -232,7 +235,9 @@ export default function RBACManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold">Roles Management</h2>
-          <p className="text-sm text-slate-600">Create and manage user roles with specific permissions</p>
+          <p className="text-sm text-slate-600">
+            Create and manage user roles with specific permissions
+          </p>
         </div>
         <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
           <DialogTrigger asChild>
@@ -277,7 +282,11 @@ export default function RBACManagementPage() {
                   )}
                 />
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsRoleDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button type="button">Create Role</Button>
@@ -369,9 +378,7 @@ export default function RBACManagementPage() {
           <Users className="h-5 w-5" />
           User Role Assignments
         </CardTitle>
-        <CardDescription>
-          Assign roles to users and manage their permissions
-        </CardDescription>
+        <CardDescription>Assign roles to users and manage their permissions</CardDescription>
       </CardHeader>
       <CardContent className="p-8 text-center">
         <Users className="h-12 w-12 mx-auto mb-4 text-slate-400" />
@@ -393,39 +400,47 @@ export default function RBACManagementPage() {
             <Shield className="h-6 w-6 text-blue-500" />
             <span className="font-semibold text-slate-800">RBAC Manager</span>
           </div>
-          
+
           <nav className="space-y-2">
             <button
-              onClick={() => setActiveSection('configuration')}
+              onClick={() => setActiveSection("configuration")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'configuration' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "configuration"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Settings className="h-4 w-4" />
               Configuration
             </button>
             <button
-              onClick={() => setActiveSection('roles')}
+              onClick={() => setActiveSection("roles")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'roles' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "roles"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Users className="h-4 w-4" />
               Roles
             </button>
             <button
-              onClick={() => setActiveSection('permissions')}
+              onClick={() => setActiveSection("permissions")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'permissions' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "permissions"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Key className="h-4 w-4" />
               Permissions
             </button>
             <button
-              onClick={() => setActiveSection('assignments')}
+              onClick={() => setActiveSection("assignments")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeSection === 'assignments' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                activeSection === "assignments"
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <Users className="h-4 w-4" />
@@ -443,20 +458,22 @@ export default function RBACManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-slate-800">RBAC Management</h1>
-                <p className="text-sm text-slate-600">Roles, permissions and access control for {(tenant as any)?.name || 'this tenant'}</p>
+                <p className="text-sm text-slate-600">
+                  Roles, permissions and access control for {(tenant as any)?.name || "this tenant"}
+                </p>
               </div>
-              <Link href={`/tenants/${tenantId}/portal`}>
-                <Button variant="outline">← Back to Portal</Button>
+              <Link href={`/tenants`}>
+                <Button variant="outline">← Back to Tenants</Button>
               </Link>
             </div>
           </div>
         </div>
 
         <div className="flex-1 p-6">
-          {activeSection === 'configuration' && renderConfiguration()}
-          {activeSection === 'roles' && renderRoles()}
-          {activeSection === 'permissions' && renderPermissions()}
-          {activeSection === 'assignments' && renderAssignments()}
+          {activeSection === "configuration" && renderConfiguration()}
+          {activeSection === "roles" && renderRoles()}
+          {activeSection === "permissions" && renderPermissions()}
+          {activeSection === "assignments" && renderAssignments()}
         </div>
       </div>
     </div>

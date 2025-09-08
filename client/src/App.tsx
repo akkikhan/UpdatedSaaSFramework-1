@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AdminLayout from "@/components/layout/admin-layout";
+import AuthGuard from "@/components/auth/AuthGuard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import TenantsPage from "@/pages/tenants";
 import AddTenantPage from "@/pages/add-tenant";
@@ -15,6 +16,9 @@ import EmailTemplatesPage from "@/pages/email-templates";
 import SystemHealthPage from "@/pages/system-health";
 import TenantLogin from "@/pages/tenant-login";
 import TenantDashboard from "@/pages/tenant-dashboard";
+import PasswordResetRequest from "@/pages/password-reset-request";
+import PasswordResetConfirm from "@/pages/password-reset-confirm";
+import PasswordChange from "@/pages/password-change";
 import AzureTestPage from "@/pages/azure-test";
 import AuthSuccessPage from "@/pages/auth-success";
 import AuthErrorPage from "@/pages/auth-error";
@@ -24,6 +28,8 @@ import TenantAttentionPage from "@/pages/tenant-attention";
 import RBACManagementPage from "@/pages/rbac-management";
 import RBACConfigPage from "@/pages/rbac-config";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
+import TenantAttentionPage from "@/pages/tenant-attention";
+import PlatformAdminLogin from "@/pages/platform-admin-login";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
 
@@ -33,13 +39,22 @@ function Router() {
       {/* Authentication Result Pages */}
       <Route path="/auth-success" component={AuthSuccessPage} />
       <Route path="/auth-error" component={AuthErrorPage} />
+      {/* Backward-compatible aliases used by server redirects */}
+      <Route path="/auth/success" component={AuthSuccessPage} />
+      <Route path="/auth/error" component={AuthErrorPage} />
+
+      {/* Admin Login Page - MUST come before protected routes */}
+      <Route path="/admin/login" component={PlatformAdminLogin} />
 
       {/* Tenant Portal Routes */}
       <Route path="/tenant/:orgId/login" component={TenantLogin} />
+      <Route path="/tenant/:orgId/password/forgot" component={PasswordResetRequest} />
+      <Route path="/tenant/:orgId/password/reset" component={PasswordResetConfirm} />
+      <Route path="/tenant/:orgId/password/change" component={PasswordChange} />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
       <Route path="/tenant/:orgId/*" component={TenantDashboard} />
 
-      {/* Admin Portal Routes */}
+      {/* Protected Admin Portal Routes */}
       <Route>
         <AdminLayout>
           <Switch>

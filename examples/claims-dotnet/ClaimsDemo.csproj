@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Avoid creating a self-contained apphost EXE during dev to reduce file locking issues -->
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+</Project>

@@ -36,6 +36,7 @@ async function seed() {
 
     const defaultRoles = await storage.getDefaultRoles();
     if (defaultRoles.length === 0) {
+
       await storage.createDefaultRole({
         name: "Admin",
         description: "Full access to system",
@@ -48,6 +49,7 @@ async function seed() {
         priority: 1,
       });
     }
+
 
     console.log("RBAC configuration seeded");
     process.exit(0);

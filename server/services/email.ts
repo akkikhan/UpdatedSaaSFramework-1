@@ -21,12 +21,15 @@ export class EmailService {
   constructor() {
     // Use environment variables with fallbacks
     const smtpEmail =
-      process.env.SMTP_EMAIL || process.env.SMTP_USERNAME || "your-email@example.com";
-    const fromEmail = process.env.FROM_EMAIL || smtpEmail;
+      process.env.GMAIL_USER ||
+      process.env.SMTP_EMAIL ||
+      process.env.SMTP_USERNAME ||
+      "your-email@example.com";
+    const fromEmail = process.env.FROM_EMAIL || process.env.GMAIL_USER || smtpEmail;
 
-    // Force Gmail settings if FROM_EMAIL is a Gmail address
+    // Force Gmail settings if GMAIL_USER provided or FROM_EMAIL is a Gmail address
     let smtpSettings;
-    if (fromEmail.includes("@gmail.com")) {
+    if (process.env.GMAIL_USER || fromEmail.includes("@gmail.com")) {
       smtpSettings = { host: "smtp.gmail.com", port: 587, secure: false };
     } else {
       smtpSettings = this.getSmtpSettings(smtpEmail);
@@ -35,8 +38,13 @@ export class EmailService {
     this.config = {
       smtpHost: process.env.SMTP_HOST || smtpSettings.host,
       smtpPort: parseInt(process.env.SMTP_PORT || "") || smtpSettings.port,
-      smtpUsername: fromEmail, // Use FROM_EMAIL as username for authentication
-      smtpPassword: process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || "",
+      // Prefer explicit SMTP_USERNAME/GMAIL_USER, fall back to FROM_EMAIL
+      smtpUsername: process.env.GMAIL_USER || process.env.SMTP_USERNAME || fromEmail,
+      smtpPassword:
+        process.env.GMAIL_APP_PASSWORD ||
+        process.env.SMTP_PASSWORD ||
+        process.env.SMTP_APP_PASSWORD ||
+        "",
       fromEmail: fromEmail,
       fromName: process.env.FROM_NAME || "SaaS Framework Platform",
     };
@@ -67,11 +75,25 @@ export class EmailService {
             pass: this.config.smtpPassword,
           }
         : undefined,
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: "SSLv3",
-      },
+      // Office365 typically requires STARTTLS on 587
+      requireTLS: this.config.smtpPort === 587,
+      tls: { rejectUnauthorized: false },
     });
+
+    // Proactively verify SMTP connectivity on startup (non-blocking)
+    void this.transporter
+      .verify()
+      .then(() => {
+        console.log(
+          `📨 SMTP verify OK for ${this.config.smtpHost}:${this.config.smtpPort} as ${this.config.smtpUsername}`
+        );
+      })
+      .catch(err => {
+        console.warn(
+          `⚠️  SMTP verify failed for ${this.config.smtpHost}:${this.config.smtpPort} as ${this.config.smtpUsername}:`,
+          err?.message || err
+        );
+      });
   }
 
   private getSmtpSettings(email: string): { host: string; port: number; secure: boolean } {
@@ -150,34 +172,79 @@ export class EmailService {
     name: string;
     orgId: string;
     adminEmail: string;
-    authApiKey: string;
-    rbacApiKey: string;
+    enabledModules?: string[];
+    authApiKey?: string;
+    rbacApiKey?: string;
+    loggingApiKey?: string;
+    notificationsApiKey?: string;
+    moduleConfigs?: any;
   }): Promise<boolean> {
-    const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    // Load tenant-specific onboarding template if available
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const onboardingTemplate = templates.find(
+      t => t.name?.toLowerCase() === "onboarding"
+    );
+
+    let subject =
+      onboardingTemplate?.subject ||
+      `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    let html = onboardingTemplate?.htmlContent ||
+      this.generateOnboardingEmailTemplate(tenant);
+
+    if (onboardingTemplate) {
+      for (const variable of onboardingTemplate.variables || []) {
+        const value = (tenant as any)[variable] ?? "";
+        html = html.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          String(value)
+        );
+      }
+    }
+
+    // Get enabled modules or default
+    const enabledModules = tenant.enabledModules || ["authentication", "rbac"];
+
+    // Build API keys object for enabled modules only
+    const apiKeys: { [key: string]: string } = {};
+    if (enabledModules.includes("authentication") && tenant.authApiKey) {
+      apiKeys.authentication = tenant.authApiKey;
+    }
+    if (enabledModules.includes("rbac") && tenant.rbacApiKey) {
+      apiKeys.rbac = tenant.rbacApiKey;
+    }
+    if (enabledModules.includes("logging") && tenant.loggingApiKey) {
+      apiKeys.logging = tenant.loggingApiKey;
+    }
+    if (enabledModules.includes("notifications") && tenant.notificationsApiKey) {
+      apiKeys.notifications = tenant.notificationsApiKey;
+    }
 
     // Temporarily skip email sending - just log as sent for now
     if (!this.config.smtpPassword) {
       console.log(
         `📧 Email functionality disabled - would have sent onboarding email to ${tenant.adminEmail}`
       );
-      console.log(`📧 Tenant "${tenant.name}" created successfully with API keys:`);
-      console.log(`📧 Auth API Key: ${tenant.authApiKey}`);
-      console.log(`📧 RBAC API Key: ${tenant.rbacApiKey}`);
+      console.log(
+        `📧 Tenant "${tenant.name}" created successfully with modules: ${enabledModules.join(", ")}`
+      );
+
+      // Log all API keys for enabled modules
+      Object.entries(apiKeys).forEach(([module, apiKey]) => {
+        console.log(`📧 ${module.charAt(0).toUpperCase() + module.slice(1)} API Key: ${apiKey}`);
+      });
 
       // Log as sent for platform functionality
       await storage.logEmail({
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: onboardingTemplate?.name || "onboarding",
         status: "sent",
         errorMessage: "Email disabled - credentials not configured",
       });
 
       return true;
     }
-
-    const html = this.generateOnboardingEmailTemplate(tenant);
 
     try {
       await this.transporter.sendMail({
@@ -192,7 +259,7 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: onboardingTemplate?.name || "onboarding",
         status: "sent",
         errorMessage: null,
       });
@@ -206,7 +273,7 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: onboardingTemplate?.name || "onboarding",
         status: "failed",
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
@@ -322,12 +389,89 @@ export class EmailService {
     name: string;
     orgId: string;
     adminEmail: string;
-    authApiKey: string;
-    rbacApiKey: string;
+    enabledModules?: string[];
+    authApiKey?: string;
+    rbacApiKey?: string;
+    loggingApiKey?: string;
+    notificationsApiKey?: string;
+    moduleConfigs?: any;
   }): string {
     const baseUrl = process.env.BASE_URL || "https://localhost:5000";
     const portalUrl = `${baseUrl}/tenant/${tenant.orgId}/login`;
     const docsUrl = `${baseUrl}/docs`;
+
+    // Get enabled modules or default
+    const enabledModules = tenant.enabledModules || ["authentication", "rbac"];
+
+    // Build API keys object for enabled modules only
+    const apiKeys: { [key: string]: string } = {};
+    if (enabledModules.includes("authentication") && tenant.authApiKey) {
+      apiKeys["Authentication"] = tenant.authApiKey;
+    }
+    if (enabledModules.includes("rbac") && tenant.rbacApiKey) {
+      apiKeys["RBAC"] = tenant.rbacApiKey;
+    }
+    if (enabledModules.includes("logging") && tenant.loggingApiKey) {
+      apiKeys["Logging"] = tenant.loggingApiKey;
+    }
+    if (enabledModules.includes("notifications") && tenant.notificationsApiKey) {
+      apiKeys["Notifications"] = tenant.notificationsApiKey;
+    }
+
+    // Generate API keys section
+    const apiKeysHtml = Object.entries(apiKeys)
+      .map(([module, apiKey]) => `<p><strong>${module} API Key:</strong> ${apiKey}</p>`)
+      .join("\n        ");
+
+    // Generate NPM install command for enabled modules
+    const packageNames = [];
+    if (enabledModules.includes("authentication")) packageNames.push("@saas-framework/auth");
+    if (enabledModules.includes("rbac")) packageNames.push("@saas-framework/rbac");
+    if (enabledModules.includes("logging")) packageNames.push("@saas-framework/logging");
+    if (enabledModules.includes("notifications"))
+      packageNames.push("@saas-framework/notifications");
+
+    const npmInstallCommand = `npm install ${packageNames.join(" ")}`;
+
+    // Generate import statements for enabled modules
+    const importStatements = [];
+    const initStatements = [];
+
+    if (enabledModules.includes("authentication") && tenant.authApiKey) {
+      importStatements.push("import { SaaSAuth } from '@saas-framework/auth';");
+      initStatements.push(`const auth = new SaaSAuth({
+  apiKey: '${tenant.authApiKey}',
+  baseUrl: '${baseUrl}/api/v2/auth'
+});`);
+    }
+
+    if (enabledModules.includes("rbac") && tenant.rbacApiKey) {
+      importStatements.push("import { SaaSRBAC } from '@saas-framework/rbac';");
+      initStatements.push(`const rbac = new SaaSRBAC({
+  apiKey: '${tenant.rbacApiKey}',
+  baseUrl: '${baseUrl}/api/v2/rbac'
+});`);
+    }
+
+    if (enabledModules.includes("logging") && tenant.loggingApiKey) {
+      importStatements.push("import { SaaSLogging } from '@saas-framework/logging';");
+      initStatements.push(`const logging = new SaaSLogging({
+  apiKey: '${tenant.loggingApiKey}',
+  baseUrl: '${baseUrl}/api/v2/logging'
+});`);
+    }
+
+    if (enabledModules.includes("notifications") && tenant.notificationsApiKey) {
+      importStatements.push("import { SaaSNotifications } from '@saas-framework/notifications';");
+      initStatements.push(`const notifications = new SaaSNotifications({
+  apiKey: '${tenant.notificationsApiKey}',
+  baseUrl: '${baseUrl}/api/v2/notifications'
+});`);
+    }
+
+    const integrationExample = `${importStatements.join("\n")}
+
+${initStatements.join("\n\n")}`;
 
     return `
 <!DOCTYPE html>
@@ -463,8 +607,8 @@ export class EmailService {
       <div class="info-card">
         <h3>🔐 API Keys for Integration</h3>
         <p><strong>Tenant ID:</strong> ${tenant.orgId}</p>
-        <p><strong>Auth API Key:</strong> ${tenant.authApiKey}</p>
-        <p><strong>RBAC API Key:</strong> ${tenant.rbacApiKey}</p>
+        <p><strong>Enabled Modules:</strong> ${enabledModules.join(", ")}</p>
+        ${apiKeysHtml}
       </div>
             
             <div class="steps">
@@ -479,26 +623,29 @@ export class EmailService {
             </div>
             
             <h3>📦 SDK Integration</h3>
-            <p>Install our authentication and RBAC SDKs:</p>
+            <p>Install SDKs for your enabled modules:</p>
             
             <div class="code-block">
-npm install @saas-framework/auth @saas-framework/rbac
+${npmInstallCommand}
             </div>
             
             <p>Example integration:</p>
             <div class="code-block">
-import { SaaSAuth } from '@saas-framework/auth';
-import { SaaSRBAC } from '@saas-framework/rbac';
+// Using our lightweight auth client so your app always calls our APIs
+import { startAzure, handleSuccessFromUrl, loginWithPassword, fetchWithAuth } from '@saas-framework/auth-client';
 
-const auth = new SaaSAuth({
-  apiKey: '${tenant.authApiKey}',
-  baseUrl: '${baseUrl}/api/v2/auth'
-});
+// 1) Add a button for Azure AD SSO
+document.getElementById('btn-azure').addEventListener('click', () => startAzure('${tenant.orgId}'));
 
-const rbac = new SaaSRBAC({
-  apiKey: '${tenant.rbacApiKey}',
-  baseUrl: '${baseUrl}/api/v2/rbac'
-});
+// 2) On your /auth/success page, capture the token from URL once
+handleSuccessFromUrl(); // stores token in localStorage
+
+// 3) For local login (optional fallback)
+await loginWithPassword({ orgId: '${tenant.orgId}', email: 'user@example.com', password: '••••••••' });
+
+// 4) Call APIs with the token attached
+const res = await fetchWithAuth('/api/tenant/me');
+const me = await res.json();
             </div>
         </div>
         
