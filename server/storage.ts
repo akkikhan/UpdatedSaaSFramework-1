@@ -924,6 +924,82 @@ export class DatabaseStorage implements IStorage {
 
 // Create demo storage for testing when database is unavailable
 class DemoStorage implements IStorage {
+  private permissionTemplates: PermissionTemplate[] = [
+    {
+      id: "pt-standard",
+      name: "Standard",
+      description: "Default permission template with full user and role access",
+      permissions: [
+        "user.create",
+        "user.read",
+        "user.update",
+        "user.delete",
+        "role.manage",
+      ],
+      businessTypes: ["general"],
+      isDefault: true,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "pt-readonly",
+      name: "Read Only",
+      description: "View-only access to users and roles",
+      permissions: ["user.read", "role.read"],
+      businessTypes: ["general"],
+      isDefault: false,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
+  private businessTypes: BusinessType[] = [
+    {
+      id: "bt-general",
+      name: "General",
+      description: "General business type",
+      requiredCompliance: [],
+      defaultPermissions: ["user.read", "role.read"],
+      riskLevel: "low",
+      isActive: true,
+      maxTenants: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
+  private defaultRoles: DefaultRole[] = [
+    {
+      id: "dr-admin",
+      name: "Admin",
+      description: "Full access to system",
+      permissions: ["*"],
+      businessTypeId: "bt-general",
+      permissionTemplateId: null,
+      isSystemRole: true,
+      canBeModified: false,
+      isActive: true,
+      priority: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "dr-manager",
+      name: "Manager",
+      description: "Manage users and roles",
+      permissions: ["user.create", "user.read", "user.update", "role.manage"],
+      businessTypeId: "bt-general",
+      permissionTemplateId: null,
+      isSystemRole: false,
+      canBeModified: true,
+      isActive: true,
+      priority: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
   async createTenant(): Promise<any> {
     return { id: "demo-tenant", status: "active" };
   }
@@ -1041,53 +1117,142 @@ class DemoStorage implements IStorage {
   async markNotificationAsRead(): Promise<void> {
     return;
   }
-  async createPermissionTemplate(): Promise<any> {
-    return { id: "demo-template" };
+  async createPermissionTemplate(
+    template: InsertPermissionTemplate
+  ): Promise<PermissionTemplate> {
+    const newTemplate: PermissionTemplate = {
+      id: randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isActive: true,
+      ...template,
+    };
+    this.permissionTemplates.push(newTemplate);
+    return newTemplate;
   }
-  async getPermissionTemplates(): Promise<any[]> {
-    return [];
+
+  async getPermissionTemplates(): Promise<PermissionTemplate[]> {
+    return this.permissionTemplates.filter((t) => t.isActive);
   }
-  async getPermissionTemplate(): Promise<any> {
-    return undefined;
+
+  async getPermissionTemplate(id: string): Promise<PermissionTemplate | undefined> {
+    return this.permissionTemplates.find((t) => t.id === id);
   }
-  async updatePermissionTemplate(): Promise<any> {
-    return { id: "demo-template" };
+
+  async updatePermissionTemplate(
+    id: string,
+    template: Partial<InsertPermissionTemplate>
+  ): Promise<PermissionTemplate> {
+    const index = this.permissionTemplates.findIndex((t) => t.id === id);
+    if (index === -1) throw new Error("Permission template not found");
+    this.permissionTemplates[index] = {
+      ...this.permissionTemplates[index],
+      ...template,
+      updatedAt: new Date(),
+    } as PermissionTemplate;
+    return this.permissionTemplates[index];
   }
-  async deletePermissionTemplate(): Promise<void> {
-    return;
+
+  async deletePermissionTemplate(id: string): Promise<void> {
+    const template = await this.getPermissionTemplate(id);
+    if (template) {
+      template.isActive = false;
+      template.updatedAt = new Date();
+    }
   }
-  async createBusinessType(): Promise<any> {
-    return { id: "demo-business-type" };
+
+  async createBusinessType(
+    businessType: InsertBusinessType
+  ): Promise<BusinessType> {
+    const newType: BusinessType = {
+      id: randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isActive: true,
+      ...businessType,
+    };
+    this.businessTypes.push(newType);
+    return newType;
   }
-  async getBusinessTypes(): Promise<any[]> {
-    return [];
+
+  async getBusinessTypes(): Promise<BusinessType[]> {
+    return this.businessTypes.filter((b) => b.isActive);
   }
-  async getBusinessType(): Promise<any> {
-    return undefined;
+
+  async getBusinessType(id: string): Promise<BusinessType | undefined> {
+    return this.businessTypes.find((b) => b.id === id);
   }
-  async updateBusinessType(): Promise<any> {
-    return { id: "demo-business-type" };
+
+  async updateBusinessType(
+    id: string,
+    businessType: Partial<InsertBusinessType>
+  ): Promise<BusinessType> {
+    const index = this.businessTypes.findIndex((b) => b.id === id);
+    if (index === -1) throw new Error("Business type not found");
+    this.businessTypes[index] = {
+      ...this.businessTypes[index],
+      ...businessType,
+      updatedAt: new Date(),
+    } as BusinessType;
+    return this.businessTypes[index];
   }
-  async deleteBusinessType(): Promise<void> {
-    return;
+
+  async deleteBusinessType(id: string): Promise<void> {
+    const type = await this.getBusinessType(id);
+    if (type) {
+      type.isActive = false;
+      type.updatedAt = new Date();
+    }
   }
-  async createDefaultRole(): Promise<any> {
-    return { id: "demo-default-role" };
+
+  async createDefaultRole(role: InsertDefaultRole): Promise<DefaultRole> {
+    const newRole: DefaultRole = {
+      id: randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isActive: true,
+      ...role,
+    };
+    this.defaultRoles.push(newRole);
+    return newRole;
   }
-  async getDefaultRoles(): Promise<any[]> {
-    return [];
+
+  async getDefaultRoles(): Promise<DefaultRole[]> {
+    return this.defaultRoles.filter((r) => r.isActive);
   }
-  async getDefaultRole(): Promise<any> {
-    return undefined;
+
+  async getDefaultRole(id: string): Promise<DefaultRole | undefined> {
+    return this.defaultRoles.find((r) => r.id === id);
   }
-  async updateDefaultRole(): Promise<any> {
-    return { id: "demo-default-role" };
+
+  async updateDefaultRole(
+    id: string,
+    role: Partial<InsertDefaultRole>
+  ): Promise<DefaultRole> {
+    const index = this.defaultRoles.findIndex((r) => r.id === id);
+    if (index === -1) throw new Error("Default role not found");
+    this.defaultRoles[index] = {
+      ...this.defaultRoles[index],
+      ...role,
+      updatedAt: new Date(),
+    } as DefaultRole;
+    return this.defaultRoles[index];
   }
-  async deleteDefaultRole(): Promise<void> {
-    return;
+
+  async deleteDefaultRole(id: string): Promise<void> {
+    const role = await this.getDefaultRole(id);
+    if (role) {
+      role.isActive = false;
+      role.updatedAt = new Date();
+    }
   }
-  async getDefaultRolesByBusinessType(): Promise<any[]> {
-    return [];
+
+  async getDefaultRolesByBusinessType(
+    businessTypeId: string
+  ): Promise<DefaultRole[]> {
+    return this.defaultRoles.filter(
+      (r) => r.businessTypeId === businessTypeId && r.isActive
+    );
   }
 
   // Platform Admin operations (demo stubs)
