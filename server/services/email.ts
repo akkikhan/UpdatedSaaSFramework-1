@@ -68,8 +68,41 @@ export class EmailService {
     tenant: { id: string; name: string; adminEmail: string },
     changes: { enabled: string[]; disabled: string[] }
   ): Promise<boolean> {
-    const subject = `Module Access Updated - ${tenant.name}`;
-    const html = this.generateModuleStatusEmailTemplate(tenant, changes);
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const template = templates.find(
+      t => t.name?.toLowerCase() === "module_status"
+    );
+
+    let subject = template?.subject || `Module Access Updated - ${tenant.name}`;
+    let html = template?.htmlContent || this.generateModuleStatusEmailTemplate(tenant, changes);
+
+    if (template) {
+      const replacements: Record<string, string> = {
+        name: tenant.name,
+        enabledList:
+          changes.enabled.length > 0
+            ? `<h3>Modules Enabled:</h3><ul>${changes.enabled
+                .map(m => `<li>${m}</li>`)
+                .join("")}</ul>`
+            : "",
+        disabledList:
+          changes.disabled.length > 0
+            ? `<h3>Modules Disabled:</h3><ul>${changes.disabled
+                .map(m => `<li>${m}</li>`)
+                .join("")}</ul>`
+            : "",
+        enabledText: changes.enabled.join(", "),
+        disabledText: changes.disabled.join(", "),
+      };
+      for (const variable of template.variables || []) {
+        const value = replacements[variable] ?? "";
+        html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
+        subject = subject.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          value
+        );
+      }
+    }
 
     try {
       await this.deliver(tenant.adminEmail, subject, html);
@@ -78,7 +111,7 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "module_status",
+        templateType: template?.name || "module_status",
         status: "sent",
         errorMessage: null,
       });
@@ -91,7 +124,142 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "module_status",
+        templateType: template?.name || "module_status",
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+
+      return false;
+    }
+  }
+
+  async sendTenantOnboardingEmail(tenant: {
+    id: string;
+    name: string;
+    orgId: string;
+    adminEmail: string;
+    enabledModules?: string[];
+    authApiKey?: string;
+    rbacApiKey?: string;
+    loggingApiKey?: string;
+    notificationsApiKey?: string;
+    moduleConfigs?: any;
+  }): Promise<boolean> {
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const template = templates.find(
+      t => t.name?.toLowerCase() === "onboarding"
+    );
+
+    let subject =
+      template?.subject ||
+      `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    let html =
+      template?.htmlContent || this.generateOnboardingEmailTemplate(tenant);
+
+    if (template) {
+      const baseUrl = process.env.BASE_URL || "https://localhost:5000";
+      const replacements: Record<string, string> = {
+        name: tenant.name,
+        portalUrl: `${baseUrl}/tenant/${tenant.orgId}/login`,
+        adminEmail: tenant.adminEmail,
+        tempPassword: "temp123!",
+        orgId: tenant.orgId,
+      };
+      for (const variable of template.variables || []) {
+        const value =
+          replacements[variable] ?? (tenant as any)[variable] ?? "";
+        html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
+        subject = subject.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          value
+        );
+      }
+    }
+
+    try {
+      await this.deliver(tenant.adminEmail, subject, html);
+
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: tenant.adminEmail,
+        subject,
+        templateType: template?.name || "onboarding",
+        status: "sent",
+        errorMessage: null,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Failed to send onboarding email:", error);
+
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: tenant.adminEmail,
+        subject,
+        templateType: template?.name || "onboarding",
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+
+      return false;
+    }
+  }
+
+  async sendModuleRequestEmail(
+    tenant: { id: string; name: string; adminEmail: string },
+    request: { moduleId: string; action: string; reason?: string },
+    to: string | string[]
+  ): Promise<boolean> {
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const template = templates.find(
+      t => t.name?.toLowerCase() === "module_request"
+    );
+
+    let subject =
+      template?.subject ||
+      `Module request: ${tenant.name} requests to ${request.action} ${request.moduleId}`;
+    let html =
+      template?.htmlContent ||
+      `<!DOCTYPE html><html><body><h2>Module Change Requested</h2><p>Tenant <strong>${tenant.name}</strong> has requested to ${request.action} module <strong>${request.moduleId}</strong>.</p><p>Reason: ${request.reason || ""}</p></body></html>`;
+
+    if (template) {
+      const replacements: Record<string, string> = {
+        tenantName: tenant.name,
+        moduleId: request.moduleId,
+        action: request.action,
+        reason: request.reason || "",
+      };
+      for (const variable of template.variables || []) {
+        const value = replacements[variable] ?? "";
+        html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
+        subject = subject.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          value
+        );
+      }
+    }
+
+    try {
+      await this.deliver(to, subject, html);
+
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: Array.isArray(to) ? to.join(",") : to,
+        subject,
+        templateType: template?.name || "module_request",
+        status: "sent",
+        errorMessage: null,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Failed to send module request email:", error);
+
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: Array.isArray(to) ? to.join(",") : to,
+        subject,
+        templateType: template?.name || "module_request",
         status: "failed",
         errorMessage: error instanceof Error ? error.message : String(error),
       });

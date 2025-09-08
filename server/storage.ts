@@ -1708,10 +1708,69 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  private emailTemplates = new Map<string, any[]>();
+  private emailTemplates = new Map<string, any[]>([
+    [
+      "default",
+      [
+        {
+          id: "default-onboarding",
+          tenantId: "default",
+          name: "onboarding",
+          subject: "Welcome to SaaS Framework - Your Tenant \"{{name}}\" is Ready",
+          htmlContent:
+            "<!DOCTYPE html><html><body><h1>\uD83D\uDE80 Welcome to SaaS Framework</h1><p>Your tenant <strong>{{name}}</strong> is ready!</p><p><strong>Portal URL:</strong> {{portalUrl}}</p><p><strong>Admin Email:</strong> {{adminEmail}}</p><p><strong>Temporary Password:</strong> {{tempPassword}}</p><p>Best regards,<br/>The SaaS Framework Team</p></body></html>",
+          textContent:
+            "Welcome to SaaS Framework\nYour tenant {{name}} is ready.\nPortal URL: {{portalUrl}}\nAdmin Email: {{adminEmail}}\nTemporary Password: {{tempPassword}}",
+          variables: ["name", "portalUrl", "adminEmail", "tempPassword"],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "default-module-status",
+          tenantId: "default",
+          name: "module_status",
+          subject: "Module Access Updated - {{name}}",
+          htmlContent:
+            "<!DOCTYPE html><html><body><h2>Module Access Updated</h2><p>Your tenant <strong>{{name}}</strong> module access has been updated.</p>{{enabledList}}{{disabledList}}<p>Best regards,<br/>The SaaS Framework Team</p></body></html>",
+          textContent:
+            "Module Access Updated for {{name}}\nEnabled: {{enabledText}}\nDisabled: {{disabledText}}",
+          variables: [
+            "name",
+            "enabledList",
+            "disabledList",
+            "enabledText",
+            "disabledText",
+          ],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "default-module-request",
+          tenantId: "default",
+          name: "module_request",
+          subject:
+            "Module Request: {{tenantName}} requests to {{action}} {{moduleId}}",
+          htmlContent:
+            "<!DOCTYPE html><html><body><h2>Module Change Requested</h2><p>Tenant <strong>{{tenantName}}</strong> has requested to {{action}} module <strong>{{moduleId}}</strong>.</p><p>Reason: {{reason}}</p></body></html>",
+          textContent:
+            "Tenant {{tenantName}} has requested to {{action}} module {{moduleId}}. Reason: {{reason}}",
+          variables: ["tenantName", "moduleId", "action", "reason"],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    ],
+  ]);
 
   async getEmailTemplates(tenantId: string): Promise<any[]> {
-    return this.emailTemplates.get(tenantId) || [];
+    const defaults = this.emailTemplates.get("default") || [];
+    if (!tenantId || tenantId === "default") return defaults;
+    const tenantTemplates = this.emailTemplates.get(tenantId) || [];
+    const map = new Map<string, any>();
+    for (const tmpl of defaults) map.set(tmpl.name.toLowerCase(), { ...tmpl });
+    for (const tmpl of tenantTemplates)
+      map.set(tmpl.name.toLowerCase(), tmpl);
+    return Array.from(map.values());
   }
 
   async createEmailTemplate(template: {

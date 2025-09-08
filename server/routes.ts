@@ -1475,11 +1475,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Attempt to notify platform admins by email (best-effort)
       try {
-        const recipients = (process.env.AUTHORIZED_ADMIN_EMAILS || "").split(",").filter(Boolean);
+        const recipients = (process.env.AUTHORIZED_ADMIN_EMAILS || "")
+          .split(",")
+          .filter(Boolean);
         const to = recipients[0] || process.env.ADMIN_EMAIL || tenant.adminEmail;
-        await emailService.sendSimpleTestEmail(
-          to,
-          `Module request: ${tenant.name} requests to ${action} ${moduleId}`
+        await emailService.sendModuleRequestEmail(
+          { id: tenant.id, name: tenant.name, adminEmail: tenant.adminEmail },
+          { moduleId, action, reason },
+          to
         );
       } catch {}
 
