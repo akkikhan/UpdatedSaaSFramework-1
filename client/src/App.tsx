@@ -20,6 +20,7 @@ import AuthSuccessPage from "@/pages/auth-success";
 import AuthErrorPage from "@/pages/auth-error";
 import TenantSuccessPage from "@/pages/tenant-success";
 import TenantPortalPage from "@/pages/tenant-portal";
+import TenantAttentionPage from "@/pages/tenant-attention";
 import RBACManagementPage from "@/pages/rbac-management";
 import RBACConfigPage from "@/pages/rbac-config";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
@@ -48,6 +49,7 @@ function Router() {
             <Route path="/tenants/add" component={AddTenantPage} />
             <Route path="/tenants/wizard" component={OnboardingWizard} />
             <Route path="/tenants/success" component={TenantSuccessPage} />
+            <Route path="/tenants/:tenantId/attention" component={TenantAttentionPage} />
             <Route path="/tenants/:tenantId/portal" component={TenantPortalPage} />
             <Route path="/tenants/:tenantId/rbac" component={RBACManagementPage} />
             <Route path="/rbac-config" component={RBACConfigPage} />

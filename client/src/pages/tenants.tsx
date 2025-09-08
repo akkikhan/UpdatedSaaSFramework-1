@@ -106,8 +106,8 @@ export default function TenantsPage() {
   };
 
   const handleViewTenant = (tenant: Tenant) => {
-    setSelectedTenant(tenant);
-    setViewMode("view");
+    // Navigate to tenant attention page for detailed configuration
+    setLocation(`/tenants/${tenant.id}/attention`);
   };
 
   const handleEditTenant = (tenant: Tenant) => {
