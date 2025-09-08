@@ -139,6 +139,20 @@ export const tenantNotifications = pgTable("tenant_notifications", {
   readAt: timestamp("read_at"),
 });
 
+// Email templates with optional tenant scope
+export const emailTemplates = pgTable("email_templates", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  tenantId: uuid("tenant_id").references(() => tenants.id),
+  templateType: varchar("template_type", { length: 50 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  htmlContent: text("html_content").notNull(),
+  textContent: text("text_content"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Email logs for tracking
 export const emailLogs = pgTable("email_logs", {
   id: uuid("id")
@@ -523,6 +537,12 @@ export const insertTenantUserRoleSchema = createInsertSchema(tenantUserRoles).om
   assignedAt: true,
 });
 
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTenantNotificationSchema = createInsertSchema(tenantNotifications).omit({
   id: true,
   createdAt: true,
@@ -549,6 +569,7 @@ export type Role = typeof roles.$inferSelect;
 export type InsertRole = z.infer<typeof insertRoleSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type EmailLog = typeof emailLogs.$inferSelect;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type SystemLog = typeof systemLogs.$inferSelect;
 export type ComplianceAuditLog = typeof complianceAuditLogs.$inferSelect;
 export type InsertComplianceAuditLog = z.infer<typeof insertComplianceAuditLogSchema>;
@@ -559,6 +580,7 @@ export type InsertTenantUser = z.infer<typeof insertTenantUserSchema>;
 export type TenantRole = typeof tenantRoles.$inferSelect;
 export type InsertTenantRole = z.infer<typeof insertTenantRoleSchema>;
 export type TenantUserRole = typeof tenantUserRoles.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
 
 // Platform Admin RBAC Configuration Types
 export type PermissionTemplate = typeof permissionTemplates.$inferSelect;
