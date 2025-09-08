@@ -6,16 +6,19 @@ interface EnvironmentConfig {
   NODE_ENV: string;
   PORT: string;
   DATABASE_URL: string;
-  SMTP_HOST: string;
-  SMTP_PORT: string;
-  SMTP_USERNAME: string;
-  SMTP_PASSWORD: string;
-  FROM_EMAIL: string;
   JWT_SECRET: string;
   AZURE_CLIENT_ID: string;
   AZURE_CLIENT_SECRET: string;
   AZURE_TENANT_ID: string;
   AZURE_REDIRECT_URI: string;
+  // Optional email configuration (SMTP or Gmail)
+  SMTP_HOST?: string;
+  SMTP_PORT?: string;
+  SMTP_USERNAME?: string;
+  SMTP_PASSWORD?: string;
+  FROM_EMAIL?: string;
+  GMAIL_USER?: string;
+  GMAIL_APP_PASSWORD?: string;
 }
 
 export function validateEnvironment(): EnvironmentConfig {
@@ -26,11 +29,6 @@ export function validateEnvironment(): EnvironmentConfig {
     "NODE_ENV",
     "PORT",
     "DATABASE_URL",
-    "SMTP_HOST",
-    "SMTP_PORT",
-    "SMTP_USERNAME",
-    "SMTP_PASSWORD",
-    "FROM_EMAIL",
     "JWT_SECRET",
     "AZURE_CLIENT_ID",
     "AZURE_CLIENT_SECRET",
@@ -68,6 +66,29 @@ export function validateEnvironment(): EnvironmentConfig {
     if (value && insecure.some(bad => value.includes(bad))) {
       errors.push(`Insecure value detected in ${key}`);
     }
+  }
+
+  // Email configuration: require either Gmail creds or SMTP settings
+  const hasGmail = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
+  const hasSmtp =
+    process.env.SMTP_HOST &&
+    process.env.SMTP_PORT &&
+    process.env.SMTP_USERNAME &&
+    process.env.SMTP_PASSWORD &&
+    process.env.FROM_EMAIL;
+
+  if (!hasGmail && !hasSmtp) {
+    errors.push(
+      "Missing email configuration: set GMAIL_USER/GMAIL_APP_PASSWORD or SMTP_HOST/SMTP_PORT/SMTP_USERNAME/SMTP_PASSWORD/FROM_EMAIL"
+    );
+  }
+
+  if (hasGmail) {
+    process.env.SMTP_HOST = "smtp.gmail.com";
+    process.env.SMTP_PORT = process.env.SMTP_PORT || "587";
+    process.env.SMTP_USERNAME = process.env.GMAIL_USER!;
+    process.env.SMTP_PASSWORD = process.env.GMAIL_APP_PASSWORD!;
+    process.env.FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER!;
   }
 
   // JWT secret must be strong

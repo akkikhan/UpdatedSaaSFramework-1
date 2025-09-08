@@ -10,12 +10,16 @@ import nodemailer from "nodemailer";
 // Load environment variables
 dotenv.config();
 
-// Configure SMTP transporter using environment variables (if available)
-const smtpHost = process.env.SMTP_HOST || null;
-const smtpPort = parseInt(process.env.SMTP_PORT || "587");
-const fromEmail = process.env.FROM_EMAIL || process.env.SMTP_USERNAME || "no-reply@example.com";
+// Configure email transporter using environment variables (Gmail or SMTP)
+const gmailUser = process.env.GMAIL_USER;
+const gmailPass = process.env.GMAIL_APP_PASSWORD;
+const smtpHost = process.env.SMTP_HOST || (gmailUser ? "smtp.gmail.com" : null);
+const smtpPort = parseInt(process.env.SMTP_PORT || (gmailUser ? "587" : "587"));
+const fromEmail =
+  process.env.FROM_EMAIL || gmailUser || process.env.SMTP_USERNAME || "no-reply@example.com";
 const fromName = process.env.FROM_NAME || "SaaS Framework Platform";
-const smtpPassword = process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || "";
+const smtpPassword =
+  process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD || gmailPass || "";
 
 let transporter = null;
 try {
