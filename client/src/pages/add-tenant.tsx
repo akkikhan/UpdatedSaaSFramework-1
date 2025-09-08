@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   Form,
   FormControl,
@@ -163,28 +164,16 @@ export default function AddTenantPage() {
 
   const watchedModules = form.watch("enabledModules");
 
-  const permissionTemplatesQuery = useQuery<Array<{ id: string; name: string }>>({
+  const permissionTemplatesQuery = useQuery({
     queryKey: ["/api/rbac-config/permission-templates"],
-    enabled: watchedModules.includes("rbac"),
   });
-
-  const businessTypesQuery = useQuery<Array<{ id: string; name: string }>>({
+  const businessTypesQuery = useQuery({
     queryKey: ["/api/rbac-config/business-types"],
-    enabled: watchedModules.includes("rbac"),
+  });
+  const defaultRolesQuery = useQuery({
+    queryKey: ["/api/rbac-config/default-roles"],
   });
 
-  useEffect(() => {
-    if (!watchedModules.includes("rbac")) return;
-    const current = form.getValues("moduleConfigs") || {};
-    const rbacCfg = { ...(current as any).rbac };
-    if (!rbacCfg.permissionTemplate && permissionTemplatesQuery.data?.length) {
-      rbacCfg.permissionTemplate = permissionTemplatesQuery.data[0].id;
-    }
-    if (!rbacCfg.businessType && businessTypesQuery.data?.length) {
-      rbacCfg.businessType = businessTypesQuery.data[0].id;
-    }
-    form.setValue("moduleConfigs", { ...current, rbac: rbacCfg });
-  }, [watchedModules, permissionTemplatesQuery.data, businessTypesQuery.data, form]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -503,16 +492,16 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Permission Template</Label>
                         <Select
-                          value={
-                            (form.watch("moduleConfigs") as any)?.rbac?.permissionTemplate ||
-                            ""
-                          }
-                          onValueChange={value => {
+
+                          onValueChange={(value) => {
+
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
                               rbac: {
-                                ...(currentConfigs as any).rbac,
+
+                                ...currentConfigs.rbac,
+
                                 permissionTemplate: value,
                               },
                             });
@@ -522,14 +511,10 @@ export default function AddTenantPage() {
                             <SelectValue placeholder="Select template" />
                           </SelectTrigger>
                           <SelectContent>
-                            {permissionTemplatesQuery.isLoading && (
-                              <SelectItem value="" disabled>
-                                Loading...
-                              </SelectItem>
-                            )}
-                            {(permissionTemplatesQuery.data || []).map(t => (
-                              <SelectItem key={t.id} value={t.id}>
-                                {t.name}
+
+                            {permissionTemplatesQuery.data?.map((template: any) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -538,15 +523,15 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Business Type</Label>
                         <Select
-                          value={
-                            (form.watch("moduleConfigs") as any)?.rbac?.businessType || ""
-                          }
-                          onValueChange={value => {
+
+                          onValueChange={(value) => {
+
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
                               rbac: {
-                                ...(currentConfigs as any).rbac,
+                                ...currentConfigs.rbac,
+
                                 businessType: value,
                               },
                             });
@@ -556,20 +541,50 @@ export default function AddTenantPage() {
                             <SelectValue placeholder="Select business type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {businessTypesQuery.isLoading && (
-                              <SelectItem value="" disabled>
-                                Loading...
-                              </SelectItem>
-                            )}
-                            {(businessTypesQuery.data || []).map(bt => (
-                              <SelectItem key={bt.id} value={bt.id}>
-                                {bt.name}
+                            {businessTypesQuery.data?.map((type: any) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                {type.name}
+
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
+                    {defaultRolesQuery.data && (
+                      <div>
+                        <Label className="text-sm font-medium">Default Roles</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                          {defaultRolesQuery.data.map((role: any) => {
+                            const currentRoles =
+                              form.getValues("moduleConfigs")?.rbac?.defaultRoles || [];
+                            const checked = currentRoles.includes(role.id);
+                            return (
+                              <div key={role.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(isChecked) => {
+                                    const configs = form.getValues("moduleConfigs") || {};
+                                    const roles = configs.rbac?.defaultRoles || [];
+                                    const newRoles = isChecked
+                                      ? [...roles, role.id]
+                                      : roles.filter((r: string) => r !== role.id);
+                                    form.setValue("moduleConfigs", {
+                                      ...configs,
+                                      rbac: {
+                                        ...configs.rbac,
+                                        defaultRoles: newRoles,
+                                      },
+                                    });
+                                  }}
+                                />
+                                <span className="text-sm">{role.name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
