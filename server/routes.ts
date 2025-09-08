@@ -89,17 +89,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // SMTP quick test (platform admin only)
+  // Gmail quick test (platform admin only)
   app.post("/api/email/test", platformAdminMiddleware, async (req, res) => {
     try {
       const to = (req.body?.to as string) || process.env.ADMIN_EMAIL || "";
       if (!to) return res.status(400).json({ message: "Recipient not provided" });
 
-      const ok = await emailService.sendSimpleTestEmail(to, "SMTP Test - SaaS Framework");
+      const ok = await emailService.sendSimpleTestEmail(to, "Gmail Test - SaaS Framework");
       return res.json({ success: ok, to });
     } catch (err) {
       console.error("/api/email/test failed:", err);
-      return res.status(500).json({ message: "SMTP test failed" });
+      return res.status(500).json({ message: "Email test failed" });
     }
   });
 
