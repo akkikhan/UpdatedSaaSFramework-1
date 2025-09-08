@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   Form,
   FormControl,
@@ -115,6 +116,13 @@ export default function AddTenantPage() {
   };
 
   const watchedModules = form.watch("enabledModules");
+
+  const permissionTemplatesQuery = useQuery({
+    queryKey: ["/api/rbac-config/permission-templates"],
+  });
+  const businessTypesQuery = useQuery({
+    queryKey: ["/api/rbac-config/business-types"],
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -316,33 +324,53 @@ export default function AddTenantPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-sm font-medium">Permission Template</Label>
-                        <Select defaultValue="standard" onValueChange={(value) => {
-                          const currentConfigs = form.getValues("moduleConfigs") || {};
-                          form.setValue("moduleConfigs", {
-                            ...currentConfigs,
-                            rbac: { permissionTemplate: value, businessType: 'general' }
-                          });
-                        }}>
+                        <Select
+                          onValueChange={(value) => {
+                            const currentConfigs = form.getValues("moduleConfigs") || {};
+                            form.setValue("moduleConfigs", {
+                              ...currentConfigs,
+                              rbac: {
+                                ...currentConfigs.rbac,
+                                permissionTemplate: value,
+                              },
+                            });
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select template" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="minimal">Minimal</SelectItem>
-                            <SelectItem value="standard">Standard</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                            {permissionTemplatesQuery.data?.map((template: any) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label className="text-sm font-medium">Business Type</Label>
-                        <Select defaultValue="general">
+                        <Select
+                          onValueChange={(value) => {
+                            const currentConfigs = form.getValues("moduleConfigs") || {};
+                            form.setValue("moduleConfigs", {
+                              ...currentConfigs,
+                              rbac: {
+                                ...currentConfigs.rbac,
+                                businessType: value,
+                              },
+                            });
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select business type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="saas">SaaS</SelectItem>
-                            <SelectItem value="ecommerce">E-commerce</SelectItem>
+                            {businessTypesQuery.data?.map((type: any) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>

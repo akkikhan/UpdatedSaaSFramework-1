@@ -438,6 +438,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RBAC Configuration Routes
+  app.get("/api/rbac-config/permission-templates", async (req, res) => {
+    try {
+      const templates = await storage.getPermissionTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching permission templates:", error);
+      res.status(500).json({ message: "Failed to fetch permission templates" });
+    }
+  });
+
+  app.get("/api/rbac-config/business-types", async (req, res) => {
+    try {
+      const types = await storage.getBusinessTypes();
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching business types:", error);
+      res.status(500).json({ message: "Failed to fetch business types" });
+    }
+  });
+
+  app.get("/api/rbac-config/default-roles", async (req, res) => {
+    try {
+      const { businessTypeId } = req.query as { businessTypeId?: string };
+      const roles = businessTypeId
+        ? await storage.getDefaultRolesByBusinessType(businessTypeId)
+        : await storage.getDefaultRoles();
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching default roles:", error);
+      res.status(500).json({ message: "Failed to fetch default roles" });
+    }
+  });
+
   // Public Tenant Registration (no auth required)
   app.post("/api/register", async (req, res) => {
     try {
