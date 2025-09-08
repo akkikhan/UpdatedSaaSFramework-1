@@ -163,24 +163,14 @@ export default function AddTenantPage() {
 
   const watchedModules = form.watch("enabledModules");
 
-  const permissionTemplatesQuery = useQuery({
+  const permissionTemplatesQuery = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ["/api/rbac-config/permission-templates"],
     enabled: watchedModules.includes("rbac"),
-    queryFn: async () => {
-      const res = await fetch(`/api/rbac-config/permission-templates`);
-      if (!res.ok) throw new Error("Failed to fetch permission templates");
-      return res.json() as Promise<Array<{ id: string; name: string }>>;
-    },
   });
 
-  const businessTypesQuery = useQuery({
+  const businessTypesQuery = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ["/api/rbac-config/business-types"],
     enabled: watchedModules.includes("rbac"),
-    queryFn: async () => {
-      const res = await fetch(`/api/rbac-config/business-types`);
-      if (!res.ok) throw new Error("Failed to fetch business types");
-      return res.json() as Promise<Array<{ id: string; name: string }>>;
-    },
   });
 
   useEffect(() => {
