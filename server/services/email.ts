@@ -274,9 +274,7 @@ export class EmailService {
   ): string {
     const enabledList =
       changes.enabled.length > 0
-        ? `<h3>Modules Enabled:</h3><ul>${changes.enabled
-            .map(m => `<li>${m}</li>`)
-            .join("")}</ul>`
+        ? `<h3>Modules Enabled:</h3><ul>${changes.enabled.map(m => `<li>${m}</li>`).join("")}</ul>`
         : "";
     const disabledList =
       changes.disabled.length > 0
