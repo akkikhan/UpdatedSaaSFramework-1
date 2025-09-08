@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Building2, Key, Mail, Settings } from "lucide-react";
 import { useCreateTenant } from "@/hooks/use-tenants";
-import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   name: z.string().min(2, "Organization name must be at least 2 characters"),
@@ -173,7 +172,6 @@ export default function AddTenantPage() {
   const defaultRolesQuery = useQuery({
     queryKey: ["/api/rbac-config/default-roles"],
   });
-
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -492,14 +490,11 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Permission Template</Label>
                         <Select
-
-                          onValueChange={(value) => {
-
+                          onValueChange={value => {
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
                               rbac: {
-
                                 ...currentConfigs.rbac,
 
                                 permissionTemplate: value,
@@ -511,7 +506,6 @@ export default function AddTenantPage() {
                             <SelectValue placeholder="Select template" />
                           </SelectTrigger>
                           <SelectContent>
-
                             {permissionTemplatesQuery.data?.map((template: any) => (
                               <SelectItem key={template.id} value={template.id}>
                                 {template.name}
@@ -523,9 +517,7 @@ export default function AddTenantPage() {
                       <div>
                         <Label className="text-sm font-medium">Business Type</Label>
                         <Select
-
-                          onValueChange={(value) => {
-
+                          onValueChange={value => {
                             const currentConfigs = form.getValues("moduleConfigs") || {};
                             form.setValue("moduleConfigs", {
                               ...currentConfigs,
@@ -544,7 +536,6 @@ export default function AddTenantPage() {
                             {businessTypesQuery.data?.map((type: any) => (
                               <SelectItem key={type.id} value={type.id}>
                                 {type.name}
-
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -563,7 +554,7 @@ export default function AddTenantPage() {
                               <div key={role.id} className="flex items-center space-x-2">
                                 <Checkbox
                                   checked={checked}
-                                  onCheckedChange={(isChecked) => {
+                                  onCheckedChange={isChecked => {
                                     const configs = form.getValues("moduleConfigs") || {};
                                     const roles = configs.rbac?.defaultRoles || [];
                                     const newRoles = isChecked
