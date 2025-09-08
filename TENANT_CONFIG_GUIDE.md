@@ -137,13 +137,38 @@ requirements that are dynamically shown in the UI based on user selections.
 
 **Parameter meanings:**
 
-- `permissionTemplate` – starting permission set seeded for the tenant.
-- `businessType` – industry context that influences available templates.
-- `defaultRoles` – roles created on provisioning with their permissions and optional inheritance.
-- `customPermissions` – additional permission definitions beyond built‑ins.
-- `permissionGroups` – optional groupings to organize permissions visually or logically.
-- `settings` – advanced RBAC behavior such as role inheritance and delegation rules.
-- `complianceSettings` – audit and review controls like access reviews or segregation of duties.
+
+- `permissionTemplate` – baseline set of roles and permissions to seed the tenant (`minimal`, `standard`, `enterprise`, or `custom`).
+- `businessType` – industry context used to tailor default templates (e.g., healthcare, finance).
+- `defaultRoles` – array of roles provisioned during onboarding:
+  - `name` – role identifier.
+  - `description` – purpose of the role.
+  - `permissions` – list of permission keys assigned.
+  - `isSystemRole` – marks the role as non-editable.
+  - `inheritFrom` – optional parent role to inherit permissions from.
+- `customPermissions` – additional permission definitions beyond built‑ins:
+  - `key` – unique internal permission code.
+  - `name` – display label.
+  - `description` – what the permission allows.
+  - `category` – grouping used in the UI.
+  - `riskLevel` – classification used for approval workflows.
+- `permissionGroups` – logical bundles of permissions for presentation or assignment:
+  - `name` and `description` – identify the group.
+  - `permissions` – keys included in the group.
+  - `color` – optional UI color hint.
+- `settings` – fine-grained RBAC behavior:
+  - `enableRoleInheritance` – allow roles to inherit other roles.
+  - `enablePermissionDelegation` – let users delegate their permissions.
+  - `requireApprovalForHighRisk` – require admin approval for high-risk permissions.
+  - `maxRolesPerUser` – cap how many roles a user can hold.
+  - `roleExpirationEnabled` – allow roles to expire automatically.
+  - `defaultRoleExpiry` – default duration before temporary roles expire.
+- `complianceSettings` – governance and audit controls:
+  - `enableAuditLog` – track changes to roles and permissions.
+  - `enableAccessReview` – schedule periodic review of role assignments.
+  - `accessReviewFrequency` – cadence for those reviews.
+  - `enableSODControl` – enforce segregation of duties to prevent conflicting roles.
+
 
 **Permission Templates:**
 
