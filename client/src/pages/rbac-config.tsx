@@ -275,172 +275,187 @@ export default function RBACConfigPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="rbac-config-page">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2" data-testid="title-rbac-config">
-            RBAC Configuration
-          </h1>
-          <p className="text-gray-600">
-            Manage permission templates, business types, and default roles for tenant onboarding
-          </p>
-        </div>
-      </div>
+    <div data-testid="rbac-config-page">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-200">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800" data-testid="title-rbac-config">
+                RBAC Configuration
+              </h3>
+              <p className="text-slate-600 text-sm mt-1">
+                Manage permission templates, business types, and default roles for tenant onboarding
+              </p>
+            </div>
+          </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex gap-6">
-        <TabsList className="flex flex-col w-48" data-testid="tabs-rbac-config">
-          <TabsTrigger value="templates" data-testid="tab-templates" className="justify-start">
-            Permission Templates
-          </TabsTrigger>
-          <TabsTrigger value="business-types" data-testid="tab-business-types" className="justify-start">
-            Business Types
-          </TabsTrigger>
-          <TabsTrigger value="default-roles" data-testid="tab-default-roles" className="justify-start">
-            Default Roles
-          </TabsTrigger>
-        </TabsList>
-        <div className="flex-1 space-y-4">
-        {/* Permission Templates Tab */}
-        <TabsContent value="templates" className="space-y-4">
-          <Card data-testid="card-permission-templates">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    Permission Templates
-                  </CardTitle>
-                  <CardDescription>
-                    Define reusable permission sets for different business scenarios
-                  </CardDescription>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3" data-testid="tabs-rbac-config">
+              <TabsTrigger value="templates" data-testid="tab-templates">
+                <Shield className="h-4 w-4 mr-2" />
+                Permission Templates
+              </TabsTrigger>
+              <TabsTrigger value="business-types" data-testid="tab-business-types">
+                <Building2 className="h-4 w-4 mr-2" />
+                Business Types
+              </TabsTrigger>
+              <TabsTrigger value="default-roles" data-testid="tab-default-roles">
+                <Users className="h-4 w-4 mr-2" />
+                Default Roles
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Permission Templates Tab */}
+            <TabsContent value="templates" data-testid="card-permission-templates">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Permission Templates
+                    </h4>
+                    <p className="text-slate-600 text-sm mt-1">
+                      Define reusable permission sets for different business scenarios
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      setEditingTemplate({
+                        id: "",
+                        name: "",
+                        description: "",
+                        permissions: [],
+                        businessTypes: [],
+                        isDefault: false,
+                        isActive: true,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      })
+                    }
+                    data-testid="button-add-template"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Template
+                  </Button>
                 </div>
-                <Button
-                  onClick={() =>
-                    setEditingTemplate({
-                      id: "",
-                      name: "",
-                      description: "",
-                      permissions: [],
-                      businessTypes: [],
-                      isDefault: false,
-                      isActive: true,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                    })
-                  }
-                  data-testid="button-add-template"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Template
-                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {permissionTemplatesQuery.isLoading ? (
-                  <div>Loading templates...</div>
-                ) : (
-                  (permissionTemplatesQuery.data as any[])?.map((template: any) => (
-                    <Card
-                      key={template.id}
-                      className="border"
-                      data-testid={`template-card-${template.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <h3
-                                className="font-semibold"
-                                data-testid={`template-name-${template.id}`}
-                              >
-                                {template.name}
-                              </h3>
-                              {template.isDefault && (
-                                <Badge
-                                  variant="secondary"
-                                  data-testid={`template-default-${template.id}`}
+              <div className="p-6">
+                <div className="grid gap-4">
+                  {permissionTemplatesQuery.isLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <div className="animate-spin h-4 w-4 border-2 border-slate-300 border-t-slate-600 rounded-full"></div>
+                        Loading templates...
+                      </div>
+                    </div>
+                  ) : (
+                    (permissionTemplatesQuery.data as any[])?.map((template: any) => (
+                      <Card
+                        key={template.id}
+                        className="border border-slate-200 hover:border-slate-300 transition-colors"
+                        data-testid={`template-card-${template.id}`}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-3 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3
+                                  className="font-semibold text-slate-900 text-lg"
+                                  data-testid={`template-name-${template.id}`}
                                 >
-                                  Default
-                                </Badge>
-                              )}
-                            </div>
-                            <p
-                              className="text-sm text-gray-600"
-                              data-testid={`template-description-${template.id}`}
-                            >
-                              {template.description}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">Permissions:</span>
-                              <div className="flex gap-1 flex-wrap">
-                                {template.permissions.slice(0, 3).map((permission: any) => (
-                                  <Badge key={permission} variant="outline" className="text-xs">
-                                    {permission}
-                                  </Badge>
-                                ))}
-                                {template.permissions.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{template.permissions.length - 3} more
+                                  {template.name}
+                                </h3>
+                                {template.isDefault && (
+                                  <Badge
+                                    variant="secondary"
+                                    data-testid={`template-default-${template.id}`}
+                                  >
+                                    Default
                                   </Badge>
                                 )}
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">Business Types:</span>
-                              <div className="flex gap-1 flex-wrap">
-                                {template.businessTypes.map((type: any) => (
-                                  <Badge key={type} variant="secondary" className="text-xs">
-                                    {type}
-                                  </Badge>
-                                ))}
+                              <p
+                                className="text-sm text-slate-600 leading-relaxed"
+                                data-testid={`template-description-${template.id}`}
+                              >
+                                {template.description}
+                              </p>
+                              <div className="flex items-start gap-2">
+                                <span className="text-xs font-medium text-slate-700 mt-1">
+                                  Permissions:
+                                </span>
+                                <div className="flex gap-1 flex-wrap">
+                                  {template.permissions.slice(0, 3).map((permission: any) => (
+                                    <Badge key={permission} variant="outline" className="text-xs">
+                                      {permission}
+                                    </Badge>
+                                  ))}
+                                  {template.permissions.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{template.permissions.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <span className="text-xs font-medium text-slate-700 mt-1">
+                                  Business Types:
+                                </span>
+                                <div className="flex gap-1 flex-wrap">
+                                  {template.businessTypes.map((type: any) => (
+                                    <Badge key={type} variant="secondary" className="text-xs">
+                                      {type}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEditingTemplate(template)}
-                              data-testid={`button-edit-template-${template.id}`}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            {!template.isDefault && (
+                            <div className="flex gap-2 ml-4">
                               <Button
-                                variant="destructive"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => deleteTemplateMutation.mutate(template.id)}
-                                disabled={deleteTemplateMutation.isPending}
-                                data-testid={`button-delete-template-${template.id}`}
+                                onClick={() => setEditingTemplate(template)}
+                                data-testid={`button-edit-template-${template.id}`}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Edit className="h-4 w-4" />
                               </Button>
-                            )}
+                              {!template.isDefault && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteTemplateMutation.mutate(template.id)}
+                                  disabled={deleteTemplateMutation.isPending}
+                                  data-testid={`button-delete-template-${template.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        {/* Business Types Tab */}
-        <TabsContent value="business-types" className="space-y-4">
-          <Card data-testid="card-business-types">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            {/* Business Types Tab */}
+            <TabsContent
+              value="business-types"
+              className="space-y-6"
+              data-testid="card-business-types"
+            >
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                     <Building2 className="h-5 w-5" />
                     Business Types
-                  </CardTitle>
-                  <CardDescription>
+                  </h4>
+                  <p className="text-slate-600 text-sm mt-1">
                     Configure business types with specific compliance requirements
-                  </CardDescription>
+                  </p>
                 </div>
                 <Button
                   onClick={() =>
@@ -463,24 +478,27 @@ export default function RBACConfigPage() {
                   Add Business Type
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
               <div className="grid gap-4">
                 {businessTypesQuery.isLoading ? (
-                  <div>Loading business types...</div>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <div className="animate-spin h-4 w-4 border-2 border-slate-300 border-t-slate-600 rounded-full"></div>
+                      Loading business types...
+                    </div>
+                  </div>
                 ) : (
                   (businessTypesQuery.data as any[])?.map((businessType: any) => (
                     <Card
                       key={businessType.id}
-                      className="border"
+                      className="border border-slate-200 hover:border-slate-300 transition-colors"
                       data-testid={`business-type-card-${businessType.id}`}
                     >
-                      <CardContent className="p-4">
+                      <CardContent className="p-6">
                         <div className="flex items-start justify-between">
-                          <div className="space-y-2">
+                          <div className="space-y-3 flex-1">
                             <div className="flex items-center gap-2">
                               <h3
-                                className="font-semibold"
+                                className="font-semibold text-slate-900 text-lg"
                                 data-testid={`business-type-name-${businessType.id}`}
                               >
                                 {businessType.name}
@@ -501,13 +519,15 @@ export default function RBACConfigPage() {
                               )}
                             </div>
                             <p
-                              className="text-sm text-gray-600"
+                              className="text-sm text-slate-600 leading-relaxed"
                               data-testid={`business-type-description-${businessType.id}`}
                             >
                               {businessType.description}
                             </p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">Required Compliance:</span>
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs font-medium text-slate-700 mt-1">
+                                Required Compliance:
+                              </span>
                               <div className="flex gap-1 flex-wrap">
                                 {businessType.requiredCompliance.map((framework: any) => (
                                   <Badge key={framework} variant="outline" className="text-xs">
@@ -516,8 +536,10 @@ export default function RBACConfigPage() {
                                 ))}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">Default Permissions:</span>
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs font-medium text-slate-700 mt-1">
+                                Default Permissions:
+                              </span>
                               <div className="flex gap-1 flex-wrap">
                                 {businessType.defaultPermissions
                                   .slice(0, 3)
@@ -559,163 +581,169 @@ export default function RBACConfigPage() {
                   ))
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        {/* Default Roles Tab */}
-        <TabsContent value="default-roles" className="space-y-4">
-          <Card data-testid="card-default-roles">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Default Roles
-                  </CardTitle>
-                  <CardDescription>
-                    Configure default roles that will be created for new tenants
-                  </CardDescription>
+            {/* Default Roles Tab */}
+            <TabsContent value="default-roles" data-testid="card-default-roles">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Default Roles
+                    </h4>
+                    <p className="text-slate-600 text-sm mt-1">
+                      Configure default roles that will be created for new tenants
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      setEditingRole({
+                        id: "",
+                        name: "",
+                        description: "",
+                        permissions: [],
+                        businessTypeId: null,
+                        permissionTemplateId: null,
+                        isSystemRole: false,
+                        canBeModified: true,
+                        isActive: true,
+                        priority: 1,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      })
+                    }
+                    data-testid="button-add-default-role"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Default Role
+                  </Button>
                 </div>
-                <Button
-                  onClick={() =>
-                    setEditingRole({
-                      id: "",
-                      name: "",
-                      description: "",
-                      permissions: [],
-                      businessTypeId: null,
-                      permissionTemplateId: null,
-                      isSystemRole: false,
-                      canBeModified: true,
-                      isActive: true,
-                      priority: 1,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                    })
-                  }
-                  data-testid="button-add-default-role"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Default Role
-                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {defaultRolesQuery.isLoading ? (
-                  <div>Loading default roles...</div>
-                ) : (
-                  (defaultRolesQuery.data as any[])?.map((role: any) => (
-                    <Card
-                      key={role.id}
-                      className="border"
-                      data-testid={`default-role-card-${role.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <h3
-                                className="font-semibold"
-                                data-testid={`default-role-name-${role.id}`}
-                              >
-                                {role.name}
-                              </h3>
-                              {role.isSystemRole && (
-                                <Badge
-                                  variant="destructive"
-                                  data-testid={`default-role-system-${role.id}`}
-                                >
-                                  System Role
-                                </Badge>
-                              )}
-                              {!role.canBeModified && (
-                                <Badge
-                                  variant="outline"
-                                  data-testid={`default-role-readonly-${role.id}`}
-                                >
-                                  Read Only
-                                </Badge>
-                              )}
-                            </div>
-                            <p
-                              className="text-sm text-gray-600"
-                              data-testid={`default-role-description-${role.id}`}
-                            >
-                              {role.description}
-                            </p>
-                            <div className="flex items-center gap-4">
+              <div className="p-6">
+                <div className="grid gap-4">
+                  {defaultRolesQuery.isLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <div className="animate-spin h-4 w-4 border-2 border-slate-300 border-t-slate-600 rounded-full"></div>
+                        Loading default roles...
+                      </div>
+                    </div>
+                  ) : (
+                    (defaultRolesQuery.data as any[])?.map((role: any) => (
+                      <Card
+                        key={role.id}
+                        className="border border-slate-200 hover:border-slate-300 transition-colors"
+                        data-testid={`default-role-card-${role.id}`}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-3 flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium">Business Type:</span>
-                                <Badge variant="secondary" className="text-xs">
-                                  {role.businessType}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium">Template:</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {role.permissionTemplate}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">Permissions:</span>
-                              <div className="flex gap-1 flex-wrap">
-                                {role.permissions.slice(0, 3).map((permission: any) => (
-                                  <Badge key={permission} variant="outline" className="text-xs">
-                                    {permission}
+                                <h3
+                                  className="font-semibold text-slate-900 text-lg"
+                                  data-testid={`default-role-name-${role.id}`}
+                                >
+                                  {role.name}
+                                </h3>
+                                {role.isSystemRole && (
+                                  <Badge
+                                    variant="destructive"
+                                    data-testid={`default-role-system-${role.id}`}
+                                  >
+                                    System Role
                                   </Badge>
-                                ))}
-                                {role.permissions.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{role.permissions.length - 3} more
+                                )}
+                                {!role.canBeModified && (
+                                  <Badge
+                                    variant="outline"
+                                    data-testid={`default-role-readonly-${role.id}`}
+                                  >
+                                    Read Only
                                   </Badge>
                                 )}
                               </div>
+                              <p
+                                className="text-sm text-slate-600 leading-relaxed"
+                                data-testid={`default-role-description-${role.id}`}
+                              >
+                                {role.description}
+                              </p>
+                              <div className="flex items-center gap-4 flex-wrap">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-slate-700">
+                                    Business Type:
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {role.businessType}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-slate-700">
+                                    Template:
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {role.permissionTemplate}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium">Permissions:</span>
+                                <div className="flex gap-1 flex-wrap">
+                                  {role.permissions.slice(0, 3).map((permission: any) => (
+                                    <Badge key={permission} variant="outline" className="text-xs">
+                                      {permission}
+                                    </Badge>
+                                  ))}
+                                  {role.permissions.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{role.permissions.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              {role.canBeModified && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setEditingRole(role)}
+                                  data-testid={`button-edit-default-role-${role.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {!role.isSystemRole && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteRoleMutation.mutate(role.id)}
+                                  disabled={deleteRoleMutation.isPending}
+                                  data-testid={`button-delete-default-role-${role.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            {role.canBeModified && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setEditingRole(role)}
-                                data-testid={`button-edit-default-role-${role.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {!role.isSystemRole && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => deleteRoleMutation.mutate(role.id)}
-                                disabled={deleteRoleMutation.isPending}
-                                data-testid={`button-delete-default-role-${role.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-      </Tabs>
 
       {/* Template Dialog */}
-      <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && setEditingTemplate(null)}>
+      <Dialog open={!!editingTemplate} onOpenChange={open => !open && setEditingTemplate(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {editingTemplate && (
             <form
-              onSubmit={(e) => {
+              onSubmit={e => {
                 e.preventDefault();
                 handleSaveTemplate(editingTemplate);
               }}
@@ -731,7 +759,7 @@ export default function RBACConfigPage() {
                 <Input
                   id="template-name"
                   value={editingTemplate.name}
-                  onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                  onChange={e => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -739,7 +767,7 @@ export default function RBACConfigPage() {
                 <Textarea
                   id="template-description"
                   value={editingTemplate.description}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditingTemplate({ ...editingTemplate, description: e.target.value })
                   }
                 />
@@ -747,15 +775,15 @@ export default function RBACConfigPage() {
               <div className="space-y-2">
                 <Label>Permissions</Label>
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                  {availablePermissions.map((perm) => (
+                  {availablePermissions.map(perm => (
                     <div key={perm} className="flex items-center gap-2">
                       <Checkbox
                         id={`perm-${perm}`}
                         checked={editingTemplate.permissions.includes(perm)}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={checked => {
                           const permissions = checked
                             ? [...editingTemplate.permissions, perm]
-                            : editingTemplate.permissions.filter((p) => p !== perm);
+                            : editingTemplate.permissions.filter(p => p !== perm);
                           setEditingTemplate({ ...editingTemplate, permissions });
                         }}
                       />
@@ -769,7 +797,7 @@ export default function RBACConfigPage() {
               <div className="flex items-center space-x-2">
                 <Switch
                   checked={editingTemplate.isDefault}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={checked =>
                     setEditingTemplate({ ...editingTemplate, isDefault: checked })
                   }
                 />
@@ -778,7 +806,7 @@ export default function RBACConfigPage() {
               <div className="flex items-center space-x-2">
                 <Switch
                   checked={editingTemplate.isActive}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={checked =>
                     setEditingTemplate({ ...editingTemplate, isActive: checked })
                   }
                 />
@@ -798,11 +826,14 @@ export default function RBACConfigPage() {
       </Dialog>
 
       {/* Business Type Dialog */}
-      <Dialog open={!!editingBusinessType} onOpenChange={(open) => !open && setEditingBusinessType(null)}>
+      <Dialog
+        open={!!editingBusinessType}
+        onOpenChange={open => !open && setEditingBusinessType(null)}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {editingBusinessType && (
             <form
-              onSubmit={(e) => {
+              onSubmit={e => {
                 e.preventDefault();
                 handleSaveBusinessType(editingBusinessType);
               }}
@@ -818,7 +849,7 @@ export default function RBACConfigPage() {
                 <Input
                   id="bt-name"
                   value={editingBusinessType.name}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditingBusinessType({ ...editingBusinessType, name: e.target.value })
                   }
                 />
@@ -828,24 +859,30 @@ export default function RBACConfigPage() {
                 <Textarea
                   id="bt-description"
                   value={editingBusinessType.description}
-                  onChange={(e) =>
-                    setEditingBusinessType({ ...editingBusinessType, description: e.target.value })
+                  onChange={e =>
+                    setEditingBusinessType({
+                      ...editingBusinessType,
+                      description: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
                 <Label>Required Compliance</Label>
                 <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                  {complianceFrameworks.map((fw) => (
+                  {complianceFrameworks.map(fw => (
                     <div key={fw} className="flex items-center gap-2">
                       <Checkbox
                         id={`fw-${fw}`}
                         checked={editingBusinessType.requiredCompliance.includes(fw)}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={checked => {
                           const requiredCompliance = checked
                             ? [...editingBusinessType.requiredCompliance, fw]
-                            : editingBusinessType.requiredCompliance.filter((c) => c !== fw);
-                          setEditingBusinessType({ ...editingBusinessType, requiredCompliance });
+                            : editingBusinessType.requiredCompliance.filter(c => c !== fw);
+                          setEditingBusinessType({
+                            ...editingBusinessType,
+                            requiredCompliance,
+                          });
                         }}
                       />
                       <label htmlFor={`fw-${fw}`} className="text-sm">
@@ -858,15 +895,15 @@ export default function RBACConfigPage() {
               <div className="space-y-2">
                 <Label>Default Permissions</Label>
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                  {availablePermissions.map((perm) => (
+                  {availablePermissions.map(perm => (
                     <div key={perm} className="flex items-center gap-2">
                       <Checkbox
                         id={`bt-perm-${perm}`}
                         checked={editingBusinessType.defaultPermissions.includes(perm)}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={checked => {
                           const defaultPermissions = checked
                             ? [...editingBusinessType.defaultPermissions, perm]
-                            : editingBusinessType.defaultPermissions.filter((p) => p !== perm);
+                            : editingBusinessType.defaultPermissions.filter(p => p !== perm);
                           setEditingBusinessType({
                             ...editingBusinessType,
                             defaultPermissions,
@@ -884,7 +921,7 @@ export default function RBACConfigPage() {
                 <Label>Risk Level</Label>
                 <Select
                   value={editingBusinessType.riskLevel}
-                  onValueChange={(value) =>
+                  onValueChange={value =>
                     setEditingBusinessType({
                       ...editingBusinessType,
                       riskLevel: value as any,
@@ -908,7 +945,7 @@ export default function RBACConfigPage() {
                   id="bt-max-tenants"
                   type="number"
                   value={editingBusinessType.maxTenants ?? ""}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditingBusinessType({
                       ...editingBusinessType,
                       maxTenants: e.target.value ? parseInt(e.target.value) : null,
@@ -919,7 +956,7 @@ export default function RBACConfigPage() {
               <div className="flex items-center space-x-2">
                 <Switch
                   checked={editingBusinessType.isActive}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={checked =>
                     setEditingBusinessType({ ...editingBusinessType, isActive: checked })
                   }
                 />
@@ -943,11 +980,11 @@ export default function RBACConfigPage() {
       </Dialog>
 
       {/* Default Role Dialog */}
-      <Dialog open={!!editingRole} onOpenChange={(open) => !open && setEditingRole(null)}>
+      <Dialog open={!!editingRole} onOpenChange={open => !open && setEditingRole(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {editingRole && (
             <form
-              onSubmit={(e) => {
+              onSubmit={e => {
                 e.preventDefault();
                 handleSaveRole(editingRole);
               }}
@@ -963,7 +1000,7 @@ export default function RBACConfigPage() {
                 <Input
                   id="role-name"
                   value={editingRole.name}
-                  onChange={(e) => setEditingRole({ ...editingRole, name: e.target.value })}
+                  onChange={e => setEditingRole({ ...editingRole, name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -971,24 +1008,20 @@ export default function RBACConfigPage() {
                 <Textarea
                   id="role-description"
                   value={editingRole.description}
-                  onChange={(e) =>
-                    setEditingRole({ ...editingRole, description: e.target.value })
-                  }
+                  onChange={e => setEditingRole({ ...editingRole, description: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Business Type</Label>
                 <Select
                   value={editingRole.businessTypeId || ""}
-                  onValueChange={(value) =>
-                    setEditingRole({ ...editingRole, businessTypeId: value })
-                  }
+                  onValueChange={value => setEditingRole({ ...editingRole, businessTypeId: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select business type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(businessTypesQuery.data as any[])?.map((bt) => (
+                    {(businessTypesQuery.data as any[])?.map(bt => (
                       <SelectItem key={bt.id} value={bt.id}>
                         {bt.name}
                       </SelectItem>
@@ -1000,7 +1033,7 @@ export default function RBACConfigPage() {
                 <Label>Permission Template</Label>
                 <Select
                   value={editingRole.permissionTemplateId || ""}
-                  onValueChange={(value) =>
+                  onValueChange={value =>
                     setEditingRole({ ...editingRole, permissionTemplateId: value })
                   }
                 >
@@ -1008,7 +1041,7 @@ export default function RBACConfigPage() {
                     <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(permissionTemplatesQuery.data as any[])?.map((t) => (
+                    {(permissionTemplatesQuery.data as any[])?.map(t => (
                       <SelectItem key={t.id} value={t.id}>
                         {t.name}
                       </SelectItem>
@@ -1019,15 +1052,15 @@ export default function RBACConfigPage() {
               <div className="space-y-2">
                 <Label>Permissions</Label>
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                  {availablePermissions.map((perm) => (
+                  {availablePermissions.map(perm => (
                     <div key={perm} className="flex items-center gap-2">
                       <Checkbox
                         id={`role-perm-${perm}`}
                         checked={editingRole.permissions.includes(perm)}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={checked => {
                           const permissions = checked
                             ? [...editingRole.permissions, perm]
-                            : editingRole.permissions.filter((p) => p !== perm);
+                            : editingRole.permissions.filter(p => p !== perm);
                           setEditingRole({ ...editingRole, permissions });
                         }}
                       />
@@ -1042,7 +1075,7 @@ export default function RBACConfigPage() {
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={editingRole.isSystemRole}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       setEditingRole({ ...editingRole, isSystemRole: checked })
                     }
                   />
@@ -1051,7 +1084,7 @@ export default function RBACConfigPage() {
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={editingRole.canBeModified}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       setEditingRole({ ...editingRole, canBeModified: checked })
                     }
                   />
@@ -1060,7 +1093,7 @@ export default function RBACConfigPage() {
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={editingRole.isActive}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       setEditingRole({ ...editingRole, isActive: checked })
                     }
                   />
@@ -1072,7 +1105,7 @@ export default function RBACConfigPage() {
                     id="role-priority"
                     type="number"
                     value={editingRole.priority}
-                    onChange={(e) =>
+                    onChange={e =>
                       setEditingRole({ ...editingRole, priority: parseInt(e.target.value) })
                     }
                   />
