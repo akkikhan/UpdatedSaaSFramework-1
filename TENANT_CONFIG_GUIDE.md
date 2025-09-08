@@ -14,6 +14,7 @@ requirements that are dynamically shown in the UI based on user selections.
 
 - ✅ **Providers** (at least one): `["azure-ad", "auth0", "saml", "local"]`
 - ✅ **Provider-specific configurations**
+- 🚫 **No configs for unselected providers**
 
 **Provider Configurations:**
 
@@ -110,9 +111,39 @@ requirements that are dynamically shown in the UI based on user selections.
       category: string,
       riskLevel: "low" | "medium" | "high" | "critical"
     }>
+    permissionGroups?: Array<{
+      name: string,
+      description: string,
+      permissions: string[],
+      color?: string,
+    }>,
+    settings?: {
+      enableRoleInheritance?: boolean,
+      enablePermissionDelegation?: boolean,
+      requireApprovalForHighRisk?: boolean,
+      maxRolesPerUser?: number,
+      roleExpirationEnabled?: boolean,
+      defaultRoleExpiry?: string,
+    },
+    complianceSettings?: {
+      enableAuditLog?: boolean,
+      enableAccessReview?: boolean,
+      accessReviewFrequency?: "monthly" | "quarterly" | "yearly",
+      enableSODControl?: boolean,
+    },
   }
 }
 ```
+
+**Parameter meanings:**
+
+- `permissionTemplate` – starting permission set seeded for the tenant.
+- `businessType` – industry context that influences available templates.
+- `defaultRoles` – roles created on provisioning with their permissions and optional inheritance.
+- `customPermissions` – additional permission definitions beyond built‑ins.
+- `permissionGroups` – optional groupings to organize permissions visually or logically.
+- `settings` – advanced RBAC behavior such as role inheritance and delegation rules.
+- `complianceSettings` – audit and review controls like access reviews or segregation of duties.
 
 **Permission Templates:**
 
