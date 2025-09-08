@@ -16,6 +16,8 @@ interface EnvironmentConfig {
   SMTP_PORT?: string;
   SMTP_USERNAME?: string;
   SMTP_PASSWORD?: string;
+  SMTP_PASS?: string;
+  SMTP_APP_PASSWORD?: string;
   FROM_EMAIL?: string;
   GMAIL_USER?: string;
   GMAIL_APP_PASSWORD?: string;
@@ -74,12 +76,12 @@ export function validateEnvironment(): EnvironmentConfig {
     process.env.SMTP_HOST &&
     process.env.SMTP_PORT &&
     process.env.SMTP_USERNAME &&
-    process.env.SMTP_PASSWORD &&
+    (process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_APP_PASSWORD) &&
     process.env.FROM_EMAIL;
 
   if (!hasGmail && !hasSmtp) {
     errors.push(
-      "Missing email configuration: set GMAIL_USER/GMAIL_APP_PASSWORD or SMTP_HOST/SMTP_PORT/SMTP_USERNAME/SMTP_PASSWORD/FROM_EMAIL"
+      "Missing email configuration: set GMAIL_USER/GMAIL_APP_PASSWORD or SMTP_HOST/SMTP_PORT/SMTP_USERNAME/(SMTP_PASSWORD|SMTP_PASS|SMTP_APP_PASSWORD)/FROM_EMAIL"
     );
   }
 
@@ -89,6 +91,13 @@ export function validateEnvironment(): EnvironmentConfig {
     process.env.SMTP_USERNAME = process.env.GMAIL_USER!;
     process.env.SMTP_PASSWORD = process.env.GMAIL_APP_PASSWORD!;
     process.env.FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER!;
+  } else {
+    if (process.env.SMTP_PASS && !process.env.SMTP_PASSWORD) {
+      process.env.SMTP_PASSWORD = process.env.SMTP_PASS;
+    }
+    if (process.env.SMTP_APP_PASSWORD && !process.env.SMTP_PASSWORD) {
+      process.env.SMTP_PASSWORD = process.env.SMTP_APP_PASSWORD;
+    }
   }
 
   // JWT secret must be strong

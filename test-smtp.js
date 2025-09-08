@@ -7,7 +7,10 @@ async function main() {
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || "587");
   const user = process.env.SMTP_USERNAME || process.env.FROM_EMAIL;
-  const pass = process.env.SMTP_PASSWORD || process.env.SMTP_APP_PASSWORD;
+  const pass =
+    process.env.SMTP_PASSWORD ||
+    process.env.SMTP_PASS ||
+    process.env.SMTP_APP_PASSWORD;
   const to = process.env.ADMIN_EMAIL || "akki@primussoft.com";
 
   console.log("SMTP config:", { host, port, user, to: to });
