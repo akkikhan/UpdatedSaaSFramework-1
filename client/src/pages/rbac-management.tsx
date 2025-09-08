@@ -45,7 +45,8 @@ import {
   Copy,
   Settings,
   Building2,
-  CheckCircle,
+  CheckCircle
+
 } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -64,7 +65,7 @@ const permissionSchema = z.object({
 });
 
 const rbacConfigSchema = z.object({
-  // Permit any template or business type coming from server config
+
   permissionTemplate: z.string(),
   businessType: z.string(),
 });
@@ -73,136 +74,7 @@ type RoleForm = z.infer<typeof roleSchema>;
 type PermissionForm = z.infer<typeof permissionSchema>;
 type RBACConfigForm = z.infer<typeof rbacConfigSchema>;
 
-// Permission templates by business type
-const PERMISSION_TEMPLATES = {
-  general: {
-    standard: [
-      { key: "user.create", description: "Create users", category: "User Management" },
-      { key: "user.read", description: "View users", category: "User Management" },
-      { key: "user.update", description: "Edit users", category: "User Management" },
-      { key: "user.delete", description: "Delete users", category: "User Management" },
-      { key: "role.create", description: "Create roles", category: "Role Management" },
-      { key: "role.read", description: "View roles", category: "Role Management" },
-      { key: "role.update", description: "Edit roles", category: "Role Management" },
-      { key: "role.delete", description: "Delete roles", category: "Role Management" },
-    ],
-    enterprise: [
-      { key: "user.create", description: "Create users", category: "User Management" },
-      { key: "user.read", description: "View users", category: "User Management" },
-      { key: "user.update", description: "Edit users", category: "User Management" },
-      { key: "user.delete", description: "Delete users", category: "User Management" },
-      { key: "role.create", description: "Create roles", category: "Role Management" },
-      { key: "role.read", description: "View roles", category: "Role Management" },
-      { key: "role.update", description: "Edit roles", category: "Role Management" },
-      { key: "role.delete", description: "Delete roles", category: "Role Management" },
-      { key: "audit.read", description: "View audit logs", category: "Audit & Compliance" },
-      {
-        key: "system.config",
-        description: "System configuration",
-        category: "System Administration",
-      },
-      {
-        key: "integration.manage",
-        description: "Manage integrations",
-        category: "System Administration",
-      },
-      { key: "report.generate", description: "Generate reports", category: "Reporting" },
-      { key: "security.manage", description: "Security settings", category: "Security" },
-    ],
-  },
-  healthcare: {
-    standard: [
-      {
-        key: "patient.create",
-        description: "Create patient records",
-        category: "Patient Management",
-      },
-      { key: "patient.read", description: "View patient records", category: "Patient Management" },
-      {
-        key: "patient.update",
-        description: "Update patient records",
-        category: "Patient Management",
-      },
-      { key: "appointment.create", description: "Schedule appointments", category: "Scheduling" },
-      { key: "appointment.read", description: "View appointments", category: "Scheduling" },
-      {
-        key: "medical.record.read",
-        description: "Access medical records",
-        category: "Medical Records",
-      },
-    ],
-  },
-  finance: {
-    standard: [
-      { key: "account.create", description: "Create accounts", category: "Account Management" },
-      { key: "account.read", description: "View accounts", category: "Account Management" },
-      {
-        key: "transaction.create",
-        description: "Create transactions",
-        category: "Transaction Management",
-      },
-      {
-        key: "transaction.read",
-        description: "View transactions",
-        category: "Transaction Management",
-      },
-      { key: "compliance.read", description: "Access compliance data", category: "Compliance" },
-    ],
-  },
-};
 
-// Default roles by business type
-const DEFAULT_ROLES = {
-  general: {
-    standard: [
-      { name: "Admin", description: "Full system access", permissions: ["*"] },
-      {
-        name: "Manager",
-        description: "Management-level access",
-        permissions: ["user.read", "role.read"],
-      },
-      { name: "User", description: "Basic user access", permissions: ["user.read"] },
-    ],
-  },
-  healthcare: {
-    standard: [
-      {
-        name: "Doctor",
-        description: "Full patient access",
-        permissions: ["patient.*", "medical.record.*", "appointment.*"],
-      },
-      {
-        name: "Nurse",
-        description: "Patient care access",
-        permissions: ["patient.read", "patient.update", "appointment.read"],
-      },
-      {
-        name: "Receptionist",
-        description: "Appointment management",
-        permissions: ["appointment.*", "patient.read"],
-      },
-    ],
-  },
-  finance: {
-    standard: [
-      {
-        name: "Financial Manager",
-        description: "Full financial access",
-        permissions: ["account.*", "transaction.*", "compliance.read"],
-      },
-      {
-        name: "Accountant",
-        description: "Transaction management",
-        permissions: ["account.read", "transaction.*"],
-      },
-      {
-        name: "Auditor",
-        description: "Read-only access",
-        permissions: ["account.read", "transaction.read", "compliance.read"],
-      },
-    ],
-  },
-};
 
 export default function RBACManagementPage() {
   const { tenantId } = useParams();
@@ -277,6 +149,17 @@ export default function RBACManagementPage() {
     },
   });
 
+  const permissionTemplatesQuery = useQuery({
+    queryKey: ["/api/rbac-config/permission-templates"],
+  });
+  const businessTypesQuery = useQuery({
+    queryKey: ["/api/rbac-config/business-types"],
+  });
+  const defaultRolesQuery = useQuery({
+    queryKey: ["/api/rbac-config/default-roles"],
+  });
+
+
   const renderConfiguration = () => (
     <Card>
       <CardHeader>
@@ -292,27 +175,19 @@ export default function RBACManagementPage() {
         <div>
           <h3 className="text-lg font-semibold mb-4">Permission Template</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {permissionTemplates.length > 0 ? (
-              permissionTemplates.map(t => (
-                <Card
-                  key={t.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Shield className="h-5 w-5 text-blue-500" />
-                      <h4 className="font-semibold">{t.name}</h4>
-                    </div>
-                    <p className="text-sm text-slate-600 mb-2">{t.description}</p>
-                    <p className="text-xs text-blue-600 font-medium">
-                      {(t.permissions || []).length} permissions
-                    </p>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className="text-sm text-slate-600">No permission templates defined.</p>
-            )}
+            {permissionTemplatesQuery.data?.map((template: any) => (
+              <Card key={template.id} className="relative cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="h-5 w-5 text-blue-500" />
+                    <h4 className="font-semibold">{template.name}</h4>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-2">{template.description}</p>
+                  <p className="text-xs text-blue-600 font-medium">{template.permissions.length} permissions</p>
+                </CardContent>
+              </Card>
+            ))}
+
           </div>
         </div>
 
@@ -321,24 +196,18 @@ export default function RBACManagementPage() {
         <div>
           <h3 className="text-lg font-semibold mb-4">Business Type</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {businessTypes.length > 0 ? (
-              businessTypes.map(bt => (
-                <Card
-                  key={bt.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Building2 className="h-5 w-5 text-blue-500" />
-                      <h4 className="font-semibold">{bt.name}</h4>
-                    </div>
-                    <p className="text-sm text-slate-600">{bt.description}</p>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className="text-sm text-slate-600">No business types defined.</p>
-            )}
+            {businessTypesQuery.data?.map((bt: any) => (
+              <Card key={bt.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Building2 className="h-5 w-5 text-blue-500" />
+                    <h4 className="font-semibold">{bt.name}</h4>
+                  </div>
+                  <p className="text-sm text-slate-600">{bt.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+
           </div>
         </div>
 
@@ -435,8 +304,8 @@ export default function RBACManagementPage() {
 
       {/* Default Roles Display */}
       <div className="grid gap-4">
-        {DEFAULT_ROLES.general.standard.map((role, index) => (
-          <Card key={index}>
+        {defaultRolesQuery.data?.map((role: any) => (
+          <Card key={role.id}>
             <CardContent className="p-4">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -447,7 +316,7 @@ export default function RBACManagementPage() {
                   </div>
                   <p className="text-sm text-slate-600 mb-3">{role.description}</p>
                   <div className="flex flex-wrap gap-2">
-                    {role.permissions.map((permission, idx) => (
+                    {role.permissions.map((permission: string, idx: number) => (
                       <Badge key={idx} variant="outline" className="text-xs">
                         {permission}
                       </Badge>
@@ -483,48 +352,23 @@ export default function RBACManagementPage() {
         </Button>
       </div>
 
-      {/* Permission Categories */}
       <div className="space-y-4">
-        {Object.entries({
-          "User Management": PERMISSION_TEMPLATES.general.standard.filter(
-            p => p.category === "User Management"
-          ),
-          "Role Management": PERMISSION_TEMPLATES.general.standard.filter(
-            p => p.category === "Role Management"
-          ),
-        }).map(([category, perms]) => (
-          <Card key={category}>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Key className="h-5 w-5" />
-                {category}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                {perms.map((permission, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div>
-                      <div className="font-medium text-sm">{permission.key}</div>
-                      <div className="text-xs text-slate-600">{permission.description}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+        {permissionTemplatesQuery.data?.[0]?.permissions.map((permission: string, index: number) => (
+          <Card key={index}>
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="font-medium text-sm">{permission}</div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm">
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+
               </div>
             </CardContent>
           </Card>
