@@ -73,6 +73,16 @@ export function validateEnvironment(): EnvironmentConfig {
     errors.push("JWT_SECRET must be at least 32 characters");
   }
 
+  // Azure client secret common misconfiguration
+  // Developers sometimes copy the secret's ID (a GUID) instead of the secret value.
+  // The secret value is a long string, while the secret ID has a UUID format.
+  const azureSecret = process.env.AZURE_CLIENT_SECRET;
+  if (azureSecret && /^[0-9a-f-]{36}$/i.test(azureSecret)) {
+    errors.push(
+      "AZURE_CLIENT_SECRET appears to be a secret ID. Use the secret value from Azure portal."
+    );
+  }
+
   if (errors.length > 0) {
     console.error("🚨 ENVIRONMENT VALIDATION FAILED:");
     errors.forEach(error => console.error(`   - ${error}`));

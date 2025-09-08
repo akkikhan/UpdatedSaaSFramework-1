@@ -34,6 +34,7 @@ Implicit grant and hybrid flows:
 2. Description: "SaaS Framework Secret"
 3. Expires: 24 months
 4. **Copy the secret value immediately!**
+   - ⚠️ Azure shows both a *secret value* and a *secret ID*; use the **value** in your `.env`, not the ID.
 
 #### API Permissions:
 ```
