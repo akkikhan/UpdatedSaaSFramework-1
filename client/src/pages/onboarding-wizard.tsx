@@ -1606,13 +1606,6 @@ export default function OnboardingWizard() {
                                         </FormItem>
                                       )}
                                     />
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
                               {/* Default Roles tag editor */}
                               <FormField
                                 control={form.control}
