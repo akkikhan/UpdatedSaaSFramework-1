@@ -8,3 +8,8 @@
 - [x] Verify runtime dependencies (e.g., fetch, WebSocket) are declared
 - [x] Set up CI workflow to run lint, build, and tests
 - [x] Provide examples demonstrating RBAC and logging integrations
+
+# Email template integration
+- [x] Add default templates for onboarding, module status changes, and module requests
+- [ ] Audit remaining emails/notifications and add templates as needed
+- [ ] Allow managing default templates via Platform Admin Portal

@@ -1613,11 +1613,139 @@ export default function OnboardingWizard() {
                           </div>
                         )}
 
-                        {/* Step 4: Review */}
-                        {currentStep === 3 && (
-                          <div className="space-y-6">
-                            <div className="bg-slate-50 rounded-lg p-6 space-y-4">
-                              <h3 className="font-semibold text-lg">Summary</h3>
+                              {/* Default Roles tag editor */}
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.rbac.defaultRoles"
+                                render={({ field }) => {
+                                  const base = (defaultRoles as any[]).map(r => r.name);
+                                  const roles: string[] =
+                                    (field.value as any) ||
+                                    (base.length ? base : ["Admin", "Manager", "Viewer"]);
+                                  const [input, setInput] = React.useState("");
+                                  const addRole = () => {
+                                    const v = input.trim();
+                                    if (!v) return;
+                                    const next = Array.from(new Set([...(roles as string[]), v]));
+                                    field.onChange(next);
+                                    setInput("");
+                                  };
+                                  const removeRole = (name: string) => {
+                                    field.onChange((roles as string[]).filter(r => r !== name));
+                                  };
+                                  return (
+                                    <FormItem>
+                                      <FormLabel>Default Roles</FormLabel>
+                                      <div className="flex flex-wrap gap-2">
+                                        {roles.map(r => (
+                                          <Badge key={r} variant="secondary" className="px-2 py-1">
+                                            <span className="mr-2">{r}</span>
+                                            <button
+                                              type="button"
+                                              className="text-slate-500 hover:text-slate-700"
+                                              onClick={() => removeRole(r)}
+                                              aria-label={`Remove ${r}`}
+                                            >
+                                              ×
+                                            </button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-2 mt-2">
+                                        <Input
+                                          value={input}
+                                          onChange={e => setInput(e.target.value)}
+                                          placeholder="Add a role (e.g., Auditor)"
+                                          onKeyDown={e => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              addRole();
+                                            }
+                                          }}
+                                        />
+                                        <Button type="button" onClick={addRole} variant="secondary">
+                                          Add
+                                        </Button>
+                                      </div>
+                                      <FormDescription>
+                                        These roles will be created for the tenant. Permissions come
+                                        from the selected template and can be refined later.
+                                      </FormDescription>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+
+                              {/* Optional custom permissions */}
+                              <FormField
+                                control={form.control}
+                                name="moduleConfigs.rbac.customPermissions"
+                                render={({ field }) => {
+                                  const perms: string[] = Array.isArray(field.value)
+                                    ? (field.value as string[])
+                                    : [];
+                                  const [input, setInput] = React.useState("");
+                                  const addPerm = () => {
+                                    const v = input.trim();
+                                    if (!v) return;
+                                    const next = Array.from(new Set([...perms, v]));
+                                    field.onChange(next);
+                                    setInput("");
+                                  };
+                                  const removePerm = (name: string) => {
+                                    field.onChange(perms.filter(p => p !== name));
+                                  };
+                                  return (
+                                    <FormItem>
+                                      <FormLabel>Custom Permissions (optional)</FormLabel>
+                                      <div className="flex flex-wrap gap-2">
+                                        {perms.map(p => (
+                                          <Badge key={p} variant="secondary" className="px-2 py-1">
+                                            <span className="mr-2">{p}</span>
+                                            <button
+                                              type="button"
+                                              className="text-slate-500 hover:text-slate-700"
+                                              onClick={() => removePerm(p)}
+                                              aria-label={`Remove ${p}`}
+                                            >
+                                              ×
+                                            </button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-2 mt-2">
+                                        <Input
+                                          value={input}
+                                          onChange={e => setInput(e.target.value)}
+                                          placeholder="custom_permission"
+                                          onKeyDown={e => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              addPerm();
+                                            }
+                                          }}
+                                        />
+                                        <Button type="button" onClick={addPerm} variant="secondary">
+                                          Add
+                                        </Button>
+                                      </div>
+                                      <FormDescription>
+                                        Extra permissions to add during creation
+                                      </FormDescription>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          {/* Logging Configuration */}
+                          {watchedModules.includes("logging") && (
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Activity className="w-5 h-5" />
+                                Logging Configuration
+                              </h3>
 
                               <div className="space-y-3">
                                 <div>

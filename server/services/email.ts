@@ -1,139 +1,108 @@
 import { config } from "dotenv";
-// SMTP functionality is disabled; using Microsoft Graph instead
-// import * as nodemailer from "nodemailer";
-import { ConfidentialClientApplication } from "@azure/msal-node";
-import { Client } from "@microsoft/microsoft-graph-client";
+// SMTP and Microsoft Graph implementations are commented out in favor of Gmail
+// import { ConfidentialClientApplication } from "@azure/msal-node";
+// import { Client } from "@microsoft/microsoft-graph-client";
+import * as nodemailer from "nodemailer";
 import { storage } from "../storage";
 
 config();
 
-interface GraphConfig {
-  tenantId: string;
-  clientId: string;
-  clientSecret: string;
+interface GmailConfig {
+  user: string;
+  pass: string;
   fromEmail: string;
+  fromName: string;
 }
 
 export class EmailService {
-  private msalClient?: ConfidentialClientApplication;
-  private graphClient?: Client;
-  private config: GraphConfig;
+  private transporter: nodemailer.Transporter;
+  private config: GmailConfig;
 
   constructor() {
     this.config = {
-      tenantId: process.env.GRAPH_TENANT_ID || process.env.AZURE_TENANT_ID || "",
-      clientId: process.env.GRAPH_CLIENT_ID || process.env.AZURE_CLIENT_ID || "",
-      clientSecret: process.env.GRAPH_CLIENT_SECRET || process.env.AZURE_CLIENT_SECRET || "",
-      fromEmail: process.env.EMAIL_FROM || "akki@primussoft.com",
+      user: process.env.GMAIL_USER || "",
+      pass: process.env.GMAIL_APP_PASSWORD || "",
+      fromEmail: process.env.FROM_EMAIL || process.env.GMAIL_USER || "",
+      fromName: process.env.FROM_NAME || "SaaS Framework Platform",
     };
 
-    if (!this.config.tenantId || !this.config.clientId || !this.config.clientSecret) {
+    if (!this.config.user || !this.config.pass) {
       console.warn(
-        "⚠️  Microsoft Graph credentials not configured. Email functionality will be disabled."
+        "⚠️  Gmail credentials not configured. Email functionality will be disabled."
       );
-      return;
     }
 
-    this.msalClient = new ConfidentialClientApplication({
+    this.transporter = nodemailer.createTransport({
+      service: "gmail",
       auth: {
-        clientId: this.config.clientId,
-        authority: `https://login.microsoftonline.com/${this.config.tenantId}`,
-        clientSecret: this.config.clientSecret,
+        user: this.config.user,
+        pass: this.config.pass,
       },
     });
 
-    console.log("📨 MSAL client initialized for Microsoft Graph");
-    this.initializeGraphClient().catch(err => {
-      console.warn("⚠️  Failed to initialize Microsoft Graph client:", err);
-    });
-  }
-
-  private async initializeGraphClient(): Promise<void> {
-    if (!this.msalClient) {
-      return;
-    }
-
-    try {
-      const authResponse = await this.msalClient.acquireTokenByClientCredential({
-        scopes: ["https://graph.microsoft.com/.default"],
+    void this.transporter
+      .verify()
+      .then(() => {
+        console.log(`📨 Gmail transporter initialized for ${this.config.user}`);
+      })
+      .catch(err => {
+        console.warn("⚠️  Failed to verify Gmail transporter:", err);
       });
-
-      if (authResponse?.accessToken) {
-        this.graphClient = Client.init({
-          authProvider: done => done(null, authResponse.accessToken),
-        });
-        console.log("📨 Microsoft Graph client initialized successfully");
-      }
-    } catch (error) {
-      console.warn("⚠️  Failed to initialize Microsoft Graph client:", error);
-    }
   }
 
-  private async sendViaGraph(to: string[], subject: string, html: string): Promise<void> {
-    if (!this.msalClient) {
-      throw new Error("Microsoft Graph client not initialized");
-    }
-
-    // Force refresh the access token to avoid caching issues with new permissions
-    const authResponse = await this.msalClient.acquireTokenByClientCredential({
-      scopes: ["https://graph.microsoft.com/.default"],
-      skipCache: true, // Force fresh token
-    });
-
-    if (!authResponse?.accessToken) {
-      throw new Error("Failed to acquire access token");
-    }
-
-    // Create a fresh Graph client with the new token
-    const graphClient = Client.init({
-      authProvider: done => done(null, authResponse.accessToken),
-    });
-
-    const message = {
-      subject,
-      body: { contentType: "HTML", content: html },
-      toRecipients: to.map(address => ({ emailAddress: { address } })),
-    };
-
-    try {
-      // For application-only authentication, use the specific user endpoint
-      await graphClient.api(`/users/${this.config.fromEmail}/sendMail`).post({ message });
-
-      console.log(`📨 Email sent successfully via Microsoft Graph to ${to.join(", ")}`);
-    } catch (error: any) {
-      console.error("Failed to send email via Microsoft Graph:", error);
-
-      // Provide detailed error information
-      if (error.statusCode === 400 && error.message?.includes("/me request is only valid")) {
-        console.error("❌ Cannot use /me endpoint with application authentication");
-        console.error(`   Using user-specific endpoint: /users/${this.config.fromEmail}/sendMail`);
-        console.error("   Make sure the fromEmail address exists in your Azure AD tenant");
-      } else if (error.statusCode === 401) {
-        console.error("❌ Authentication failed - check Azure AD app permissions");
-        console.error("   Required permission: Mail.Send (Application)");
-      } else if (error.statusCode === 403) {
-        console.error("❌ Forbidden - check if the app has permission to send emails");
-        console.error(`   From email: ${this.config.fromEmail}`);
-      } else if (error.statusCode === 404) {
-        console.error("❌ User not found - check if the from email address exists in your tenant");
-        console.error(`   From email: ${this.config.fromEmail}`);
-      }
-
-      throw error;
-    }
-  }
-
-  private async deliver(to: string | string[], subject: string, html: string): Promise<void> {
+  private async deliver(
+    to: string | string[],
+    subject: string,
+    html: string
+  ): Promise<void> {
     const recipients = Array.isArray(to) ? to : [to];
-    await this.sendViaGraph(recipients, subject, html);
+    await this.transporter.sendMail({
+      from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+      to: recipients.join(", "),
+      subject,
+      html,
+    });
   }
 
   async sendModuleStatusEmail(
     tenant: { id: string; name: string; adminEmail: string },
     changes: { enabled: string[]; disabled: string[] }
   ): Promise<boolean> {
-    const subject = `Module Access Updated - ${tenant.name}`;
-    const html = this.generateModuleStatusEmailTemplate(tenant, changes);
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const template = templates.find(
+      t => t.name?.toLowerCase() === "module_status"
+    );
+
+    let subject = template?.subject || `Module Access Updated - ${tenant.name}`;
+    let html = template?.htmlContent || this.generateModuleStatusEmailTemplate(tenant, changes);
+
+    if (template) {
+      const replacements: Record<string, string> = {
+        name: tenant.name,
+        enabledList:
+          changes.enabled.length > 0
+            ? `<h3>Modules Enabled:</h3><ul>${changes.enabled
+                .map(m => `<li>${m}</li>`)
+                .join("")}</ul>`
+            : "",
+        disabledList:
+          changes.disabled.length > 0
+            ? `<h3>Modules Disabled:</h3><ul>${changes.disabled
+                .map(m => `<li>${m}</li>`)
+                .join("")}</ul>`
+            : "",
+        enabledText: changes.enabled.join(", "),
+        disabledText: changes.disabled.join(", "),
+      };
+      for (const variable of template.variables || []) {
+        const value = replacements[variable] ?? "";
+        html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
+        subject = subject.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          value
+        );
+      }
+    }
 
     try {
       await this.deliver(tenant.adminEmail, subject, html);
@@ -142,7 +111,7 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "module_status",
+        templateType: template?.name || "module_status",
         status: "sent",
         errorMessage: null,
       });
@@ -155,9 +124,9 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "module_status",
+        templateType: template?.name || "module_status",
         status: "failed",
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorMessage: error instanceof Error ? error.message : String(error),
       });
 
       return false;
@@ -176,8 +145,36 @@ export class EmailService {
     notificationsApiKey?: string;
     moduleConfigs?: any;
   }): Promise<boolean> {
-    const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
-    const html = this.generateOnboardingEmailTemplate(tenant);
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const template = templates.find(
+      t => t.name?.toLowerCase() === "onboarding"
+    );
+
+    let subject =
+      template?.subject ||
+      `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
+    let html =
+      template?.htmlContent || this.generateOnboardingEmailTemplate(tenant);
+
+    if (template) {
+      const baseUrl = process.env.BASE_URL || "https://localhost:5000";
+      const replacements: Record<string, string> = {
+        name: tenant.name,
+        portalUrl: `${baseUrl}/tenant/${tenant.orgId}/login`,
+        adminEmail: tenant.adminEmail,
+        tempPassword: "temp123!",
+        orgId: tenant.orgId,
+      };
+      for (const variable of template.variables || []) {
+        const value =
+          replacements[variable] ?? (tenant as any)[variable] ?? "";
+        html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
+        subject = subject.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          value
+        );
+      }
+    }
 
     try {
       await this.deliver(tenant.adminEmail, subject, html);
@@ -186,7 +183,7 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: template?.name || "onboarding",
         status: "sent",
         errorMessage: null,
       });
@@ -199,9 +196,72 @@ export class EmailService {
         tenantId: tenant.id,
         recipientEmail: tenant.adminEmail,
         subject,
-        templateType: "onboarding",
+        templateType: template?.name || "onboarding",
         status: "failed",
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+
+      return false;
+    }
+  }
+
+  async sendModuleRequestEmail(
+    tenant: { id: string; name: string; adminEmail: string },
+    request: { moduleId: string; action: string; reason?: string },
+    to: string | string[]
+  ): Promise<boolean> {
+    const templates = await storage.getEmailTemplates(tenant.id);
+    const template = templates.find(
+      t => t.name?.toLowerCase() === "module_request"
+    );
+
+    let subject =
+      template?.subject ||
+      `Module request: ${tenant.name} requests to ${request.action} ${request.moduleId}`;
+    let html =
+      template?.htmlContent ||
+      `<!DOCTYPE html><html><body><h2>Module Change Requested</h2><p>Tenant <strong>${tenant.name}</strong> has requested to ${request.action} module <strong>${request.moduleId}</strong>.</p><p>Reason: ${request.reason || ""}</p></body></html>`;
+
+    if (template) {
+      const replacements: Record<string, string> = {
+        tenantName: tenant.name,
+        moduleId: request.moduleId,
+        action: request.action,
+        reason: request.reason || "",
+      };
+      for (const variable of template.variables || []) {
+        const value = replacements[variable] ?? "";
+        html = html.replace(new RegExp(`{{\\s*${variable}\\s*}}`, "g"), value);
+        subject = subject.replace(
+          new RegExp(`{{\\s*${variable}\\s*}}`, "g"),
+          value
+        );
+      }
+    }
+
+    try {
+      await this.deliver(to, subject, html);
+
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: Array.isArray(to) ? to.join(",") : to,
+        subject,
+        templateType: template?.name || "module_request",
+        status: "sent",
+        errorMessage: null,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Failed to send module request email:", error);
+
+      await storage.logEmail({
+        tenantId: tenant.id,
+        recipientEmail: Array.isArray(to) ? to.join(",") : to,
+        subject,
+        templateType: template?.name || "module_request",
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : String(error),
       });
 
       return false;
@@ -224,21 +284,21 @@ export class EmailService {
         : "";
 
     return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Module Access Updated</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2>Module Access Updated</h2>
-          <p>Your tenant <strong>${tenant.name}</strong> module access has been updated.</p>
-          ${enabledList}
-          ${disabledList}
-          <p>Best regards,<br>The SaaS Framework Team</p>
-        </body>
-      </html>
-    `;
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Module Access Updated</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2>Module Access Updated</h2>
+            <p>Your tenant <strong>${tenant.name}</strong> module access has been updated.</p>
+            ${enabledList}
+            ${disabledList}
+            <p>Best regards,<br>The SaaS Framework Team</p>
+          </body>
+        </html>
+      `;
   }
 
   private generateOnboardingEmailTemplate(tenant: {
@@ -255,72 +315,67 @@ export class EmailService {
     const portalUrl = `${baseUrl}/tenant/${tenant.orgId}/login`;
 
     return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Welcome to SaaS Framework</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1>🚀 Welcome to SaaS Framework</h1>
-          <p>Your tenant <strong>${tenant.name}</strong> is ready!</p>
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Welcome to SaaS Framework</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1>🚀 Welcome to SaaS Framework</h1>
+            <p>Your tenant <strong>${tenant.name}</strong> is ready!</p>
 
-          <h3>Portal Access</h3>
-          <p><strong>Portal URL:</strong> <a href="${portalUrl}">${portalUrl}</a></p>
-          <p><strong>Admin Email:</strong> ${tenant.adminEmail}</p>
-          <p><strong>Temporary Password:</strong> temp123!</p>
+            <h3>Portal Access</h3>
+            <p><strong>Portal URL:</strong> <a href="${portalUrl}">${portalUrl}</a></p>
+            <p><strong>Admin Email:</strong> ${tenant.adminEmail}</p>
+            <p><strong>Temporary Password:</strong> temp123!</p>
 
-          <h3>Next Steps</h3>
-          <ol>
-            <li>Login to your tenant portal</li>
-            <li>Change your temporary password</li>
-            <li>Set up users and roles</li>
-            <li>Start building your application!</li>
-          </ol>
+            <h3>Next Steps</h3>
+            <ol>
+              <li>Login to your tenant portal</li>
+              <li>Change your temporary password</li>
+              <li>Set up users and roles</li>
+              <li>Start building your application!</li>
+            </ol>
 
-          <p>Best regards,<br>The SaaS Framework Team</p>
-        </body>
-      </html>
-    `;
+            <p>Best regards,<br>The SaaS Framework Team</p>
+          </body>
+        </html>
+      `;
   }
 
   async testConnection(): Promise<boolean> {
-    if (!this.msalClient) {
-      console.log("📧 Microsoft Graph not configured - skipping connection test");
-      return false;
-    }
-
     try {
-      await this.msalClient.acquireTokenByClientCredential({
-        scopes: ["https://graph.microsoft.com/.default"],
-      });
-      console.log("📨 Microsoft Graph connection test successful");
+      await this.transporter.verify();
+      console.log("📨 Gmail connection test successful");
       return true;
     } catch (error) {
-      console.error("Microsoft Graph connection test failed:", error);
+      console.error("Gmail connection test failed:", error);
       return false;
     }
   }
 
-  async sendSimpleTestEmail(to: string, subject = "Test Email"): Promise<boolean> {
+  async sendSimpleTestEmail(
+    to: string,
+    subject = "Test Email"
+  ): Promise<boolean> {
     try {
       const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Test Email</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2>Microsoft Graph Email Service Test</h2>
-          <p>This is a test email to verify that the Microsoft Graph configuration is working correctly.</p>
-          <p>Sent at: ${new Date().toISOString()}</p>
-        </body>
-      </html>
-      `;
-
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Test Email</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2>Gmail Email Service Test</h2>
+            <p>This is a test email to verify that the Gmail configuration is working correctly.</p>
+            <p>Sent at: ${new Date().toISOString()}</p>
+          </body>
+        </html>
+        `;
       await this.deliver(to, subject, html);
-      console.log(`Test email sent successfully to ${to} via Microsoft Graph`);
+      console.log(`Test email sent successfully to ${to} via Gmail`);
       return true;
     } catch (error) {
       console.error("Failed to send test email:", error);
