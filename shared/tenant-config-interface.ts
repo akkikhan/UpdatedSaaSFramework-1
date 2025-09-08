@@ -102,6 +102,46 @@ export const AuthModuleConfigSchema = z.object({
       rememberMeExpiry: z.string().default("30d"),
     })
     .optional(),
+}).superRefine((val, ctx) => {
+  const providerKeyMap = {
+    "azure-ad": "azureAd",
+    auth0: "auth0",
+    saml: "saml",
+    local: "local",
+  } as const;
+
+  val.providers.forEach(provider => {
+    const key = providerKeyMap[provider as keyof typeof providerKeyMap];
+    const cfg = (val.providerConfigs as any)?.[key];
+    if (!cfg) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["providerConfigs", key],
+        message: `${provider} configuration is required when provider is selected`,
+      });
+    }
+  });
+
+  Object.keys(val.providerConfigs ?? {}).forEach(key => {
+    const selected = val.providers.some(
+      p => providerKeyMap[p as keyof typeof providerKeyMap] === key
+    );
+    if (!selected) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["providerConfigs", key],
+        message: `${key} configuration provided but provider is not enabled`,
+      });
+    }
+  });
+
+  if (val.defaultProvider && !val.providers.includes(val.defaultProvider)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["defaultProvider"],
+      message: "Default provider must be one of the selected providers",
+    });
+  }
 });
 
 export type AuthModuleConfig = z.infer<typeof AuthModuleConfigSchema>;
