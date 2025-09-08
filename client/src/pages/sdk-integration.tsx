@@ -54,6 +54,16 @@ export default function SDKIntegrationPage() {
           Integrate our authentication and RBAC SDKs into your applications for seamless tenant
           management.
         </p>
+        <div className="mb-6">
+          <a
+            href="/docs/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 underline"
+          >
+            View full documentation
+          </a>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="border border-slate-200 rounded-lg p-4">
