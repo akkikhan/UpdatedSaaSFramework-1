@@ -161,6 +161,17 @@ export default function OnboardingWizard() {
       return res.json();
     },
   });
+  const { data: defaultRoles = [] } = useQuery({
+    queryKey: ["/api/rbac-config/default-roles"],
+    queryFn: async () => {
+      const token = localStorage.getItem("platformAdminToken") || "";
+      const res = await fetch("/api/rbac-config/default-roles", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [] as any[];
+      return res.json();
+    },
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(WIZARD_FORM_SCHEMA as any),
@@ -215,13 +226,15 @@ export default function OnboardingWizard() {
         const roles =
           (form.getValues("moduleConfigs.rbac.defaultRoles") as string[] | undefined) || [];
         if (roles.length === 0) {
+          const names = (defaultRoles as any[]).map(r => r.name);
+          const fallback = ["Admin", "Manager", "Viewer"];
           form.setValue(
             "moduleConfigs.rbac.defaultRoles" as any,
-            ["Admin", "Manager", "Viewer"] as any
+            (names.length ? names : fallback) as any
           );
           toast({
             title: "Default roles added",
-            description: "We added Admin, Manager, Viewer to get you started.",
+            description: "We added default roles to get you started.",
           });
         }
       }
@@ -589,12 +602,20 @@ export default function OnboardingWizard() {
                                     // Seed default RBAC config if missing
                                     const currentRBAC = form.getValues("moduleConfigs.rbac");
                                     if (!currentRBAC) {
+                                      const tpl =
+                                        (permissionTemplates as any[]).find((t: any) => t.isDefault) ||
+                                        (permissionTemplates as any[])[0];
+                                      const bt = (businessTypes as any[])[0];
+                                      const roleNames =
+                                        (defaultRoles as any[]).length > 0
+                                          ? (defaultRoles as any[]).map(r => r.name)
+                                          : ["Admin", "Manager", "Viewer"];
                                       form.setValue(
                                         "moduleConfigs.rbac" as any,
                                         {
-                                          permissionTemplate: "standard",
-                                          businessType: "general",
-                                          defaultRoles: ["Admin", "Manager", "Viewer"],
+                                          permissionTemplate: (tpl?.name || tpl?.id || "").toString().toLowerCase(),
+                                          businessType: (bt?.name || bt?.id || "").toString().toLowerCase(),
+                                          defaultRoles: roleNames,
                                         } as any
                                       );
                                     }
@@ -1094,11 +1115,10 @@ export default function OnboardingWizard() {
                                 control={form.control}
                                 name="moduleConfigs.rbac.defaultRoles"
                                 render={({ field }) => {
-                                  const roles: string[] = (field.value as any) || [
-                                    "Admin",
-                                    "Manager",
-                                    "Viewer",
-                                  ];
+                                  const base = (defaultRoles as any[]).map(r => r.name);
+                                  const roles: string[] =
+                                    (field.value as any) ||
+                                    (base.length ? base : ["Admin", "Manager", "Viewer"]);
                                   const [input, setInput] = React.useState("");
                                   const addRole = () => {
                                     const v = input.trim();
@@ -1417,14 +1437,19 @@ export default function OnboardingWizard() {
                                   <strong>
                                     {(form.getValues(
                                       "moduleConfigs.rbac.permissionTemplate"
-                                    ) as any) || "standard"}
+                                    ) as any) ||
+                                      ((permissionTemplates as any[])[0]?.name ||
+                                        (permissionTemplates as any[])[0]?.id ||
+                                        "")}
                                   </strong>
                                 </div>
                                 <div>
                                   Business Type:{" "}
                                   <strong>
                                     {(form.getValues("moduleConfigs.rbac.businessType") as any) ||
-                                      "general"}
+                                      ((businessTypes as any[])[0]?.name ||
+                                        (businessTypes as any[])[0]?.id ||
+                                        "")}
                                   </strong>
                                 </div>
                                 <div className="flex items-start gap-2">
