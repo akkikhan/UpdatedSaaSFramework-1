@@ -3,64 +3,299 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Create Demo Tenant</title>
+    <title>Demo Tenant Creator - SaaS Framework</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: Arial, sans-serif;
-        max-width: 600px;
-        margin: 50px auto;
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
         padding: 20px;
+        line-height: 1.6;
       }
-      .button {
-        background: #007cba;
+
+      .container {
+        max-width: 700px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow:
+          0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         color: white;
-        padding: 10px 20px;
+        padding: 32px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .header p {
+        font-size: 16px;
+        opacity: 0.9;
+        font-weight: 400;
+      }
+
+      .content {
+        padding: 32px;
+      }
+
+      .info-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 32px;
+      }
+
+      .info-card h3 {
+        color: #334155;
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .info-list {
+        list-style: none;
+      }
+
+      .info-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .info-list li:last-child {
+        border-bottom: none;
+      }
+
+      .info-list strong {
+        color: #475569;
+        font-weight: 500;
+        min-width: 120px;
+      }
+
+      .info-list span {
+        color: #64748b;
+        font-family:
+          "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+        background: #e2e8f0;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+
+      .button {
+        flex: 1;
+        min-width: 200px;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        padding: 14px 24px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       }
+
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      }
+
+      .button:active {
+        transform: translateY(0);
+      }
+
+      .button.secondary {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      }
+
+      .button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
       .result {
-        margin-top: 20px;
-        padding: 15px;
-        border-radius: 5px;
+        margin-top: 24px;
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 4px solid;
+        animation: slideIn 0.3s ease;
       }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
       .success {
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
+        background: #f0f9ff;
+        border-left-color: #10b981;
+        color: #065f46;
       }
+
+      .success h3 {
+        color: #059669;
+        margin-bottom: 12px;
+        font-weight: 600;
+      }
+
       .error {
-        background: #f8d7da;
-        border: 1px solid #f5c6cb;
-        color: #721c24;
+        background: #fef2f2;
+        border-left-color: #ef4444;
+        color: #991b1b;
+      }
+
+      .error h3 {
+        color: #dc2626;
+        margin-bottom: 12px;
+        font-weight: 600;
+      }
+
+      .tenant-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 12px 0;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      }
+
+      .tenant-card a {
+        color: #4f46e5;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .tenant-card a:hover {
+        text-decoration: underline;
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #6b7280;
+        font-weight: 500;
+      }
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #e5e7eb;
+        border-top: 2px solid #4f46e5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Demo Tenant Creator</h1>
-    <p>This will create a demo tenant with orgId "demo" for testing.</p>
+    <div class="container">
+      <div class="header">
+        <h1>🚀 Demo Tenant Creator</h1>
+        <p>Create a demo tenant with pre-configured settings for testing your SaaS framework</p>
+      </div>
 
-    <div>
-      <h3>Tenant Details:</h3>
-      <ul>
-        <li><strong>Name:</strong> Demo Company</li>
-        <li><strong>Org ID:</strong> demo</li>
-        <li><strong>Admin Email:</strong> akki@primussoft.com</li>
-        <li><strong>Modules:</strong> user-management, rbac</li>
-      </ul>
+      <div class="content">
+        <div class="info-card">
+          <h3>📋 Tenant Configuration</h3>
+          <ul class="info-list">
+            <li><strong>Name:</strong> <span>Demo Company</span></li>
+            <li><strong>Org ID:</strong> <span>demo</span></li>
+            <li><strong>Admin Email:</strong> <span>akki@primussoft.com</span></li>
+            <li><strong>Modules:</strong> <span>user-management, rbac</span></li>
+          </ul>
+        </div>
+
+        <div class="button-group">
+          <button class="button" onclick="createDemoTenant()">✨ Create Demo Tenant</button>
+          <button class="button secondary" onclick="checkExistingTenants()">
+            📝 Check Existing Tenants
+          </button>
+        </div>
+
+        <div id="result"></div>
+      </div>
     </div>
-
-    <button class="button" onclick="createDemoTenant()">Create Demo Tenant</button>
-    <button class="button" onclick="checkExistingTenants()" style="background: #6c757d">
-      Check Existing Tenants
-    </button>
-
-    <div id="result"></div>
 
     <script>
       async function createDemoTenant() {
         const resultDiv = document.getElementById("result");
-        resultDiv.innerHTML = "<p>🚀 Creating demo tenant...</p>";
+        const createButton = document.querySelector(".button");
+
+        // Show loading state
+        createButton.disabled = true;
+        createButton.innerHTML = '<div class="spinner"></div> Creating Tenant...';
+        resultDiv.innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <span>Creating demo tenant...</span>
+          </div>
+        `;
 
         try {
           const response = await fetch("/api/tenants", {
@@ -80,36 +315,52 @@
 
           if (response.ok) {
             resultDiv.innerHTML = `
-                        <div class="result success">
-                            <h3>✅ Demo tenant created successfully!</h3>
-                            <p><strong>Tenant ID:</strong> ${data.id}</p>
-                            <p><strong>Login URL:</strong> <a href="/tenant/demo/login" target="_blank">http://localhost:5000/tenant/demo/login</a></p>
-                            <p><strong>Email:</strong> akki@primussoft.com</p>
-                            <p><strong>Password:</strong> Demo123</p>
-                        </div>
-                    `;
+              <div class="result success">
+                <h3>✅ Demo tenant created successfully!</h3>
+                <div class="tenant-card">
+                  <p><strong>Tenant ID:</strong> ${data.id}</p>
+                  <p><strong>Login URL:</strong> <a href="/tenant/demo/login" target="_blank">http://localhost:5000/tenant/demo/login</a></p>
+                  <p><strong>Email:</strong> akki@primussoft.com</p>
+                  <p><strong>Password:</strong> Demo123</p>
+                </div>
+              </div>
+            `;
           } else {
             resultDiv.innerHTML = `
-                        <div class="result error">
-                            <h3>❌ Failed to create tenant</h3>
-                            <p><strong>Status:</strong> ${response.status}</p>
-                            <p><strong>Error:</strong> ${data.message || "Unknown error"}</p>
-                        </div>
-                    `;
+              <div class="result error">
+                <h3>❌ Failed to create tenant</h3>
+                <p><strong>Status:</strong> ${response.status}</p>
+                <p><strong>Error:</strong> ${data.message || "Unknown error"}</p>
+              </div>
+            `;
           }
         } catch (error) {
           resultDiv.innerHTML = `
-                    <div class="result error">
-                        <h3>❌ Request failed</h3>
-                        <p><strong>Error:</strong> ${error.message}</p>
-                    </div>
-                `;
+            <div class="result error">
+              <h3>❌ Request failed</h3>
+              <p><strong>Error:</strong> ${error.message}</p>
+            </div>
+          `;
+        } finally {
+          // Reset button state
+          createButton.disabled = false;
+          createButton.innerHTML = "✨ Create Demo Tenant";
         }
       }
 
       async function checkExistingTenants() {
         const resultDiv = document.getElementById("result");
-        resultDiv.innerHTML = "<p>🔍 Checking existing tenants...</p>";
+        const checkButton = document.querySelector(".button.secondary");
+
+        // Show loading state
+        checkButton.disabled = true;
+        checkButton.innerHTML = '<div class="spinner"></div> Checking...';
+        resultDiv.innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <span>Checking existing tenants...</span>
+          </div>
+        `;
 
         try {
           const response = await fetch("/api/tenants");
@@ -118,37 +369,41 @@
           if (response.ok) {
             let html = '<div class="result success"><h3>📋 Existing Tenants:</h3>';
             if (data.length === 0) {
-              html += "<p>No tenants found.</p>";
+              html += "<p>No tenants found. Create your first tenant above!</p>";
             } else {
               data.forEach(tenant => {
                 html += `
-                                <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-                                    <p><strong>Name:</strong> ${tenant.name}</p>
-                                    <p><strong>Org ID:</strong> ${tenant.orgId}</p>
-                                    <p><strong>Admin Email:</strong> ${tenant.adminEmail}</p>
-                                    <p><strong>Login URL:</strong> <a href="/tenant/${tenant.orgId}/login" target="_blank">http://localhost:5000/tenant/${tenant.orgId}/login</a></p>
-                                </div>
-                            `;
+                  <div class="tenant-card">
+                    <p><strong>Name:</strong> ${tenant.name}</p>
+                    <p><strong>Org ID:</strong> ${tenant.orgId}</p>
+                    <p><strong>Admin Email:</strong> ${tenant.adminEmail}</p>
+                    <p><strong>Login URL:</strong> <a href="/tenant/${tenant.orgId}/login" target="_blank">http://localhost:5000/tenant/${tenant.orgId}/login</a></p>
+                  </div>
+                `;
               });
             }
             html += "</div>";
             resultDiv.innerHTML = html;
           } else {
             resultDiv.innerHTML = `
-                        <div class="result error">
-                            <h3>❌ Failed to fetch tenants</h3>
-                            <p><strong>Status:</strong> ${response.status}</p>
-                            <p><strong>Error:</strong> ${data.message || "Unknown error"}</p>
-                        </div>
-                    `;
+              <div class="result error">
+                <h3>❌ Failed to fetch tenants</h3>
+                <p><strong>Status:</strong> ${response.status}</p>
+                <p><strong>Error:</strong> ${data.message || "Unknown error"}</p>
+              </div>
+            `;
           }
         } catch (error) {
           resultDiv.innerHTML = `
-                    <div class="result error">
-                        <h3>❌ Request failed</h3>
-                        <p><strong>Error:</strong> ${error.message}</p>
-                    </div>
-                `;
+            <div class="result error">
+              <h3>❌ Request failed</h3>
+              <p><strong>Error:</strong> ${error.message}</p>
+            </div>
+          `;
+        } finally {
+          // Reset button state
+          checkButton.disabled = false;
+          checkButton.innerHTML = "📝 Check Existing Tenants";
         }
       }
     </script>

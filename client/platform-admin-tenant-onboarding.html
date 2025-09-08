@@ -4,8 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Platform Admin - Tenant Onboarding</title>
+    <meta
+      name="description"
+      content="Create and configure new tenants for the multi-tenant SaaS platform with comprehensive onboarding wizard"
+    />
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- Preconnect to Google Fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Modern CSS with enhanced styling -->
     <link rel="stylesheet" href="assets/css/tenant-onboarding.css" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <!-- Enhanced accessibility and SEO -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="application-name" content="Multi-Tenant SaaS Platform" />
   </head>
   <body>
     <!-- Toast Container -->
@@ -16,10 +31,20 @@
       <div class="onboarding-wrapper">
         <!-- Header -->
         <header class="onboarding-header">
-          <h1 class="onboarding-title">Create New Tenant</h1>
+          <div class="header-brand">
+            <div class="header-icon">🏢</div>
+            <h1 class="onboarding-title">Create New Tenant</h1>
+          </div>
           <p class="onboarding-subtitle">
-            Set up a new organization with admin access and module configuration
+            Set up a new organization with comprehensive admin access and module configuration
           </p>
+          <div class="header-features">
+            <span>🚀 Multi-tenant SaaS Platform</span>
+            <span>•</span>
+            <span>⚡ Quick Setup</span>
+            <span>•</span>
+            <span>🔒 Secure Configuration</span>
+          </div>
         </header>
 
         <!-- Progress Indicator -->
@@ -525,7 +550,8 @@
             id="createBtn"
             onclick="createTenant()"
           >
-            Create Tenant
+            <span class="btn-text">🚀 Create Tenant</span>
+            <span class="btn-loading">Creating...</span>
           </button>
         </div>
       </div>
