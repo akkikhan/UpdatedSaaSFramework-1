@@ -24,7 +24,7 @@ export class EmailService {
       tenantId: process.env.GRAPH_TENANT_ID || process.env.AZURE_TENANT_ID || "",
       clientId: process.env.GRAPH_CLIENT_ID || process.env.AZURE_CLIENT_ID || "",
       clientSecret: process.env.GRAPH_CLIENT_SECRET || process.env.AZURE_CLIENT_SECRET || "",
-      fromEmail: process.env.EMAIL_FROM || "noreply@yourdomain.com",
+      fromEmail: process.env.EMAIL_FROM || "akki@primussoft.com",
     };
 
     if (!this.config.tenantId || !this.config.clientId || !this.config.clientSecret) {
@@ -70,27 +70,56 @@ export class EmailService {
   }
 
   private async sendViaGraph(to: string[], subject: string, html: string): Promise<void> {
-    if (!this.graphClient) {
+    if (!this.msalClient) {
       throw new Error("Microsoft Graph client not initialized");
     }
+
+    // Force refresh the access token to avoid caching issues with new permissions
+    const authResponse = await this.msalClient.acquireTokenByClientCredential({
+      scopes: ["https://graph.microsoft.com/.default"],
+      skipCache: true, // Force fresh token
+    });
+
+    if (!authResponse?.accessToken) {
+      throw new Error("Failed to acquire access token");
+    }
+
+    // Create a fresh Graph client with the new token
+    const graphClient = Client.init({
+      authProvider: done => done(null, authResponse.accessToken),
+    });
 
     const message = {
       subject,
       body: { contentType: "HTML", content: html },
       toRecipients: to.map(address => ({ emailAddress: { address } })),
-      from: { emailAddress: { address: this.config.fromEmail } },
     };
 
     try {
-      await this.graphClient
-        .api(`/users/${this.config.fromEmail}/sendMail`)
-        .post({ message });
+      // For application-only authentication, use the specific user endpoint
+      await graphClient.api(`/users/${this.config.fromEmail}/sendMail`).post({ message });
+
+      console.log(`📨 Email sent successfully via Microsoft Graph to ${to.join(", ")}`);
     } catch (error: any) {
-      if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
-        await this.graphClient.api("/me/sendMail").post({ message });
-      } else {
-        throw error;
+      console.error("Failed to send email via Microsoft Graph:", error);
+
+      // Provide detailed error information
+      if (error.statusCode === 400 && error.message?.includes("/me request is only valid")) {
+        console.error("❌ Cannot use /me endpoint with application authentication");
+        console.error(`   Using user-specific endpoint: /users/${this.config.fromEmail}/sendMail`);
+        console.error("   Make sure the fromEmail address exists in your Azure AD tenant");
+      } else if (error.statusCode === 401) {
+        console.error("❌ Authentication failed - check Azure AD app permissions");
+        console.error("   Required permission: Mail.Send (Application)");
+      } else if (error.statusCode === 403) {
+        console.error("❌ Forbidden - check if the app has permission to send emails");
+        console.error(`   From email: ${this.config.fromEmail}`);
+      } else if (error.statusCode === 404) {
+        console.error("❌ User not found - check if the from email address exists in your tenant");
+        console.error(`   From email: ${this.config.fromEmail}`);
       }
+
+      throw error;
     }
   }
 
@@ -185,9 +214,7 @@ export class EmailService {
   ): string {
     const enabledList =
       changes.enabled.length > 0
-        ? `<h3>Modules Enabled:</h3><ul>${changes.enabled
-            .map(m => `<li>${m}</li>`)
-            .join("")}</ul>`
+        ? `<h3>Modules Enabled:</h3><ul>${changes.enabled.map(m => `<li>${m}</li>`).join("")}</ul>`
         : "";
     const disabledList =
       changes.disabled.length > 0
