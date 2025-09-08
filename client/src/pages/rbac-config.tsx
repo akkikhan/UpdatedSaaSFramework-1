@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Edit, Trash2, Save, Shield, Users, Building2, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, Save, Shield, Users, Building2, Settings, Eye } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -32,6 +32,7 @@ interface PermissionTemplate {
   name: string;
   description: string;
   permissions: string[];
+  roles?: string[];
   businessTypes: string[];
   isDefault: boolean;
   isActive: boolean;
@@ -57,6 +58,7 @@ interface DefaultRole {
   name: string;
   description: string;
   permissions: string[];
+  roles?: string[];
   businessTypeId: string | null;
   permissionTemplateId: string | null;
   isSystemRole: boolean;
@@ -113,6 +115,11 @@ export default function RBACConfigPage() {
   const [editingTemplate, setEditingTemplate] = useState<PermissionTemplate | null>(null);
   const [editingBusinessType, setEditingBusinessType] = useState<BusinessType | null>(null);
   const [editingRole, setEditingRole] = useState<DefaultRole | null>(null);
+  const [newTemplatePermission, setNewTemplatePermission] = useState("");
+  const [newRolePermission, setNewRolePermission] = useState("");
+  const [newTemplateRole, setNewTemplateRole] = useState("");
+  const [newRoleRole, setNewRoleRole] = useState("");
+  const [previewTemplate, setPreviewTemplate] = useState<PermissionTemplate | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -326,6 +333,7 @@ export default function RBACConfigPage() {
                         name: "",
                         description: "",
                         permissions: [],
+                        roles: [],
                         businessTypes: [],
                         isDefault: false,
                         isActive: true,
@@ -398,6 +406,25 @@ export default function RBACConfigPage() {
                                   )}
                                 </div>
                               </div>
+                              {(template.roles || []).length > 0 && (
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-medium text-slate-700 mt-1">
+                                    Roles:
+                                  </span>
+                                  <div className="flex gap-1 flex-wrap">
+                                    {(template.roles || []).slice(0, 3).map(role => (
+                                      <Badge key={role} variant="secondary" className="text-xs">
+                                        {role}
+                                      </Badge>
+                                    ))}
+                                    {(template.roles || []).length > 3 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        +{(template.roles || []).length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                               <div className="flex items-start gap-2">
                                 <span className="text-xs font-medium text-slate-700 mt-1">
                                   Business Types:
@@ -412,6 +439,14 @@ export default function RBACConfigPage() {
                               </div>
                             </div>
                             <div className="flex gap-2 ml-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPreviewTemplate(template)}
+                                data-testid={`button-preview-template-${template.id}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -603,6 +638,7 @@ export default function RBACConfigPage() {
                         name: "",
                         description: "",
                         permissions: [],
+                        roles: [],
                         businessTypeId: null,
                         permissionTemplateId: null,
                         isSystemRole: false,
@@ -702,6 +738,23 @@ export default function RBACConfigPage() {
                                   )}
                                 </div>
                               </div>
+                              {(role.roles || []).length > 0 && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs font-medium">Roles:</span>
+                                  <div className="flex gap-1 flex-wrap">
+                                    {(role.roles || []).slice(0, 3).map((r: any) => (
+                                      <Badge key={r} variant="secondary" className="text-xs">
+                                        {r}
+                                      </Badge>
+                                    ))}
+                                    {(role.roles || []).length > 3 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        +{(role.roles || []).length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             <div className="flex gap-2">
                               {role.canBeModified && (
@@ -738,8 +791,68 @@ export default function RBACConfigPage() {
         </div>
       </div>
 
+      {/* Template Preview Dialog */}
+      <Dialog open={!!previewTemplate} onOpenChange={open => !open && setPreviewTemplate(null)}>
+        <DialogContent className="max-w-lg">
+          {previewTemplate && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>{previewTemplate.name} Preview</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-slate-600">{previewTemplate.description}</p>
+              <div>
+                <p className="text-xs font-medium text-slate-700 mb-1">Permissions</p>
+                <div className="flex flex-wrap gap-2">
+                  {previewTemplate.permissions.map(p => (
+                    <Badge key={p} variant="outline" className="text-xs">
+                      {p}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              {(previewTemplate.roles || []).length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-slate-700 mb-1">Default Roles</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(previewTemplate.roles || []).map(r => (
+                      <Badge key={r} variant="secondary" className="text-xs">
+                        {r}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-medium text-slate-700 mb-1">Business Types</p>
+                <div className="flex flex-wrap gap-2">
+                  {previewTemplate.businessTypes.map(b => (
+                    <Badge key={b} variant="secondary" className="text-xs">
+                      {b}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter className="justify-end">
+                <Button type="button" onClick={() => setPreviewTemplate(null)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Template Dialog */}
-      <Dialog open={!!editingTemplate} onOpenChange={open => !open && setEditingTemplate(null)}>
+      <Dialog
+        open={!!editingTemplate}
+        onOpenChange={open => {
+          if (!open) {
+            setEditingTemplate(null);
+            setNewTemplatePermission("");
+            setNewTemplateRole("");
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {editingTemplate && (
             <form
@@ -793,6 +906,133 @@ export default function RBACConfigPage() {
                     </div>
                   ))}
                 </div>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    placeholder="custom_permission"
+                    value={newTemplatePermission}
+                    onChange={e => setNewTemplatePermission(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const perm = newTemplatePermission.trim();
+                        if (
+                          perm &&
+                          !editingTemplate.permissions.includes(perm)
+                        ) {
+                          setEditingTemplate({
+                            ...editingTemplate,
+                            permissions: [...editingTemplate.permissions, perm],
+                          });
+                        }
+                        setNewTemplatePermission("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const perm = newTemplatePermission.trim();
+                      if (
+                        perm &&
+                        !editingTemplate.permissions.includes(perm)
+                      ) {
+                        setEditingTemplate({
+                          ...editingTemplate,
+                          permissions: [...editingTemplate.permissions, perm],
+                        });
+                      }
+                      setNewTemplatePermission("");
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {editingTemplate.permissions.filter(p => !availablePermissions.includes(p)).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {editingTemplate.permissions
+                      .filter(p => !availablePermissions.includes(p))
+                      .map(perm => (
+                        <Badge key={perm} variant="secondary" className="px-2 py-1">
+                          <span className="mr-2">{perm}</span>
+                          <button
+                            type="button"
+                            className="text-slate-500 hover:text-slate-700"
+                            onClick={() =>
+                              setEditingTemplate({
+                                ...editingTemplate,
+                                permissions: editingTemplate.permissions.filter(p => p !== perm),
+                              })
+                            }
+                            aria-label={`Remove ${perm}`}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Default Roles</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="role-name"
+                    value={newTemplateRole}
+                    onChange={e => setNewTemplateRole(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const role = newTemplateRole.trim();
+                        if (role && !(editingTemplate.roles || []).includes(role)) {
+                          setEditingTemplate({
+                            ...editingTemplate,
+                            roles: [...(editingTemplate.roles || []), role],
+                          });
+                        }
+                        setNewTemplateRole("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const role = newTemplateRole.trim();
+                      if (role && !(editingTemplate.roles || []).includes(role)) {
+                        setEditingTemplate({
+                          ...editingTemplate,
+                          roles: [...(editingTemplate.roles || []), role],
+                        });
+                      }
+                      setNewTemplateRole("");
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {(editingTemplate.roles || []).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {(editingTemplate.roles || []).map(role => (
+                      <Badge key={role} variant="outline" className="px-2 py-1">
+                        <span className="mr-2">{role}</span>
+                        <button
+                          type="button"
+                          className="text-slate-500 hover:text-slate-700"
+                          onClick={() =>
+                            setEditingTemplate({
+                              ...editingTemplate,
+                              roles: (editingTemplate.roles || []).filter(r => r !== role),
+                            })
+                          }
+                          aria-label={`Remove ${role}`}
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
@@ -980,7 +1220,16 @@ export default function RBACConfigPage() {
       </Dialog>
 
       {/* Default Role Dialog */}
-      <Dialog open={!!editingRole} onOpenChange={open => !open && setEditingRole(null)}>
+      <Dialog
+        open={!!editingRole}
+        onOpenChange={open => {
+          if (!open) {
+            setEditingRole(null);
+            setNewRolePermission("");
+            setNewRoleRole("");
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {editingRole && (
             <form
@@ -1070,6 +1319,133 @@ export default function RBACConfigPage() {
                     </div>
                   ))}
                 </div>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    placeholder="custom_permission"
+                    value={newRolePermission}
+                    onChange={e => setNewRolePermission(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const perm = newRolePermission.trim();
+                        if (
+                          perm &&
+                          !editingRole.permissions.includes(perm)
+                        ) {
+                          setEditingRole({
+                            ...editingRole,
+                            permissions: [...editingRole.permissions, perm],
+                          });
+                        }
+                        setNewRolePermission("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const perm = newRolePermission.trim();
+                      if (
+                        perm &&
+                        !editingRole.permissions.includes(perm)
+                      ) {
+                        setEditingRole({
+                          ...editingRole,
+                          permissions: [...editingRole.permissions, perm],
+                        });
+                      }
+                      setNewRolePermission("");
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {editingRole.permissions.filter(p => !availablePermissions.includes(p)).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {editingRole.permissions
+                      .filter(p => !availablePermissions.includes(p))
+                      .map(perm => (
+                        <Badge key={perm} variant="secondary" className="px-2 py-1">
+                          <span className="mr-2">{perm}</span>
+                          <button
+                            type="button"
+                            className="text-slate-500 hover:text-slate-700"
+                            onClick={() =>
+                              setEditingRole({
+                                ...editingRole,
+                                permissions: editingRole.permissions.filter(p => p !== perm),
+                              })
+                            }
+                            aria-label={`Remove ${perm}`}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Default Roles</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="role-name"
+                    value={newRoleRole}
+                    onChange={e => setNewRoleRole(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const role = newRoleRole.trim();
+                        if (role && !(editingRole.roles || []).includes(role)) {
+                          setEditingRole({
+                            ...editingRole,
+                            roles: [...(editingRole.roles || []), role],
+                          });
+                        }
+                        setNewRoleRole("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const role = newRoleRole.trim();
+                      if (role && !(editingRole.roles || []).includes(role)) {
+                        setEditingRole({
+                          ...editingRole,
+                          roles: [...(editingRole.roles || []), role],
+                        });
+                      }
+                      setNewRoleRole("");
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {(editingRole.roles || []).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {(editingRole.roles || []).map(role => (
+                      <Badge key={role} variant="outline" className="px-2 py-1">
+                        <span className="mr-2">{role}</span>
+                        <button
+                          type="button"
+                          className="text-slate-500 hover:text-slate-700"
+                          onClick={() =>
+                            setEditingRole({
+                              ...editingRole,
+                              roles: (editingRole.roles || []).filter(r => r !== role),
+                            })
+                          }
+                          aria-label={`Remove ${role}`}
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">

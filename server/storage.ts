@@ -49,6 +49,8 @@ import { db } from "./db.ts";
 import { eq, desc, count, asc, and, like, gte, lte, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
+console.log("init");
+
 // Helper function to ensure db is available
 function ensureDb() {
   if (!db) {
@@ -1801,6 +1803,7 @@ class DemoStorage implements IStorage {
         "user.delete",
         "role.manage",
       ],
+      roles: [],
       businessTypes: ["standard"],
       isDefault: true,
       isActive: true,
@@ -1812,6 +1815,7 @@ class DemoStorage implements IStorage {
       name: "Everything",
       description: "All permissions enabled",
       permissions: ["*"],
+      roles: [],
       businessTypes: ["everything"],
       isDefault: false,
       isActive: true,
@@ -1853,6 +1857,7 @@ class DemoStorage implements IStorage {
       name: "Admin",
       description: "Full access to system",
       permissions: ["*"],
+      roles: [],
       businessTypeId: "bt-everything",
       permissionTemplateId: null,
       isSystemRole: true,
@@ -1867,6 +1872,7 @@ class DemoStorage implements IStorage {
       name: "Manager",
       description: "Manage users and roles",
       permissions: ["user.create", "user.read", "user.update", "role.manage"],
+      roles: [],
       businessTypeId: "bt-standard",
       permissionTemplateId: null,
       isSystemRole: false,
@@ -1881,6 +1887,7 @@ class DemoStorage implements IStorage {
       name: "Viewer",
       description: "Read-only access",
       permissions: ["user.read", "role.read"],
+      roles: [],
       businessTypeId: "bt-standard",
       permissionTemplateId: null,
       isSystemRole: false,
@@ -2025,6 +2032,7 @@ class DemoStorage implements IStorage {
       updatedAt: new Date(),
       isActive: true,
       ...template,
+      roles: template.roles || [],
     };
     this.permissionTemplates.push(newTemplate);
     return newTemplate;
@@ -2111,6 +2119,7 @@ class DemoStorage implements IStorage {
       updatedAt: new Date(),
       isActive: true,
       ...role,
+      roles: role.roles || [],
     };
     this.defaultRoles.push(newRole);
     return newRole;

@@ -1302,32 +1302,61 @@ export default function OnboardingWizard() {
                               <FormField
                                 control={form.control}
                                 name="moduleConfigs.rbac.customPermissions"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Custom Permissions (optional)</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        placeholder="comma,separated,permissions"
-                                        value={
-                                          (Array.isArray(field.value)
-                                            ? field.value.join(",")
-                                            : "") as any
-                                        }
-                                        onChange={e =>
-                                          field.onChange(
-                                            e.target.value
-                                              .split(",")
-                                              .map(s => s.trim())
-                                              .filter(Boolean)
-                                          )
-                                        }
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      Extra permissions to add during creation
-                                    </FormDescription>
-                                  </FormItem>
-                                )}
+                                render={({ field }) => {
+                                  const perms: string[] = Array.isArray(field.value)
+                                    ? (field.value as string[])
+                                    : [];
+                                  const [input, setInput] = React.useState("");
+                                  const addPerm = () => {
+                                    const v = input.trim();
+                                    if (!v) return;
+                                    const next = Array.from(new Set([...perms, v]));
+                                    field.onChange(next);
+                                    setInput("");
+                                  };
+                                  const removePerm = (name: string) => {
+                                    field.onChange(perms.filter(p => p !== name));
+                                  };
+                                  return (
+                                    <FormItem>
+                                      <FormLabel>Custom Permissions (optional)</FormLabel>
+                                      <div className="flex flex-wrap gap-2">
+                                        {perms.map(p => (
+                                          <Badge key={p} variant="secondary" className="px-2 py-1">
+                                            <span className="mr-2">{p}</span>
+                                            <button
+                                              type="button"
+                                              className="text-slate-500 hover:text-slate-700"
+                                              onClick={() => removePerm(p)}
+                                              aria-label={`Remove ${p}`}
+                                            >
+                                              ×
+                                            </button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-2 mt-2">
+                                        <Input
+                                          value={input}
+                                          onChange={e => setInput(e.target.value)}
+                                          placeholder="custom_permission"
+                                          onKeyDown={e => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              addPerm();
+                                            }
+                                          }}
+                                        />
+                                        <Button type="button" onClick={addPerm} variant="secondary">
+                                          Add
+                                        </Button>
+                                      </div>
+                                      <FormDescription>
+                                        Extra permissions to add during creation
+                                      </FormDescription>
+                                    </FormItem>
+                                  );
+                                }}
                               />
                             </div>
                           )}
