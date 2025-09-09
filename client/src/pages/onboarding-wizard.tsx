@@ -25,7 +25,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,32 +47,205 @@ import {
   Bot,
   Activity,
   Lock,
+  Globe,
+  FileText,
+  X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MODULES_INFO, type TenantCreationData } from "../../../shared/types";
 import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
+import { transformTenantFormData } from "@/utils/tenant-form-transform";
 
 // Wizard form schema
-const WIZARD_FORM_SCHEMA = z.object({
-  name: z.string().min(1, "Organization name is required"),
-  orgId: z
-    .string()
-    .min(1, "Organization ID is required")
-    .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
-  adminEmail: z.string().email("Valid email address required"),
-  adminName: z.string().min(1, "Admin name is required"),
-  sendEmail: z.boolean().optional(),
-  companyWebsite: z.string().optional(),
-  enabledModules: z.array(z.string()).optional(),
-  moduleConfigs: z.any().optional(),
-  metadata: z
-    .object({
-      adminName: z.string().optional(),
-      companyWebsite: z.string().optional(),
-    })
-    .optional(),
-});
+const AUTH_PROVIDER = z.enum(["local", "azure-ad", "auth0", "saml"]);
+const LOG_LEVEL = z.enum(["error", "warn", "info", "debug", "trace"]);
+const NOTIFICATION_CHANNEL = z.enum(["email", "sms", "webhook"]);
+
+const WIZARD_FORM_SCHEMA = z
+  .object({
+    name: z.string().min(1, "Organization name is required"),
+    orgId: z
+      .string()
+      .min(1, "Organization ID is required")
+      .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
+    adminEmail: z.string().email("Valid email address required"),
+    adminName: z.string().min(1, "Admin name is required"),
+    sendEmail: z.boolean().optional(),
+    companyWebsite: z.string().optional(),
+    enabledModules: z.array(z.string()).optional(),
+    moduleConfigs: z.object({
+      authentication: z.object({
+        providers: z.array(AUTH_PROVIDER).default([]),
+        azureAd: z
+          .object({
+            tenantId: z.string().min(1, "Tenant ID is required"),
+            clientId: z.string().min(1, "Client ID is required"),
+            clientSecret: z.string().min(1, "Client secret is required"),
+          })
+          .partial(),
+        auth0: z
+          .object({
+            domain: z.string().min(1, "Domain is required"),
+            clientId: z.string().min(1, "Client ID is required"),
+            clientSecret: z.string().min(1, "Client secret is required"),
+            audience: z.string().optional(),
+          })
+          .partial(),
+        saml: z
+          .object({
+            entryPoint: z.string().min(1, "Entry Point URL is required"),
+            issuer: z.string().min(1, "Issuer is required"),
+            cert: z.string().min(1, "Certificate is required"),
+            callbackUrl: z.string().min(1, "Callback URL is required"),
+          })
+          .partial(),
+      }),
+      rbac: z.object({
+        permissionTemplate: z.string().min(1, "Permission template is required"),
+        businessType: z.string().min(1, "Business type is required"),
+        defaultRoles: z.array(z.string()).min(1, "Select at least one default role"),
+        customPermissions: z.string().optional(),
+      }),
+      logging: z.object({
+        levels: z.array(LOG_LEVEL).min(1, "Select at least one log level"),
+        notificationChannels: z.array(NOTIFICATION_CHANNEL).optional(),
+      }),
+    }),
+    metadata: z
+      .object({
+        adminName: z.string().optional(),
+        companyWebsite: z.string().optional(),
+      })
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Authentication provider config validation
+    if (data.enabledModules?.includes("auth")) {
+      const auth = data.moduleConfigs?.authentication;
+      if (!auth.providers || auth.providers.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Select at least one authentication provider",
+          path: ["moduleConfigs", "authentication", "providers"],
+        });
+      }
+      if (auth.providers?.includes("azure-ad")) {
+        if (!auth.azureAd?.tenantId) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Tenant ID is required",
+            path: ["moduleConfigs", "authentication", "azureAd", "tenantId"],
+          });
+        }
+        if (!auth.azureAd?.clientId) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Client ID is required",
+            path: ["moduleConfigs", "authentication", "azureAd", "clientId"],
+          });
+        }
+        if (!auth.azureAd?.clientSecret) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Client secret is required",
+            path: ["moduleConfigs", "authentication", "azureAd", "clientSecret"],
+          });
+        }
+      }
+      if (auth.providers?.includes("auth0")) {
+        if (!auth.auth0?.domain) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Domain is required",
+            path: ["moduleConfigs", "authentication", "auth0", "domain"],
+          });
+        }
+        if (!auth.auth0?.clientId) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Client ID is required",
+            path: ["moduleConfigs", "authentication", "auth0", "clientId"],
+          });
+        }
+        if (!auth.auth0?.clientSecret) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Client secret is required",
+            path: ["moduleConfigs", "authentication", "auth0", "clientSecret"],
+          });
+        }
+      }
+      if (auth.providers?.includes("saml")) {
+        if (!auth.saml?.entryPoint) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Entry Point URL is required",
+            path: ["moduleConfigs", "authentication", "saml", "entryPoint"],
+          });
+        }
+        if (!auth.saml?.issuer) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Issuer is required",
+            path: ["moduleConfigs", "authentication", "saml", "issuer"],
+          });
+        }
+        if (!auth.saml?.cert) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Certificate is required",
+            path: ["moduleConfigs", "authentication", "saml", "cert"],
+          });
+        }
+        if (!auth.saml?.callbackUrl) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Callback URL is required",
+            path: ["moduleConfigs", "authentication", "saml", "callbackUrl"],
+          });
+        }
+      }
+    }
+
+    // RBAC config validation
+    if (data.enabledModules?.includes("rbac")) {
+      const rbac = data.moduleConfigs?.rbac;
+      if (!rbac.permissionTemplate) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Permission template is required",
+          path: ["moduleConfigs", "rbac", "permissionTemplate"],
+        });
+      }
+      if (!rbac.businessType) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Business type is required",
+          path: ["moduleConfigs", "rbac", "businessType"],
+        });
+      }
+      if (!rbac.defaultRoles || rbac.defaultRoles.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Select at least one default role",
+          path: ["moduleConfigs", "rbac", "defaultRoles"],
+        });
+      }
+    }
+
+    // Logging config validation
+    if (data.enabledModules?.includes("logging")) {
+      const logging = data.moduleConfigs?.logging;
+      if (!logging.levels || logging.levels.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Select at least one log level",
+          path: ["moduleConfigs", "logging", "levels"],
+        });
+      }
+    }
+  });
 
 type FormData = z.infer<typeof WIZARD_FORM_SCHEMA>;
 
@@ -127,7 +306,16 @@ export default function OnboardingWizard() {
       sendEmail: true,
       companyWebsite: "",
       enabledModules: [],
-      moduleConfigs: {},
+      moduleConfigs: {
+        authentication: { providers: [] },
+        rbac: {
+          permissionTemplate: "",
+          businessType: "",
+          defaultRoles: [],
+          customPermissions: "",
+        },
+        logging: { levels: [], notificationChannels: [] },
+      },
       metadata: {
         adminName: "",
         companyWebsite: "",
@@ -166,20 +354,7 @@ export default function OnboardingWizard() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      const transformedData = {
-        name: data.name,
-        orgId: data.orgId,
-        adminEmail: data.adminEmail,
-        adminName: data.adminName,
-        sendEmail: data.sendEmail,
-        enabledModules: data.enabledModules || [],
-        moduleConfigs: data.moduleConfigs || {},
-        metadata: {
-          adminName: data.adminName,
-          companyWebsite: data.companyWebsite || data.metadata?.companyWebsite,
-        },
-      };
-
+      const transformedData = transformTenantFormData(data);
       const result = await createTenant.mutateAsync(transformedData as any);
 
       toast({
@@ -512,13 +687,17 @@ export default function OnboardingWizard() {
                                 <p>No modules selected. Go back to select modules to configure.</p>
                               </div>
                             ) : (
-                              <div className="text-center py-8 text-slate-600">
-                                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                                <p>Selected modules can be configured after tenant creation.</p>
-                                <p className="text-sm mt-2">
-                                  Click "Next" to review your configuration.
-                                </p>
-                              </div>
+                              <>
+                                {watchedModules.includes("auth") && (
+                                  <AuthModuleConfig form={form} />
+                                )}
+                                {watchedModules.includes("rbac") && (
+                                  <RBACModuleConfig form={form} />
+                                )}
+                                {watchedModules.includes("logging") && (
+                                  <LoggingModuleConfig form={form} />
+                                )}
+                              </>
                             )}
                           </div>
                         )}
@@ -627,3 +806,471 @@ export default function OnboardingWizard() {
     </div>
   );
 }
+
+// ----------------------------
+// Module configuration forms
+// ----------------------------
+
+const AuthModuleConfig: React.FC<{ form: any }> = ({ form }) => {
+  const selectedProviders =
+    form.watch("moduleConfigs.authentication.providers") || [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Lock className="w-5 h-5" />
+          Authentication Configuration
+        </CardTitle>
+        <CardDescription>
+          Configure authentication providers and settings
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <FormField
+          control={form.control}
+          name="moduleConfigs.authentication.providers"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Authentication Providers</FormLabel>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { id: "local", name: "Username/Password", desc: "Traditional email/password" },
+                  { id: "azure-ad", name: "Azure AD", desc: "Microsoft Azure Active Directory" },
+                  { id: "auth0", name: "Auth0", desc: "Auth0 identity platform" },
+                  { id: "saml", name: "SAML", desc: "SAML 2.0 Single Sign-On" },
+                ].map(provider => {
+                  const isSelected = field.value?.includes(provider.id) || false;
+                  return (
+                    <div
+                      key={provider.id}
+                      className={`border rounded-lg p-3 cursor-pointer ${
+                        isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200"
+                      }`}
+                      onClick={() => {
+                        const current = field.value || [];
+                        const updated = isSelected
+                          ? current.filter((p: string) => p !== provider.id)
+                          : [...current, provider.id];
+                        field.onChange(updated);
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={isSelected} readOnly />
+                        <div>
+                          <div className="font-medium text-sm">{provider.name}</div>
+                          <div className="text-xs text-gray-600">{provider.desc}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {selectedProviders.includes("azure-ad") && <AzureADConfig form={form} />}
+        {selectedProviders.includes("auth0") && <Auth0Config form={form} />}
+        {selectedProviders.includes("saml") && <SAMLConfig form={form} />}
+        {selectedProviders.includes("local") && <LocalAuthConfig />}
+      </CardContent>
+    </Card>
+  );
+};
+
+const AzureADConfig: React.FC<{ form: any }> = ({ form }) => (
+  <div className="border rounded-lg p-4 bg-blue-50">
+    <h4 className="font-medium mb-4 flex items-center gap-2">
+      <Globe className="w-4 h-4" /> Azure AD Configuration
+    </h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.azureAd.tenantId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Tenant ID *</FormLabel>
+            <FormControl>
+              <Input placeholder="00000000-0000-0000-0000-000000000000" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.azureAd.clientId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client ID *</FormLabel>
+            <FormControl>
+              <Input placeholder="Application (client) ID" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.azureAd.clientSecret"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client Secret *</FormLabel>
+            <FormControl>
+              <Input type="password" placeholder="Client secret value" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  </div>
+);
+
+const Auth0Config: React.FC<{ form: any }> = ({ form }) => (
+  <div className="border rounded-lg p-4 bg-orange-50">
+    <h4 className="font-medium mb-4">Auth0 Configuration</h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.domain"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Domain *</FormLabel>
+            <FormControl>
+              <Input placeholder="your-domain.auth0.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.clientId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client ID *</FormLabel>
+            <FormControl>
+              <Input placeholder="Client ID" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.clientSecret"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client Secret *</FormLabel>
+            <FormControl>
+              <Input type="password" placeholder="Client Secret" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.audience"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Audience</FormLabel>
+            <FormControl>
+              <Input placeholder="https://api.example.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  </div>
+);
+
+const SAMLConfig: React.FC<{ form: any }> = ({ form }) => (
+  <div className="border rounded-lg p-4 bg-green-50">
+    <h4 className="font-medium mb-4">SAML Configuration</h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.saml.entryPoint"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Entry Point URL *</FormLabel>
+            <FormControl>
+              <Input placeholder="https://idp.example.com/saml/sso" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.saml.issuer"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Issuer *</FormLabel>
+            <FormControl>
+              <Input placeholder="urn:your-app" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+    <FormField
+      control={form.control}
+      name="moduleConfigs.authentication.saml.cert"
+      render={({ field }) => (
+        <FormItem className="mt-4">
+          <FormLabel>Certificate (PEM) *</FormLabel>
+          <FormControl>
+            <Textarea placeholder="-----BEGIN CERTIFICATE-----" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  </div>
+);
+
+const LocalAuthConfig: React.FC = () => (
+  <div className="border rounded-lg p-4 bg-gray-50">
+    <Alert>
+      <CheckCircle className="h-4 w-4" />
+      <AlertDescription>
+        Default password policies will be applied. Advanced settings can be
+        configured after deployment.
+      </AlertDescription>
+    </Alert>
+  </div>
+);
+
+const RBACModuleConfig: React.FC<{ form: any }> = ({ form }) => {
+  const roles = form.watch("moduleConfigs.rbac.defaultRoles") || [];
+  const [roleInput, setRoleInput] = useState("");
+
+  const addRole = () => {
+    const value = roleInput.trim();
+    if (!value) return;
+    form.setValue("moduleConfigs.rbac.defaultRoles", [...roles, value]);
+    setRoleInput("");
+  };
+
+  const removeRole = (role: string) => {
+    form.setValue(
+      "moduleConfigs.rbac.defaultRoles",
+      roles.filter((r: string) => r !== role)
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="w-5 h-5" /> RBAC Configuration
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="moduleConfigs.rbac.permissionTemplate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Permission Template</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Choose a base set of permissions for default roles
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="moduleConfigs.rbac.businessType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Business Type</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select business type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="healthcare">Healthcare</SelectItem>
+                    <SelectItem value="ecommerce">E-commerce</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div>
+          <FormLabel>Template Preview</FormLabel>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+            {["Admin", "Manager", "Viewer"].map(role => (
+              <Card key={role} className="p-4">
+                <div className="font-medium">{role}</div>
+                <div className="text-xs text-slate-600">
+                  {role} role permissions
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <FormLabel>Default Roles</FormLabel>
+          <div className="flex gap-2 mt-2">
+            <Input
+              value={roleInput}
+              onChange={e => setRoleInput(e.target.value)}
+              placeholder="Add a role"
+            />
+            <Button type="button" variant="secondary" onClick={addRole}>
+              Add
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {roles.map((role: string) => (
+              <Badge key={role} variant="secondary" className="flex items-center gap-1">
+                {role}
+                <button
+                  type="button"
+                  className="ml-1"
+                  onClick={() => removeRole(role)}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="moduleConfigs.rbac.customPermissions"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Custom Permissions (optional)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="permission_one, permission_two" {...field} />
+              </FormControl>
+              <FormDescription>
+                Comma separated list of additional permissions
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </CardContent>
+    </Card>
+  );
+};
+
+const LoggingModuleConfig: React.FC<{ form: any }> = ({ form }) => {
+  const logLevels = [
+    { id: "error", label: "Error" },
+    { id: "warn", label: "Warn" },
+    { id: "info", label: "Info" },
+    { id: "debug", label: "Debug" },
+    { id: "trace", label: "Trace" },
+  ];
+
+  const channels = [
+    { id: "email", label: "Email" },
+    { id: "sms", label: "SMS" },
+    { id: "webhook", label: "Webhook" },
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="w-5 h-5" /> Logging Configuration
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <FormField
+          control={form.control}
+          name="moduleConfigs.logging.levels"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Select log levels to capture</FormLabel>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                {logLevels.map(level => {
+                  const isChecked = field.value?.includes(level.id);
+                  return (
+                    <div key={level.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`level-${level.id}`}
+                        checked={isChecked}
+                        onCheckedChange={checked => {
+                          const current = field.value || [];
+                          const updated = checked
+                            ? [...current, level.id]
+                            : current.filter((l: string) => l !== level.id);
+                          field.onChange(updated);
+                        }}
+                      />
+                      <Label htmlFor={`level-${level.id}`}>{level.label}</Label>
+                    </div>
+                  );
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="moduleConfigs.logging.notificationChannels"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notification Channels</FormLabel>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                {channels.map(ch => {
+                  const isChecked = field.value?.includes(ch.id);
+                  return (
+                    <div key={ch.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`channel-${ch.id}`}
+                        checked={isChecked}
+                        onCheckedChange={checked => {
+                          const current = field.value || [];
+                          const updated = checked
+                            ? [...current, ch.id]
+                            : current.filter((l: string) => l !== ch.id);
+                          field.onChange(updated);
+                        }}
+                      />
+                      <Label htmlFor={`channel-${ch.id}`}>{ch.label}</Label>
+                    </div>
+                  );
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </CardContent>
+    </Card>
+  );
+};
