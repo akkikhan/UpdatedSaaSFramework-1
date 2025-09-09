@@ -37,6 +37,7 @@ export const AUTH_PROVIDER_SCHEMA = z.object({
       issuer: z.string().optional(),
       cert: z.string().optional(),
       // Common settings
+      redirectUri: z.string().optional(),
       callbackUrl: z.string().optional(),
       logoutUrl: z.string().optional(),
     })
@@ -276,13 +277,13 @@ export const createAuthProviderObject = (
       tenantId: config.tenantId,
       clientId: config.clientId,
       clientSecret: config.clientSecret,
-      callbackUrl: config.callbackUrl,
+      redirectUri: config.redirectUri || config.callbackUrl,
     };
   } else if (type === "auth0" && config.domain) {
     baseProvider.config = {
       domain: config.domain,
       audience: config.audience,
-      callbackUrl: config.callbackUrl,
+      redirectUri: config.redirectUri || config.callbackUrl,
     };
   }
 
