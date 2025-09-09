@@ -1,4 +1,4 @@
-. "$(dirname -- "$0")/_/husky.sh"
+#!/usr/bin/env sh
 
 # Keep pre-push lightweight and deterministic:
 # - Lint only (skip format check to avoid warnings on files that don't need formatting)
