@@ -178,8 +178,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Aspire KPI Cards */}
-      <div className="aspire-stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* KPI Cards */}
+      <div className="dashboard-stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsLoading ? (
           <>
             <Skeleton className="h-28 rounded-2xl" />
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
           </>
         ) : (
           <>
-            <div className="aspire-stat-card group">
+            <div className="dashboard-stat-card group">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Tenants</p>
@@ -200,13 +200,13 @@ export default function AdminDashboard() {
                     <span className="text-gray-500 ml-1">vs last month</span>
                   </div>
                 </div>
-                <div className="aspire-stat-icon bg-gradient-to-br from-purple-500 to-purple-600">
+                <div className="dashboard-stat-icon bg-gradient-to-br from-purple-500 to-purple-600">
                   <Building className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="aspire-stat-card group">
+            <div className="dashboard-stat-card group">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Tenants</p>
@@ -216,13 +216,13 @@ export default function AdminDashboard() {
                     <span className="text-gray-600">{activeRate}% active rate</span>
                   </div>
                 </div>
-                <div className="aspire-stat-icon bg-gradient-to-br from-green-500 to-green-600">
+                <div className="dashboard-stat-icon bg-gradient-to-br from-green-500 to-green-600">
                   <CheckCircle className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="aspire-stat-card group">
+            <div className="dashboard-stat-card group">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending Requests</p>
@@ -234,13 +234,13 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                 </div>
-                <div className="aspire-stat-icon bg-gradient-to-br from-orange-500 to-orange-600">
+                <div className="dashboard-stat-icon bg-gradient-to-br from-orange-500 to-orange-600">
                   <Activity className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="aspire-stat-card group">
+            <div className="dashboard-stat-card group">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Emails Sent</p>
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
                     <span className="text-blue-600 font-medium">All systems operational</span>
                   </div>
                 </div>
-                <div className="aspire-stat-icon bg-gradient-to-br from-blue-500 to-blue-600">
+                <div className="dashboard-stat-icon bg-gradient-to-br from-blue-500 to-blue-600">
                   <Mail className="h-6 w-6 text-white" />
                 </div>
               </div>
@@ -259,10 +259,10 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Aspire Analytics Grid */}
+      {/* Analytics Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* New Tenants Trend */}
-        <div className="aspire-chart-card">
+        <div className="dashboard-chart-card">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -335,7 +335,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tenant Status Distribution */}
-        <div className="aspire-chart-card">
+        <div className="dashboard-chart-card">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -393,7 +393,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Module Adoption */}
-        <div className="aspire-chart-card">
+        <div className="dashboard-chart-card">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -460,8 +460,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Tenants - Aspire Table */}
-        <div className="aspire-chart-card">
+        {/* Recent Tenants Table */}
+        <div className="dashboard-chart-card">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
