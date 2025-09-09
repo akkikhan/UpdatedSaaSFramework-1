@@ -1,39 +1,22 @@
 {
   "recommendations": [
-    // Essential development tools
     "esbenp.prettier-vscode",
     "dbaeumer.vscode-eslint",
     "bradlc.vscode-tailwindcss",
     "ms-vscode.vscode-typescript-next",
-    
-    // Testing
     "orta.vscode-jest",
-    
-    // Database
     "ms-mssql.mssql",
     "ckolkman.vscode-postgres",
-    
-    // Docker
     "ms-azuretools.vscode-docker",
-    
-    // Git
     "eamodio.gitlens",
-    
-    // React development
     "dsznajder.es7-react-js-snippets",
     "formulahendry.auto-rename-tag",
-    
-    // Utility extensions
     "christian-kohler.path-intellisense",
     "ms-vscode.vscode-json",
     "redhat.vscode-yaml",
     "ms-vscode.vscode-node-azure-pack",
-    
-    // Code quality
     "streetsidesoftware.code-spell-checker",
     "usernamehw.errorlens",
-    
-    // Productivity
     "ms-vscode.vscode-thunder-client",
     "humao.rest-client"
   ],
