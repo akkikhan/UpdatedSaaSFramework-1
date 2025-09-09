@@ -1,0 +1,25 @@
+{
+  "id": "platform-admin/portal-overview",
+  "title": "Platform Admin Portal Overview",
+  "description": "The web‑based admin portal is where you create tenants, issue API keys, and manage module",
+  "source": "@site/versioned_docs/version-1.0/platform-admin/portal-overview.md",
+  "sourceDirName": "platform-admin",
+  "slug": "/platform-admin/portal-overview",
+  "permalink": "/docs/platform-admin/portal-overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/platform-admin/portal-overview.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Email Providers",
+    "permalink": "/docs/modules/email/providers"
+  },
+  "next": {
+    "title": "SDK Guide",
+    "permalink": "/docs/platform-admin/sdk-guide"
+  }
+}

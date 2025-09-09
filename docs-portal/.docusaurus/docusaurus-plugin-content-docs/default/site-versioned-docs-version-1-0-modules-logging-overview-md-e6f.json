@@ -1,0 +1,25 @@
+{
+  "id": "modules/logging/overview",
+  "title": "Logging Module Overview",
+  "description": "The Logging module records structured events and routes them to storage or external sinks. Each",
+  "source": "@site/versioned_docs/version-1.0/modules/logging/overview.md",
+  "sourceDirName": "modules/logging",
+  "slug": "/modules/logging/overview",
+  "permalink": "/docs/modules/logging/overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/logging/overview.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "RBAC Examples",
+    "permalink": "/docs/modules/rbac/examples"
+  },
+  "next": {
+    "title": "Logging Quickstart",
+    "permalink": "/docs/modules/logging/quickstart"
+  }
+}

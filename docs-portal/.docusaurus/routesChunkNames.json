@@ -1,0 +1,305 @@
+{
+  "/__docusaurus/debug-5ff": {
+    "__comp": "__comp---theme-debug-config-23-a-2ff",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/config-5ba": {
+    "__comp": "__comp---theme-debug-config-23-a-2ff",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/content-a2b": {
+    "__comp": "__comp---theme-debug-contentba-8-ce7",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    },
+    "__props": "__props---docusaurus-debug-content-3-c-0-be2"
+  },
+  "/__docusaurus/debug/globalData-c3c": {
+    "__comp": "__comp---theme-debug-global-dataede-0fa",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/metadata-156": {
+    "__comp": "__comp---theme-debug-site-metadata-68-e-3d4",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/registry-88c": {
+    "__comp": "__comp---theme-debug-registry-679-501",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/routes-000": {
+    "__comp": "__comp---theme-debug-routes-946-699",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/docs-ca8": {
+    "__comp": "__comp---theme-docs-root-5-e-9-0b6",
+    "__context": {
+      "plugin": "plugin---docsaba-d7c"
+    }
+  },
+  "/docs/next-785": {
+    "__comp": "__comp---theme-doc-version-roota-7-b-5de",
+    "__props": "__props---docs-nextbf-1-ba7"
+  },
+  "/docs/next-abf": {
+    "__comp": "__comp---theme-doc-roota-94-67a"
+  },
+  "/docs/next/getting-started/faqs-6ec": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-getting-started-faqsaa-2-cb8"
+  },
+  "/docs/next/getting-started/prerequisites-ce3": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-getting-started-prerequisites-737-e0a"
+  },
+  "/docs/next/getting-started/quickstart-9e3": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-getting-started-quickstartfbd-5e7"
+  },
+  "/docs/next/intro-7b1": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-intro-0-e-3-e8b"
+  },
+  "/docs/next/modules/auth/client-sdk-e75": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-auth-client-sdk-454-736"
+  },
+  "/docs/next/modules/auth/overview-d21": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-auth-overview-127-b8b"
+  },
+  "/docs/next/modules/auth/server-setup-057": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-auth-server-setup-93-e-2d1"
+  },
+  "/docs/next/modules/auth/troubleshooting-4cb": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-auth-troubleshooting-7-af-95c"
+  },
+  "/docs/next/modules/email/overview-dc1": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-email-overview-4-ce-0a6"
+  },
+  "/docs/next/modules/email/providers-531": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-email-providers-85-c-b16"
+  },
+  "/docs/next/modules/email/template-management-151": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-email-template-management-056-3ef"
+  },
+  "/docs/next/modules/logging/overview-bc3": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-logging-overview-7-f-9-15b"
+  },
+  "/docs/next/modules/logging/quickstart-ac8": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-logging-quickstart-7-e-6-d6b"
+  },
+  "/docs/next/modules/logging/sinks-feb": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-logging-sinks-0-f-1-c5b"
+  },
+  "/docs/next/modules/rbac/examples-bca": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-rbac-examples-660-143"
+  },
+  "/docs/next/modules/rbac/overview-407": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-rbac-overview-0-d-5-b96"
+  },
+  "/docs/next/modules/rbac/policy-model-cbd": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-modules-rbac-policy-modelcc-9-44c"
+  },
+  "/docs/next/platform-admin/portal-overview-9ab": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-platform-admin-portal-overview-6-af-d3c"
+  },
+  "/docs/next/platform-admin/sdk-guide-d19": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-platform-admin-sdk-guide-5-ff-53e"
+  },
+  "/docs/next/reference/api/auth-977": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-reference-api-authe-83-797"
+  },
+  "/docs/next/reference/api/email-61e": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-reference-api-emailcf-9-891"
+  },
+  "/docs/next/reference/api/logging-a38": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-reference-api-logging-6-c-1-50d"
+  },
+  "/docs/next/reference/api/rbac-3bd": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-reference-api-rbaca-84-bcc"
+  },
+  "/docs/next/reference/architecture-73d": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-reference-architecture-33-e-9c8"
+  },
+  "/docs/next/reference/cli-5e6": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-reference-cli-91-c-0a6"
+  },
+  "/docs/next/sdk-integration/configuration-8ca": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-sdk-integration-configurationecd-d3c"
+  },
+  "/docs/next/sdk-integration/examples/browser-365": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-sdk-integration-examples-browserbab-156"
+  },
+  "/docs/next/sdk-integration/examples/node-91f": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-sdk-integration-examples-nodeb-4-c-f38"
+  },
+  "/docs/next/sdk-integration/installation-033": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-sdk-integration-installation-4-af-816"
+  },
+  "/docs/next/sdk-integration/overview-a12": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-next-sdk-integration-overview-9-db-765"
+  },
+  "/docs-726": {
+    "__comp": "__comp---theme-doc-version-roota-7-b-5de",
+    "__props": "__props---docs-005-788"
+  },
+  "/docs-9da": {
+    "__comp": "__comp---theme-doc-roota-94-67a"
+  },
+  "/docs/getting-started/faqs-1aa": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-getting-started-faqs-127-8fa"
+  },
+  "/docs/getting-started/prerequisites-f71": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-getting-started-prerequisitesba-1-668"
+  },
+  "/docs/getting-started/quickstart-03a": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-getting-started-quickstarteb-4-b87"
+  },
+  "/docs/intro-8f9": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-intro-7-bd-4eb"
+  },
+  "/docs/modules/auth/client-sdk-e43": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-auth-client-sdke-13-3d7"
+  },
+  "/docs/modules/auth/overview-d1c": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-auth-overviewf-89-61b"
+  },
+  "/docs/modules/auth/server-setup-991": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-auth-server-setupdb-1-e17"
+  },
+  "/docs/modules/auth/troubleshooting-76b": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-auth-troubleshooting-80-f-e21"
+  },
+  "/docs/modules/email/overview-6aa": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-email-overviewc-98-265"
+  },
+  "/docs/modules/email/providers-252": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-email-providersedd-26c"
+  },
+  "/docs/modules/email/template-management-6f1": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-email-template-management-4-b-6-331"
+  },
+  "/docs/modules/logging/overview-1b7": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-logging-overviewe-6-f-116"
+  },
+  "/docs/modules/logging/quickstart-95a": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-logging-quickstart-8-c-9-1c8"
+  },
+  "/docs/modules/logging/sinks-07d": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-logging-sinks-14-d-1b8"
+  },
+  "/docs/modules/rbac/examples-bf4": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-rbac-examplese-56-43c"
+  },
+  "/docs/modules/rbac/overview-94c": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-rbac-overviewe-95-05e"
+  },
+  "/docs/modules/rbac/policy-model-88e": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-modules-rbac-policy-modela-65-df7"
+  },
+  "/docs/platform-admin/portal-overview-f1a": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-platform-admin-portal-overviewbac-d57"
+  },
+  "/docs/platform-admin/sdk-guide-36e": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-platform-admin-sdk-guide-5-b-6-756"
+  },
+  "/docs/reference/api/auth-c75": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-reference-api-authce-3-842"
+  },
+  "/docs/reference/api/email-166": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-reference-api-email-25-a-a0b"
+  },
+  "/docs/reference/api/logging-d48": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-reference-api-logging-353-586"
+  },
+  "/docs/reference/api/rbac-0d5": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-reference-api-rbac-9-e-0-b37"
+  },
+  "/docs/reference/architecture-c81": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-reference-architecture-42-c-f4a"
+  },
+  "/docs/reference/cli-6c0": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-reference-cli-104-53b"
+  },
+  "/docs/sdk-integration/configuration-b3d": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-sdk-integration-configuration-513-133"
+  },
+  "/docs/sdk-integration/examples/browser-1bd": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-sdk-integration-examples-browser-028-9ba"
+  },
+  "/docs/sdk-integration/examples/node-3c4": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-sdk-integration-examples-nodec-52-a35"
+  },
+  "/docs/sdk-integration/installation-949": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-sdk-integration-installation-0-ba-2c1"
+  },
+  "/docs/sdk-integration/overview-cc7": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-sdk-integration-overview-06-c-fad"
+  }
+}
