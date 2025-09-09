@@ -23,9 +23,10 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Edit, Trash2, Save, Shield, Users, Building2, Settings, Eye } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { usePermissionTemplates, useBusinessTypes, useDefaultRoles } from "@/hooks/use-platform-config";
 
 interface PermissionTemplate {
   id: string;
@@ -68,25 +69,6 @@ interface DefaultRole {
   createdAt: string;
   updatedAt: string;
 }
-
-// API data hooks
-const usePermissionTemplates = () => {
-  return useQuery({
-    queryKey: ["/api/rbac-config/permission-templates"],
-  });
-};
-
-const useBusinessTypes = () => {
-  return useQuery({
-    queryKey: ["/api/rbac-config/business-types"],
-  });
-};
-
-const useDefaultRoles = () => {
-  return useQuery({
-    queryKey: ["/api/rbac-config/default-roles"],
-  });
-};
 
 const availablePermissions = [
   "read_users",

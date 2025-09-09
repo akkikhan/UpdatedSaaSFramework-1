@@ -142,3 +142,39 @@ export function useResendOnboardingEmail() {
     },
   });
 }
+
+export function useNotificationHistory(
+  tenantId: string | undefined,
+  filters: {
+    recipientId?: string;
+    channel?: string;
+    status?: string;
+    template?: string;
+    limit?: number;
+    offset?: number;
+  } = {}
+) {
+  return useQuery({
+    queryKey: ["/api/notifications/history", tenantId, filters],
+    queryFn: () => api.getNotificationHistory(tenantId as string, filters),
+    enabled: !!tenantId,
+    refetchInterval: 5000,
+  });
+}
+
+export function useBulkResendNotifications(tenantId: string | undefined) {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (ids: string[]) => api.bulkResendNotifications(tenantId as string, ids),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Notifications resent" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to resend notifications",
+        variant: "destructive",
+      });
+    },
+  });
+}

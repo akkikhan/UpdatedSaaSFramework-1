@@ -50,6 +50,12 @@ import {
 } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import {
+  usePermissionTemplates,
+  useBusinessTypes,
+  useDefaultRoles,
+  useCustomRules,
+} from "@/hooks/use-platform-config";
 
 // Schema definitions for forms
 const roleSchema = z.object({
@@ -101,13 +107,10 @@ export default function RBACManagementPage() {
   });
 
   // Pull RBAC configuration options from platform admin APIs
-  const { data: permissionTemplates = [] } = useQuery({
-    queryKey: ["/api/rbac-config/permission-templates"],
-  });
-
-  const { data: businessTypes = [] } = useQuery({
-    queryKey: ["/api/rbac-config/business-types"],
-  });
+  const { data: permissionTemplates = [] } = usePermissionTemplates();
+  const { data: businessTypes = [] } = useBusinessTypes();
+  const { data: defaultRoles = [] } = useDefaultRoles();
+  const { data: customRules = [] } = useCustomRules();
 
   // Forms
   const roleForm = useForm<RoleForm>({
@@ -147,15 +150,6 @@ export default function RBACManagementPage() {
     },
   });
 
-  const permissionTemplatesQuery = useQuery({
-    queryKey: ["/api/rbac-config/permission-templates"],
-  });
-  const businessTypesQuery = useQuery({
-    queryKey: ["/api/rbac-config/business-types"],
-  });
-  const defaultRolesQuery = useQuery({
-    queryKey: ["/api/rbac-config/default-roles"],
-  });
   const renderConfiguration = () => (
     <Card>
       <CardHeader>
@@ -171,7 +165,7 @@ export default function RBACManagementPage() {
         <div>
           <h3 className="text-lg font-semibold mb-4">Permission Template</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {permissionTemplatesQuery.data?.map((template: any) => (
+            {permissionTemplates?.map((template: any) => (
               <Card key={template.id} className="relative cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -192,7 +186,7 @@ export default function RBACManagementPage() {
         <div>
           <h3 className="text-lg font-semibold mb-4">Business Type</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {businessTypesQuery.data?.map((bt: any) => (
+            {businessTypes?.map((bt: any) => (
               <Card key={bt.id} className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3 mb-2">
@@ -299,7 +293,7 @@ export default function RBACManagementPage() {
 
       {/* Default Roles Display */}
       <div className="grid gap-4">
-        {defaultRolesQuery.data?.map((role: any) => (
+        {defaultRoles?.map((role: any) => (
           <Card key={role.id}>
             <CardContent className="p-4">
               <div className="flex justify-between items-start">
@@ -348,7 +342,7 @@ export default function RBACManagementPage() {
       </div>
 
       <div className="space-y-4">
-        {permissionTemplatesQuery.data?.[0]?.permissions.map((permission: string, index: number) => (
+        {permissionTemplates?.[0]?.permissions.map((permission: string, index: number) => (
           <Card key={index}>
             <CardContent className="flex items-center justify-between p-4">
               <div className="font-medium text-sm">{permission}</div>
@@ -364,6 +358,13 @@ export default function RBACManagementPage() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        ))}
+        {customRules.map((rule: any, index: number) => (
+          <Card key={`custom-${index}`}>
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="font-medium text-sm">{rule}</div>
             </CardContent>
           </Card>
         ))}

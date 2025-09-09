@@ -52,7 +52,7 @@ import {
 } from "../../../shared/modules-config";
 import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
-import { transformTenantFormData } from "@/utils/tenant-form-transform";
+import { usePermissionTemplates } from "@/hooks/use-platform-config";
 
 // Wizard form schema
 const AUTH_PROVIDER = z.enum(["local", "azure-ad", "auth0", "saml"]);
@@ -297,6 +297,7 @@ export default function OnboardingWizard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createTenant = useCreateTenant();
+  const { data: permissionTemplates = [] } = usePermissionTemplates();
 
   const form = useForm<FormData>({
     resolver: zodResolver(WIZARD_FORM_SCHEMA),
@@ -308,16 +309,7 @@ export default function OnboardingWizard() {
       sendEmail: true,
       companyWebsite: "",
       enabledModules: [],
-      moduleConfigs: {
-        authentication: { providers: [] },
-        rbac: {
-          permissionTemplate: "",
-          businessType: "",
-          defaultRoles: [],
-          customPermissions: "",
-        },
-        logging: { levels: [], notificationChannels: [] },
-      },
+      moduleConfigs: { rbac: { permissionTemplate: "" } },
       metadata: {
         adminName: "",
         companyWebsite: "",
@@ -580,6 +572,34 @@ export default function OnboardingWizard() {
                                     />
                                   </FormControl>
                                   <FormDescription>Your organization's website URL</FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="moduleConfigs.rbac.permissionTemplate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>RBAC Template</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select template" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {permissionTemplates.map((tpl: any) => (
+                                        <SelectItem key={tpl.id} value={tpl.id}>
+                                          {tpl.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>
+                                    Baseline roles and permissions for this tenant
+                                  </FormDescription>
                                   <FormMessage />
                                 </FormItem>
                               )}
