@@ -4,152 +4,325 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SaaS Framework - Integration Benefits Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+        min-height: 100vh;
+        line-height: 1.6;
+        color: #334155;
+      }
+
+      .container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
-        background-color: #f5f5f5;
       }
+
       .header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         color: white;
-        padding: 30px;
-        border-radius: 10px;
+        padding: 48px 32px;
+        border-radius: 20px;
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 32px;
+        box-shadow:
+          0 20px 25px -5px rgba(79, 70, 229, 0.1),
+          0 10px 10px -5px rgba(79, 70, 229, 0.04);
       }
+
+      .header h1 {
+        font-size: 36px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .header p {
+        font-size: 18px;
+        opacity: 0.9;
+        font-weight: 400;
+      }
+
       .section {
         background: white;
-        padding: 25px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 32px;
+        border-radius: 16px;
+        margin-bottom: 24px;
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
       }
+
+      .section h2 {
+        color: #1e293b;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .section p {
+        color: #64748b;
+        margin-bottom: 20px;
+      }
+
       .benefit-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
       }
+
       .benefit-card {
-        border: 1px solid #e0e0e0;
-        padding: 20px;
-        border-radius: 8px;
-        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        padding: 24px;
+        border-radius: 12px;
+        background: #f8fafc;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
       }
+
+      .benefit-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      }
+
+      .benefit-card h4 {
+        color: #1e293b;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
       .code-block {
-        background: #2d3748;
+        background: #1e293b;
         color: #e2e8f0;
-        padding: 15px;
-        border-radius: 5px;
-        font-family: "Courier New", monospace;
+        padding: 20px;
+        border-radius: 12px;
+        font-family:
+          "JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+          "Courier New", monospace;
         font-size: 14px;
         overflow-x: auto;
-        margin: 10px 0;
+        margin: 16px 0;
+        border: 1px solid #334155;
+        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
       }
+
       .highlight {
-        background: #4299e1;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         color: white;
-        padding: 2px 6px;
-        border-radius: 3px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 12px;
       }
+
       .module-selector {
-        margin: 20px 0;
-      }
-      .module-checkbox {
-        margin: 10px 15px 10px 0;
-      }
-      .demo-output {
-        background: #f7fafc;
+        background: #f1f5f9;
+        padding: 24px;
+        border-radius: 12px;
+        margin: 24px 0;
         border: 1px solid #e2e8f0;
-        padding: 15px;
-        border-radius: 5px;
-        margin-top: 15px;
       }
+
+      .module-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .module-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+
+      .module-checkbox:hover {
+        border-color: #4f46e5;
+        box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
+      }
+
+      .module-checkbox input[type="checkbox"] {
+        margin: 0;
+        accent-color: #4f46e5;
+      }
+
+      .module-checkbox label {
+        cursor: pointer;
+        font-weight: 500;
+        user-select: none;
+      }
+
+      .demo-output {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 20px;
+      }
+
       .api-key-display {
-        background: #2d3748;
-        color: #68d391;
-        padding: 10px;
-        border-radius: 5px;
-        font-family: monospace;
-        margin: 5px 0;
+        background: #1e293b;
+        color: #10b981;
+        padding: 12px;
+        border-radius: 8px;
+        font-family: "JetBrains Mono", monospace;
+        margin: 8px 0;
+        font-size: 13px;
+        border: 1px solid #334155;
       }
+
       .framework-tabs {
         display: flex;
-        background: #edf2f7;
-        border-radius: 5px;
-        margin-bottom: 15px;
+        background: #f1f5f9;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
       }
+
       .framework-tab {
         flex: 1;
-        padding: 10px 20px;
+        padding: 16px 24px;
         border: none;
         background: transparent;
         cursor: pointer;
-        border-radius: 5px;
+        font-weight: 500;
+        color: #64748b;
+        transition: all 0.2s ease;
       }
+
+      .framework-tab:hover {
+        color: #4f46e5;
+        background: rgba(79, 70, 229, 0.05);
+      }
+
       .framework-tab.active {
         background: white;
+        color: #4f46e5;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-weight: 600;
       }
+
       .framework-content {
         display: none;
       }
+
       .framework-content.active {
         display: block;
+      }
+
+      .framework-content h3 {
+        color: #1e293b;
+        margin-bottom: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .generate-button {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 20px 0;
+      }
+
+      .generate-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1);
+      }
+
+      .generate-button:active {
+        transform: translateY(0);
+      }
+      
+      .hidden {
+        display: none;
       }
     </style>
   </head>
   <body>
-    <div class="header">
-      <h1>🚀 SaaS Framework Integration Benefits</h1>
-      <p>Demonstrating module-specific API keys and framework integration</p>
-    </div>
-
-    <div class="section">
-      <h2>📋 Module Selection Simulator</h2>
-      <p>Select the modules you want to enable for your tenant:</p>
-
-      <div class="module-selector">
-        <label class="module-checkbox">
-          <input type="checkbox" id="auth-module" checked disabled />
-          🔐 Authentication (Required)
-        </label>
-        <label class="module-checkbox">
-          <input type="checkbox" id="rbac-module" checked disabled />
-          👥 RBAC (Required)
-        </label>
-        <label class="module-checkbox">
-          <input type="checkbox" id="logging-module" />
-          📝 Logging (Optional)
-        </label>
-        <label class="module-checkbox">
-          <input type="checkbox" id="notifications-module" />
-          📧 Notifications (Optional)
-        </label>
+    <div class="container">
+      <div class="header">
+        <h1>🚀 SaaS Framework Integration Benefits</h1>
+        <p>Demonstrating module-specific API keys and framework integration</p>
       </div>
 
-      <button
-        onclick="generateApiKeys()"
-        style="
-          background: #4299e1;
-          color: white;
-          padding: 10px 20px;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        "
-      >
-        Generate API Keys for Selected Modules
-      </button>
+      <div class="section">
+        <h2>📋 Module Selection Simulator</h2>
+        <p>Select the modules you want to enable for your tenant:</p>
 
-      <div id="api-keys-output" class="demo-output" style="display: none">
-        <h3>🔑 Generated API Keys</h3>
-        <div id="api-keys-list"></div>
+        <div class="module-selector">
+          <div class="module-grid">
+            <label class="module-checkbox">
+              <input type="checkbox" id="auth-module" checked disabled />
+              <span>🔐 Authentication (Required)</span>
+            </label>
+            <label class="module-checkbox">
+              <input type="checkbox" id="rbac-module" checked disabled />
+              <span>👥 RBAC (Required)</span>
+            </label>
+            <label class="module-checkbox">
+              <input type="checkbox" id="logging-module" />
+              <span>📝 Logging (Optional)</span>
+            </label>
+            <label class="module-checkbox">
+              <input type="checkbox" id="notifications-module" />
+              <span>📧 Notifications (Optional)</span>
+            </label>
+          </div>
+        </div>
+
+        <button class="generate-button" onclick="generateApiKeys()">
+          🔑 Generate API Keys for Selected Modules
+        </button>
+
+        <div id="api-keys-output" class="demo-output hidden">
+          <h3>🔑 Generated API Keys</h3>
+          <div id="api-keys-list"></div>
+        </div>
       </div>
-    </div>
 
     <div class="section">
       <h2>🛠️ Framework Integration Examples</h2>
@@ -309,7 +482,7 @@
         // Update framework examples with real keys
         updateFrameworkExamples(selectedModules);
 
-        output.style.display = "block";
+        output.classList.remove("hidden");
       }
 
       function generateRandomKey() {

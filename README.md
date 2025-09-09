@@ -12,8 +12,6 @@ Install dependencies (root and docs portal) with:
 npm install
 ```
 
-### Commands
-
 ```bash
 # start local dev server
 npm --prefix docs-portal start

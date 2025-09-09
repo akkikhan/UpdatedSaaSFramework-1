@@ -299,6 +299,10 @@ export const permissionTemplates = pgTable("permission_templates", {
     .array()
     .notNull()
     .default(sql`'{}'::text[]`),
+  roles: text("roles")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   businessTypes: text("business_types")
     .array()
     .notNull()
@@ -339,6 +343,10 @@ export const defaultRoles = pgTable("default_roles", {
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   permissions: text("permissions")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
+  roles: text("roles")
     .array()
     .notNull()
     .default(sql`'{}'::text[]`),
@@ -441,6 +449,8 @@ export const insertPermissionTemplateSchema = createInsertSchema(permissionTempl
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  roles: z.array(z.string()).optional(),
 });
 
 export const insertBusinessTypeSchema = createInsertSchema(businessTypes).omit({
@@ -453,6 +463,8 @@ export const insertDefaultRoleSchema = createInsertSchema(defaultRoles).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  roles: z.array(z.string()).optional(),
 });
 
 export type InsertPermissionTemplate = z.infer<typeof insertPermissionTemplateSchema>;
