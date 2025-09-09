@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,11 +41,14 @@ import {
   Bot,
   Activity,
   Lock,
+  Globe,
+  FileText,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { MODULES_INFO, type TenantCreationData } from "../../../shared/types";
 import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
+import { transformTenantFormData } from "@/utils/tenant-form-transform";
 
 // Wizard form schema
 const WIZARD_FORM_SCHEMA = z.object({
@@ -166,20 +169,7 @@ export default function OnboardingWizard() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      const transformedData = {
-        name: data.name,
-        orgId: data.orgId,
-        adminEmail: data.adminEmail,
-        adminName: data.adminName,
-        sendEmail: data.sendEmail,
-        enabledModules: data.enabledModules || [],
-        moduleConfigs: data.moduleConfigs || {},
-        metadata: {
-          adminName: data.adminName,
-          companyWebsite: data.companyWebsite || data.metadata?.companyWebsite,
-        },
-      };
-
+      const transformedData = transformTenantFormData(data);
       const result = await createTenant.mutateAsync(transformedData as any);
 
       toast({
@@ -514,13 +504,13 @@ export default function OnboardingWizard() {
                                 <p>No modules selected. Go back to select modules to configure.</p>
                               </div>
                             ) : (
-                              <div className="text-center py-8 text-slate-600">
-                                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                                <p>Selected modules can be configured after tenant creation.</p>
-                                <p className="text-sm mt-2">
-                                  Click "Next" to review your configuration.
-                                </p>
-                              </div>
+                              <>
+                                {watchedModules.includes("auth") && (
+                                  <AuthModuleConfig form={form} />
+                                )}
+                                {watchedModules.includes("rbac") && <RBACModuleConfig />}
+                                {watchedModules.includes("logging") && <LoggingModuleConfig />}
+                              </>
                             )}
                           </div>
                         )}
@@ -629,3 +619,293 @@ export default function OnboardingWizard() {
     </div>
   );
 }
+
+// ----------------------------
+// Module configuration forms
+// ----------------------------
+
+const AuthModuleConfig: React.FC<{ form: any }> = ({ form }) => {
+  const selectedProviders =
+    form.watch("moduleConfigs.authentication.providers") || [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Lock className="w-5 h-5" />
+          Authentication Configuration
+        </CardTitle>
+        <CardDescription>
+          Configure authentication providers and settings
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <FormField
+          control={form.control}
+          name="moduleConfigs.authentication.providers"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Authentication Providers</FormLabel>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { id: "local", name: "Username/Password", desc: "Traditional email/password" },
+                  { id: "azure-ad", name: "Azure AD", desc: "Microsoft Azure Active Directory" },
+                  { id: "auth0", name: "Auth0", desc: "Auth0 identity platform" },
+                  { id: "saml", name: "SAML", desc: "SAML 2.0 Single Sign-On" },
+                ].map(provider => {
+                  const isSelected = field.value?.includes(provider.id) || false;
+                  return (
+                    <div
+                      key={provider.id}
+                      className={`border rounded-lg p-3 cursor-pointer ${
+                        isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200"
+                      }`}
+                      onClick={() => {
+                        const current = field.value || [];
+                        const updated = isSelected
+                          ? current.filter((p: string) => p !== provider.id)
+                          : [...current, provider.id];
+                        field.onChange(updated);
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={isSelected} readOnly />
+                        <div>
+                          <div className="font-medium text-sm">{provider.name}</div>
+                          <div className="text-xs text-gray-600">{provider.desc}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {selectedProviders.includes("azure-ad") && <AzureADConfig form={form} />}
+        {selectedProviders.includes("auth0") && <Auth0Config form={form} />}
+        {selectedProviders.includes("saml") && <SAMLConfig form={form} />}
+        {selectedProviders.includes("local") && <LocalAuthConfig />}
+      </CardContent>
+    </Card>
+  );
+};
+
+const AzureADConfig: React.FC<{ form: any }> = ({ form }) => (
+  <div className="border rounded-lg p-4 bg-blue-50">
+    <h4 className="font-medium mb-4 flex items-center gap-2">
+      <Globe className="w-4 h-4" /> Azure AD Configuration
+    </h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.azureAd.tenantId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Tenant ID *</FormLabel>
+            <FormControl>
+              <Input placeholder="00000000-0000-0000-0000-000000000000" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.azureAd.clientId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client ID *</FormLabel>
+            <FormControl>
+              <Input placeholder="Application (client) ID" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.azureAd.clientSecret"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client Secret *</FormLabel>
+            <FormControl>
+              <Input type="password" placeholder="Client secret value" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  </div>
+);
+
+const Auth0Config: React.FC<{ form: any }> = ({ form }) => (
+  <div className="border rounded-lg p-4 bg-orange-50">
+    <h4 className="font-medium mb-4">Auth0 Configuration</h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.domain"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Domain *</FormLabel>
+            <FormControl>
+              <Input placeholder="your-domain.auth0.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.clientId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client ID *</FormLabel>
+            <FormControl>
+              <Input placeholder="Client ID" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.clientSecret"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Client Secret *</FormLabel>
+            <FormControl>
+              <Input type="password" placeholder="Client Secret" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.auth0.audience"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Audience</FormLabel>
+            <FormControl>
+              <Input placeholder="https://api.example.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  </div>
+);
+
+const SAMLConfig: React.FC<{ form: any }> = ({ form }) => (
+  <div className="border rounded-lg p-4 bg-green-50">
+    <h4 className="font-medium mb-4">SAML Configuration</h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.saml.entryPoint"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Entry Point URL *</FormLabel>
+            <FormControl>
+              <Input placeholder="https://idp.example.com/saml/sso" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="moduleConfigs.authentication.saml.issuer"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Issuer *</FormLabel>
+            <FormControl>
+              <Input placeholder="urn:your-app" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+    <FormField
+      control={form.control}
+      name="moduleConfigs.authentication.saml.cert"
+      render={({ field }) => (
+        <FormItem className="mt-4">
+          <FormLabel>Certificate (PEM) *</FormLabel>
+          <FormControl>
+            <Textarea placeholder="-----BEGIN CERTIFICATE-----" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  </div>
+);
+
+const LocalAuthConfig: React.FC = () => (
+  <div className="border rounded-lg p-4 bg-gray-50">
+    <Alert>
+      <CheckCircle className="h-4 w-4" />
+      <AlertDescription>
+        Default password policies will be applied. Advanced settings can be
+        configured after deployment.
+      </AlertDescription>
+    </Alert>
+  </div>
+);
+
+const RBACModuleConfig: React.FC = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Shield className="w-5 h-5" /> RBAC Configuration
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <Alert>
+        <CheckCircle className="h-4 w-4" />
+        <AlertDescription>
+          Standard RBAC configuration will be applied automatically with the
+          Authentication module.
+        </AlertDescription>
+      </Alert>
+    </CardContent>
+  </Card>
+);
+
+const LoggingModuleConfig: React.FC = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <FileText className="w-5 h-5" /> Logging Configuration
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      <Alert>
+        <CheckCircle className="h-4 w-4" />
+        <AlertDescription>
+          Basic logging (error, warning, info) will be enabled by default.
+        </AlertDescription>
+      </Alert>
+      <div className="text-sm text-slate-700">
+        <div className="font-medium">Dependencies</div>
+        <ul className="list-disc pl-5 mt-1">
+          <li>
+            <span className="font-medium">Required:</span> Authentication
+          </li>
+          <li>
+            <span className="font-medium">Recommended:</span> RBAC (for log
+            access control)
+          </li>
+        </ul>
+      </div>
+    </CardContent>
+  </Card>
+);
