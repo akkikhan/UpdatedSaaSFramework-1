@@ -148,12 +148,16 @@ export default function RBACConfigPage() {
     mutationFn: async (template: PermissionTemplate) => {
       if (template.id) {
         return await apiRequest(
-          `/api/rbac-config/permission-templates/${template.id}`,
           "PUT",
+          `/api/rbac-config/permission-templates/${template.id}`,
           template
         );
       } else {
-        return await apiRequest("/api/rbac-config/permission-templates", "POST", template);
+        return await apiRequest(
+          "POST",
+          "/api/rbac-config/permission-templates",
+          template
+        );
       }
     },
     onSuccess: () => {
@@ -174,12 +178,16 @@ export default function RBACConfigPage() {
     mutationFn: async (businessType: BusinessType) => {
       if (businessType.id) {
         return await apiRequest(
-          `/api/rbac-config/business-types/${businessType.id}`,
           "PUT",
+          `/api/rbac-config/business-types/${businessType.id}`,
           businessType
         );
       } else {
-        return await apiRequest("/api/rbac-config/business-types", "POST", businessType);
+        return await apiRequest(
+          "POST",
+          "/api/rbac-config/business-types",
+          businessType
+        );
       }
     },
     onSuccess: () => {
@@ -199,9 +207,17 @@ export default function RBACConfigPage() {
   const saveRoleMutation = useMutation({
     mutationFn: async (role: DefaultRole) => {
       if (role.id) {
-        return await apiRequest(`/api/rbac-config/default-roles/${role.id}`, "PUT", role);
+        return await apiRequest(
+          "PUT",
+          `/api/rbac-config/default-roles/${role.id}`,
+          role
+        );
       } else {
-        return await apiRequest("/api/rbac-config/default-roles", "POST", role);
+        return await apiRequest(
+          "POST",
+          "/api/rbac-config/default-roles",
+          role
+        );
       }
     },
     onSuccess: () => {
@@ -220,7 +236,10 @@ export default function RBACConfigPage() {
 
   const deleteTemplateMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/rbac-config/permission-templates/${id}`, "DELETE");
+      return await apiRequest(
+        "DELETE",
+        `/api/rbac-config/permission-templates/${id}`
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/permission-templates"] });
@@ -237,7 +256,10 @@ export default function RBACConfigPage() {
 
   const deleteBusinessTypeMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/rbac-config/business-types/${id}`, "DELETE");
+      return await apiRequest(
+        "DELETE",
+        `/api/rbac-config/business-types/${id}`
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/business-types"] });
@@ -254,7 +276,10 @@ export default function RBACConfigPage() {
 
   const deleteRoleMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/rbac-config/default-roles/${id}`, "DELETE");
+      return await apiRequest(
+        "DELETE",
+        `/api/rbac-config/default-roles/${id}`
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac-config/default-roles"] });
@@ -270,14 +295,48 @@ export default function RBACConfigPage() {
   });
 
   const handleSaveTemplate = (template: PermissionTemplate) => {
+    if (
+      !template.name.trim() ||
+      !template.description.trim() ||
+      template.permissions.length === 0
+    ) {
+      toast({
+        title: "Missing Required Fields",
+        description:
+          "Name, description, and at least one permission are required.",
+        variant: "destructive",
+      });
+      return;
+    }
     saveTemplateMutation.mutate(template);
   };
 
   const handleSaveBusinessType = (businessType: BusinessType) => {
+    if (!businessType.name.trim() || !businessType.description.trim()) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Name and description are required.",
+        variant: "destructive",
+      });
+      return;
+    }
     saveBusinessTypeMutation.mutate(businessType);
   };
 
   const handleSaveRole = (role: DefaultRole) => {
+    if (
+      !role.name.trim() ||
+      !role.description.trim() ||
+      role.permissions.length === 0
+    ) {
+      toast({
+        title: "Missing Required Fields",
+        description:
+          "Name, description, and at least one permission are required.",
+        variant: "destructive",
+      });
+      return;
+    }
     saveRoleMutation.mutate(role);
   };
 
@@ -911,6 +970,7 @@ export default function RBACConfigPage() {
                 <Label htmlFor="template-name">Name</Label>
                 <Input
                   id="template-name"
+                  required
                   value={editingTemplate.name}
                   onChange={e => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
                 />
@@ -919,6 +979,7 @@ export default function RBACConfigPage() {
                 <Label htmlFor="template-description">Description</Label>
                 <Textarea
                   id="template-description"
+                  required
                   value={editingTemplate.description}
                   onChange={e =>
                     setEditingTemplate({ ...editingTemplate, description: e.target.value })
@@ -1122,6 +1183,7 @@ export default function RBACConfigPage() {
                 <Label htmlFor="bt-name">Name</Label>
                 <Input
                   id="bt-name"
+                  required
                   value={editingBusinessType.name}
                   onChange={e =>
                     setEditingBusinessType({ ...editingBusinessType, name: e.target.value })
@@ -1132,6 +1194,7 @@ export default function RBACConfigPage() {
                 <Label htmlFor="bt-description">Description</Label>
                 <Textarea
                   id="bt-description"
+                  required
                   value={editingBusinessType.description}
                   onChange={e =>
                     setEditingBusinessType({
@@ -1281,6 +1344,7 @@ export default function RBACConfigPage() {
                 <Label htmlFor="role-name">Name</Label>
                 <Input
                   id="role-name"
+                  required
                   value={editingRole.name}
                   onChange={e => setEditingRole({ ...editingRole, name: e.target.value })}
                 />
@@ -1289,6 +1353,7 @@ export default function RBACConfigPage() {
                 <Label htmlFor="role-description">Description</Label>
                 <Textarea
                   id="role-description"
+                  required
                   value={editingRole.description}
                   onChange={e => setEditingRole({ ...editingRole, description: e.target.value })}
                 />
