@@ -71,6 +71,52 @@ export function useUpdateTenantStatus() {
   });
 }
 
+export function useUpdateTenantModules() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { enabledModules?: string[]; moduleConfigs?: Record<string, any> } }) =>
+      api.updateTenantModules(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: "Tenant modules updated",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update modules",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useDeleteTenant() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: api.deleteTenant,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ title: "Success", description: "Tenant deleted" });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete tenant",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 export function useResendOnboardingEmail() {
   const { toast } = useToast();
 

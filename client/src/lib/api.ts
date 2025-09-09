@@ -56,6 +56,10 @@ export const api = {
     await apiRequest("POST", `/api/tenants/${id}/resend-email`);
   },
 
+  async deleteTenant(id: string): Promise<void> {
+    await apiRequest("DELETE", `/api/tenants/${id}`);
+  },
+
   async updateTenantModules(
     id: string,
     payload: { enabledModules?: string[]; moduleConfigs?: Record<string, any> }

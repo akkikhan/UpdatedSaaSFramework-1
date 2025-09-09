@@ -282,20 +282,20 @@ export default function RBACConfigPage() {
   };
 
   return (
-    <div data-testid="rbac-config-page" className="aspire-page-container">
-      {/* Aspire Page Header */}
-      <div className="aspire-page-header">
-        <div className="aspire-header-content">
-          <div className="aspire-header-text">
+    <div data-testid="rbac-config-page" className="rbac-page-container">
+      {/* Page Header */}
+      <div className="rbac-page-header">
+        <div className="rbac-header-content">
+          <div className="rbac-header-text">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="aspire-page-title" data-testid="title-rbac-config">
+                <h1 className="rbac-page-title" data-testid="title-rbac-config">
                   RBAC Configuration
                 </h1>
-                <p className="aspire-page-subtitle">
+                <p className="rbac-page-subtitle">
                   Manage permission templates, business types, and default roles for tenant
                   onboarding
                 </p>
@@ -305,14 +305,14 @@ export default function RBACConfigPage() {
         </div>
       </div>
 
-      <div className="aspire-content-wrapper">
-        <div className="aspire-main-card">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="aspire-tabs-container">
-            <TabsList className="aspire-tabs-list" data-testid="tabs-rbac-config">
+      <div className="rbac-content-wrapper">
+        <div className="rbac-main-card">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="rbac-tabs-container">
+            <TabsList className="rbac-tabs-list" data-testid="tabs-rbac-config">
               <TabsTrigger
                 value="templates"
                 data-testid="tab-templates"
-                className="aspire-tab-trigger"
+                className="rbac-tab-trigger"
               >
                 <Shield className="h-4 w-4 mr-2" />
                 Permission Templates
@@ -320,7 +320,7 @@ export default function RBACConfigPage() {
               <TabsTrigger
                 value="business-types"
                 data-testid="tab-business-types"
-                className="aspire-tab-trigger"
+                className="rbac-tab-trigger"
               >
                 <Building2 className="h-4 w-4 mr-2" />
                 Business Types
@@ -328,7 +328,7 @@ export default function RBACConfigPage() {
               <TabsTrigger
                 value="default-roles"
                 data-testid="tab-default-roles"
-                className="aspire-tab-trigger"
+                className="rbac-tab-trigger"
               >
                 <Users className="h-4 w-4 mr-2" />
                 Default Roles
@@ -339,17 +339,17 @@ export default function RBACConfigPage() {
             <TabsContent
               value="templates"
               data-testid="card-permission-templates"
-              className="aspire-tab-content"
+              className="rbac-tab-content"
             >
-              <div className="aspire-section-header">
-                <div className="aspire-section-info">
+              <div className="rbac-section-header">
+                <div className="rbac-section-info">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                       <Shield className="h-4 w-4 text-purple-600" />
                     </div>
                     <div>
-                      <h4 className="aspire-section-title">Permission Templates</h4>
-                      <p className="aspire-section-description">
+                      <h4 className="rbac-section-title">Permission Templates</h4>
+                      <p className="rbac-section-description">
                         Define reusable permission sets for different business scenarios
                       </p>
                     </div>
@@ -371,7 +371,7 @@ export default function RBACConfigPage() {
                     })
                   }
                   data-testid="button-add-template"
-                  className="aspire-primary-btn"
+                  className="rbac-primary-btn"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Template
@@ -390,7 +390,7 @@ export default function RBACConfigPage() {
                     (permissionTemplatesQuery.data as any[])?.map((template: any) => (
                       <Card
                         key={template.id}
-                        className="aspire-data-card"
+                        className="rbac-data-card"
                         data-testid={`template-card-${template.id}`}
                       >
                         <CardContent className="p-6">
@@ -402,14 +402,14 @@ export default function RBACConfigPage() {
                                 </div>
                                 <div>
                                   <h3
-                                    className="aspire-card-title"
+                                    className="rbac-card-title"
                                     data-testid={`template-name-${template.id}`}
                                   >
                                     {template.name}
                                   </h3>
                                   {template.isDefault && (
                                     <Badge
-                                      className="aspire-badge bg-green-100 text-green-700 text-xs px-2 py-1"
+                                      className="rbac-badge bg-green-100 text-green-700 text-xs px-2 py-1"
                                       data-testid={`template-default-${template.id}`}
                                     >
                                       Default
@@ -418,7 +418,7 @@ export default function RBACConfigPage() {
                                 </div>
                               </div>
                               <p
-                                className="aspire-card-description"
+                                className="rbac-card-description"
                                 data-testid={`template-description-${template.id}`}
                               >
                                 {template.description}
@@ -1525,15 +1525,15 @@ export default function RBACConfigPage() {
       </Dialog>
 
       {/* Implementation Note */}
-      <Card className="aspire-info-card">
+      <Card className="rbac-info-card">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <Settings className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h4 className="aspire-info-title">RBAC Configuration Implementation</h4>
-              <p className="aspire-info-description">
+              <h4 className="rbac-info-title">RBAC Configuration Implementation</h4>
+              <p className="rbac-info-description">
                 This RBAC configuration system allows Platform Admins to define templates, business
                 types, and default roles. When tenants are onboarded, they inherit these
                 configurations and can then customize their tenant-specific roles and permissions

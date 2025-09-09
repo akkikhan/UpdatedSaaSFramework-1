@@ -3,7 +3,7 @@
 ## **Pre-UI Redesign Documentation - September 8, 2025**
 
 > **PURPOSE**: This document serves as a comprehensive record of ALL existing
-> functionality in the SaaS platform before implementing the Aspire UI design.
+> functionality in the SaaS platform before implementing the new UI design.
 > This ensures NO functionality is lost during the UI transformation.
 
 ---
@@ -504,28 +504,28 @@ interface Tenant {
 
 ### **Phase 1: Layout Transformation**
 
-1. Transform AdminLayout to match Aspire header + sidebar
-2. Apply Aspire color scheme throughout
+1. Transform AdminLayout to match the updated header and sidebar
+2. Apply new color scheme throughout
 3. Update navigation styling and icons
 4. Implement new header with search and profile
 
 ### **Phase 2: Dashboard Redesign**
 
-1. Create Aspire-style statistics cards
+1. Create modern statistics cards
 2. Implement visual elements section
 3. Style data tables to match reference
 4. Add charts and visual components
 
 ### **Phase 3: Page-by-Page Transformation**
 
-1. Apply Aspire styling to all admin pages
+1. Apply new styling to all admin pages
 2. Maintain existing functionality
 3. Update forms and components
 4. Ensure responsive design
 
 ### **Phase 4: Component Updates**
 
-1. Update UI components to match Aspire style
+1. Update UI components to match new style
 2. Create new components as needed
 3. Maintain existing props and functionality
 4. Test all interactive elements
@@ -579,7 +579,7 @@ interface Tenant {
 ---
 
 **�📝 NOTE**: This comprehensive audit was completed on September 8, 2025,
-before implementing the Aspire UI design. ALL functionality listed above MUST be
+before implementing the new UI design. ALL functionality listed above MUST be
 preserved during the UI transformation process. The transformation will ONLY
 affect visual styling and layout while maintaining 100% of existing
 functionality.
