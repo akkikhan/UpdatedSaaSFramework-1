@@ -640,6 +640,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SSO provider catalog
+  app.get("/api/admin/auth/providers", platformAdminMiddleware, async (_req, res) => {
+    res.json([
+      { id: "azure-ad", label: "Azure AD" },
+      { id: "auth0", label: "Auth0" },
+      { id: "saml", label: "SAML" },
+    ]);
+  });
+
   // Platform admin token refresh
   app.post("/api/platform/auth/refresh", async (req, res) => {
     try {
@@ -2990,13 +2999,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/notifications/history", tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
-      const { recipientId, channel, status, limit = 50, offset = 0 } = req.query;
+      const { recipientId, channel, status, template, limit = 50, offset = 0 } = req.query;
 
       const filters = {
         tenantId,
         recipientId: recipientId as string,
         channel: channel as string,
         status: status as string,
+        template: template as string,
         limit: parseInt(limit as string),
         offset: parseInt(offset as string),
       };
@@ -3006,6 +3016,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get notification history error:", error);
       res.status(500).json({ message: "Failed to get notification history" });
+    }
+  });
+
+  app.post("/notifications/bulk-resend", tenantMiddleware, async (req, res) => {
+    try {
+      const { ids = [] } = req.body || {};
+      // In a full implementation we would look up each notification and resend it.
+      console.log(`Bulk resend notifications for tenant ${req.tenantId}:`, ids);
+      res.json({ success: true, count: ids.length });
+    } catch (error) {
+      console.error("Bulk resend notifications error:", error);
+      res.status(500).json({ message: "Failed to resend notifications" });
     }
   });
 

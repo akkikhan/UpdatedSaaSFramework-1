@@ -42,7 +42,8 @@ async function throwIfResNotOk(res: Response) {
 export async function apiRequest(
   method: string,
   url: string,
-  data?: unknown | undefined
+  data?: unknown | undefined,
+  extraHeaders?: Record<string, string>
 ): Promise<Response> {
   // Determine which token to use based on current portal
   const platformAdminToken = localStorage.getItem("platformAdminToken");
@@ -58,6 +59,7 @@ export async function apiRequest(
     Accept: "application/json",
     ...(data ? { "Content-Type": "application/json" } : {}),
     ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    ...(extraHeaders || {}),
   };
 
   const res = await fetch(url, {

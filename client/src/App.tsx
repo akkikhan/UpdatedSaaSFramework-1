@@ -28,9 +28,12 @@ import TenantAttentionPage from "@/pages/tenant-attention";
 import RBACManagementPage from "@/pages/rbac-management";
 import RBACConfigPage from "@/pages/rbac-config";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
+import PendingRequestsPage from "@/pages/pending-requests";
+import NotificationHistoryPage from "@/pages/notification-history";
 import PlatformAdminLogin from "@/pages/platform-admin-login";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
+import usePlatformChangeMonitor from "@/hooks/use-platform-change-monitor";
 
 function Router() {
   return (
@@ -67,6 +70,8 @@ function Router() {
             <Route path="/tenants/:tenantId/sso" component={TenantSSOConfigPage} />
             <Route path="/tenants/:tenantId/rbac" component={RBACManagementPage} />
             <Route path="/rbac-config" component={RBACConfigPage} />
+            <Route path="/requests" component={PendingRequestsPage} />
+            <Route path="/notifications" component={NotificationHistoryPage} />
             <Route path="/modules" component={ModuleManagementPage} />
             <Route path="/logs" component={LogsPage} />
             <Route path="/compliance" component={ComplianceDashboard} />
@@ -83,6 +88,8 @@ function Router() {
 }
 
 function App() {
+  // Monitor platform config changes for new RBAC templates or SSO providers
+  usePlatformChangeMonitor();
   // Handle token from URL when redirected from Azure AD login
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
