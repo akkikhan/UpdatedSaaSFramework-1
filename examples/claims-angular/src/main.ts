@@ -7,7 +7,7 @@ import { MatSnackBarModule } from "@angular/material/snack-bar";
 import { MatDialogModule } from "@angular/material/dialog";
 import { provideRouter, Routes, CanActivateFn } from "@angular/router";
 import { AppComponent } from "./app/app.component";
-import { getToken } from "@saas-framework/auth-client";
+import { getToken, setToken } from "@saas-framework/auth-client";
 
 const canActivate: CanActivateFn = () => !!getToken();
 
@@ -39,6 +39,21 @@ export const routes: Routes = [
   { path: "", pathMatch: "full", redirectTo: "dashboard" },
   { path: "**", redirectTo: "dashboard" },
 ];
+
+// Capture token from URL if Azure callback redirected here
+(() => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      setToken(token);
+      localStorage.setItem("tenant_token", token);
+      // Clean URL params, keep the path
+      const clean = window.location.pathname;
+      window.history.replaceState({}, document.title, clean);
+    }
+  } catch {}
+})();
 
 bootstrapApplication(AppComponent, {
   providers: [

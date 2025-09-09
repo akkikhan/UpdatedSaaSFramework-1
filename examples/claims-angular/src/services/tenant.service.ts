@@ -3,6 +3,7 @@ import { HttpClient } from "@angular/common/http";
 import { BehaviorSubject, timer } from "rxjs";
 import { switchMap, catchError } from "rxjs/operators";
 import { SnackbarService } from "./snackbar.service";
+import { BASE } from "./api-base";
 
 export interface TenantInfo {
   id: string;
@@ -13,7 +14,7 @@ export interface TenantInfo {
   moduleConfigs?: any;
 }
 
-const BASE = localStorage.getItem("claims_base") || "http://localhost:5000";
+// BASE now comes from centralized api-base helper
 
 @Injectable({ providedIn: "root" })
 export class TenantService {

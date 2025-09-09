@@ -1479,7 +1479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing authorization code or state" });
       }
 
-      // Parse state to get tenant ID
+      // Parse state to get tenant ID and any extra routing info
       let stateData;
       try {
         const decodedState = decodeURIComponent(state as string);
@@ -1614,10 +1614,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Logged successful Azure AD login");
 
-      // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-success?token=${appToken}&tenant=${tenant.orgId}`;
+      // Redirect to main portal dashboard with token (preferred),
+      // falling back to /auth-success for legacy clients
+      const clientBase =
+        (stateData?.redirectBase as string | undefined) ||
+        process.env.CLIENT_URL ||
+        `${req.protocol}://${req.get("host")}`;
+      // If a specific redirectTo was requested upstream, honor it (path-only)
+      const safeRedirectPath = (() => {
+        const raw = stateData?.redirectTo as string | undefined;
+        if (!raw) return "";
+        try {
+          // prevent open redirect: allow only path starting with '/'
+          if (raw.startsWith("/")) return raw;
+        } catch {}
+        return "";
+      })();
+      // Prefer sending users directly to the requested path or the tenant dashboard
+      const preferredTarget = `${clientBase}${safeRedirectPath || `/tenant/${tenant.orgId}/dashboard`}`;
+      // Legacy fallback
+      const legacyTarget = `${clientBase}/auth-success`;
 
-      console.log(`Redirecting to success page: ${redirectUrl}`);
+      // Choose preferred target by default
+      let redirectTarget = preferredTarget;
+      // Allow forcing legacy via env if needed
+      if (process.env.AUTH_REDIRECT_LEGACY === "true") redirectTarget = legacyTarget;
+
+      // Append token and tenant parameters safely
+      const joiner = redirectTarget.includes("?") ? "&" : "?";
+      const redirectUrl = `${redirectTarget}${joiner}token=${appToken}&tenant=${tenant.orgId}`;
+
+      console.log(`Redirecting after Azure login: ${redirectUrl}`);
 
       res.redirect(redirectUrl);
     } catch (error) {
@@ -1724,11 +1751,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Azure AD provider found for tenant ${tenant.name}`);
 
+      // Decrypt client secret if needed
+      let decryptedClientSecret = azureProvider.config.clientSecret;
+      try {
+        const { decryptSecret } = await import("./utils/secret.js");
+        decryptedClientSecret = decryptSecret(azureProvider.config.clientSecret);
+      } catch (error) {
+        console.error("Failed to decrypt client secret:", error);
+        return res.status(500).json({ message: "Failed to decrypt credentials" });
+      }
+
       // Create Azure AD service instance
       const azureADService = new AzureADService({
         tenantId: azureProvider.config.tenantId,
         clientId: azureProvider.config.clientId,
-        clientSecret: azureProvider.config.clientSecret,
+        clientSecret: decryptedClientSecret,
         redirectUri:
           azureProvider.config.redirectUri ||
           azureProvider.config.callbackUrl ||
@@ -1736,9 +1773,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Generate authorization URL
+      const redirectTo =
+        typeof req.query.redirectTo === "string" ? req.query.redirectTo : undefined;
+      const redirectBase =
+        typeof req.query.redirectBase === "string" ? req.query.redirectBase : undefined;
+
+      const extraState: Record<string, any> = {};
+      if (redirectTo) extraState.redirectTo = redirectTo;
+      if (redirectBase) extraState.redirectBase = redirectBase;
+
       const authUrl = await azureADService.getAuthorizationUrl(
         ["User.Read", "User.ReadBasic.All"],
-        tenant.id
+        tenant.id,
+        Object.keys(extraState).length ? extraState : undefined
       );
 
       console.log(`Generated Azure AD auth URL for tenant ${tenant.name}`);

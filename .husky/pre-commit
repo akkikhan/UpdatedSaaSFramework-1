@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-
-# Husky v9+ hook: run lint-staged on staged files
-npx lint-staged

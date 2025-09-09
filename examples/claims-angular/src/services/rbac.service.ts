@@ -1,8 +1,9 @@
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { getToken, getRbacProfile, hasPermission } from "@saas-framework/auth-client";
+import { BASE } from "./api-base";
 
-const BASE = localStorage.getItem("claims_base") || "http://localhost:5000";
+// BASE now comes from centralized api-base helper
 
 @Injectable({ providedIn: "root" })
 export class RbacService {

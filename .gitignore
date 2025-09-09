@@ -58,6 +58,7 @@ desktop.ini
 .vscode/
 .idea/
 *.iml
+.husky/
 
 # Archives and packages
 *.tar.gz

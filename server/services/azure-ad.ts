@@ -87,7 +87,8 @@ export class AzureADService {
    */
   async getAuthorizationUrl(
     scopes: string[] = ["User.Read", "User.ReadBasic.All"],
-    tenantId?: string
+    tenantId?: string,
+    extraState?: Record<string, any>
   ): Promise<string> {
     try {
       // Generate PKCE parameters
@@ -101,9 +102,10 @@ export class AzureADService {
           "http://localhost:3000/auth/azure/callback",
         codeChallenge: challenge,
         codeChallengeMethod: "S256",
-        state: tenantId
-          ? JSON.stringify({ tenantId, codeVerifier: verifier })
-          : JSON.stringify({ codeVerifier: verifier }),
+        state: (() => {
+          const base = tenantId ? { tenantId, codeVerifier: verifier } : { codeVerifier: verifier };
+          return JSON.stringify({ ...base, ...(extraState || {}) });
+        })(),
       };
 
       // Default to select_account for better UX; allow forcing consent via env

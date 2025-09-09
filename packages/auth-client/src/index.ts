@@ -27,10 +27,16 @@ export function clearToken() {
 /** Start Azure AD SSO by requesting authUrl from the platform API and redirecting the browser. */
 export async function startAzure(
   orgId: string,
-  options?: { baseUrl?: string; redirect?: boolean }
+  options?: { baseUrl?: string; redirect?: boolean; redirectTo?: string; redirectBase?: string }
 ) {
   const base = options?.baseUrl || "";
-  const url = `${base}/api/auth/azure/${encodeURIComponent(orgId)}`;
+  const params: string[] = [];
+  if (options?.redirectTo) params.push(`redirectTo=${encodeURIComponent(options.redirectTo)}`);
+  if (options?.redirectBase)
+    params.push(`redirectBase=${encodeURIComponent(options.redirectBase)}`);
+  const url = `${base}/api/auth/azure/${encodeURIComponent(orgId)}${
+    params.length ? `?${params.join("&")}` : ""
+  }`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to start Azure SSO: ${res.status}`);
   const data = await res.json();

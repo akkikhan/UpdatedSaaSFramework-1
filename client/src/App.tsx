@@ -30,6 +30,7 @@ import TenantAttentionPage from "@/pages/tenant-attention";
 import PlatformAdminLogin from "@/pages/platform-admin-login";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
+import { setToken as setTenantToken } from "@saas-framework/auth-client";
 
 function Router() {
   return (
@@ -88,8 +89,10 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("token");
     const isAdmin = urlParams.get("admin");
+    const tenantOrgId = urlParams.get("tenant");
 
-    if (token) {
+    // Platform admin token handling (root/admin redirects)
+    if (token && isAdmin) {
       // Store token in localStorage for persistence
       localStorage.setItem("platformAdminToken", token);
 
@@ -101,6 +104,24 @@ function App() {
       queryClient.invalidateQueries();
 
       console.log("Platform admin token stored from URL");
+    }
+
+    // Tenant SSO token handling (any tenant route)
+    if (token && tenantOrgId) {
+      try {
+        // Store using SDK default key and our portal's expected keys
+        setTenantToken(token);
+        localStorage.setItem("tenant_token", token);
+        localStorage.setItem(`tenant_token_${tenantOrgId}`, token);
+      } catch {}
+
+      // Clean URL params but keep current path
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+
+      // Invalidate queries to pick up the token immediately
+      queryClient.invalidateQueries();
+      console.log("Tenant token stored from URL for:", tenantOrgId);
     }
 
     // Check if token exists in localStorage
