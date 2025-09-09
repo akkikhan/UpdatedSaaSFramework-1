@@ -20,4 +20,8 @@ client/vite.config.ts
 *.pdb
 *.cache
 *.deps.json
-*.runtimeconfig.jsondocs-portal/.docusaurus/
+*.runtimeconfig.json
+
+# Docusaurus build artifacts
+docs-portal/.docusaurus/
+docs-portal/build/
