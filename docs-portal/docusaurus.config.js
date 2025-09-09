@@ -4,7 +4,8 @@ export default {
   title: 'SaaS Platform Docs',
   tagline: 'Integration guides and API reference',
   url: 'https://example.com',
-  baseUrl: '/',
+  // Serve documentation from /docs so the app link works without 404s
+  baseUrl: '/docs/',
   favicon: 'img/favicon.ico',
   organizationName: 'saas-platform',
   projectName: 'docs',

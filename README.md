@@ -6,6 +6,11 @@ This repository contains the SaaS framework and an accompanying documentation po
 
 The docs portal is located in the `docs-portal/` directory and is built with [Docusaurus](https://docusaurus.io/).
 
+Install dependencies (root and docs portal) with:
+
+```bash
+npm install
+```
 ### Commands
 
 ```bash

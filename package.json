@@ -5,7 +5,8 @@
   "private": true,
   "license": "MIT",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "docs-portal"
   ],
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx --no-warnings server/index.ts",
