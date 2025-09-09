@@ -120,6 +120,14 @@ export default function TenantDashboard() {
   const { user, logout } = useTenantAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // Get tenant data from API with real-time polling so downstream queries
+  // (like sessions or RBAC) can rely on a resolved tenant ID.
+  const { data: tenant } = useQuery({
+    queryKey: [`/api/tenants/by-org-id/${orgId}`],
+    enabled: !!orgId,
+    refetchInterval: 5000, // Poll every 5 seconds for module changes
+    refetchIntervalInBackground: true,
+  }) as { data: any };
   const [showApiKeys, setShowApiKeys] = useState(false);
   const [manageRolesUser, setManageRolesUser] = useState<any | null>(null);
   const [showQuickstart, setShowQuickstart] = useState(false);
@@ -130,6 +138,13 @@ export default function TenantDashboard() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState<any>(null);
   const [permissionExplain, setPermissionExplain] = useState<any | null>(null);
+  const [newCustomPermission, setNewCustomPermission] = useState("");
+  const [sessionDiagnostics, setSessionDiagnostics] = useState<{
+    lastError?: string;
+    lastAttempt?: number;
+    attempts: number;
+    logs: { time: number; error: string }[];
+  }>({ attempts: 0, logs: [] });
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -151,44 +166,199 @@ export default function TenantDashboard() {
   const { data: rbacSettings } = useQuery({
     queryKey: ["/api/tenant", "rbac", "settings", orgId],
     enabled: !!orgId,
+    retry: false,
     queryFn: async () => {
       const token =
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
       // Need tenant to resolve id; fetch minimal tenant first
       const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-      const t = tRes.ok ? await tRes.json() : null;
-      if (!t) return null;
+      if (!tRes.ok) throw new Error("Failed to resolve tenant");
+      const t = await tRes.json();
       const res = await fetch(`/api/tenant/${t.id}/rbac/settings`, {
         headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
       });
-      if (!res.ok) return null;
+      if (!res.ok) throw new Error("Failed to fetch RBAC settings");
       return res.json();
     },
+    onError: () =>
+      toast({ title: "Failed to load RBAC settings", variant: "destructive" }),
   });
 
-  // Dynamic catalogs for RBAC editor in tenant portal
-  const { data: rbacCatalog = { templates: [], businessTypes: [] } } = useQuery({
+  // Live platform RBAC configuration for sync validation
+  const { data: platformRbac = { templates: [], businessTypes: [], roles: [] } } = useQuery({
+    queryKey: ["/api/rbac-config/platform"],
+    retry: false,
+    queryFn: async () => {
+      const [tplRes, btRes, roleRes] = await Promise.all([
+        fetch(`/api/rbac-config/permission-templates`),
+        fetch(`/api/rbac-config/business-types`),
+        fetch(`/api/rbac-config/roles`),
+      ]);
+      if (!tplRes.ok || !btRes.ok || !roleRes.ok)
+        throw new Error("Failed to fetch platform RBAC config");
+      return {
+        templates: await tplRes.json(),
+        businessTypes: await btRes.json(),
+        roles: await roleRes.json(),
+      };
+    },
+    onError: (err: any) =>
+      toast({
+        title: "Failed to load platform RBAC config",
+        description: err.message,
+        variant: "destructive",
+      }),
+  });
+
+  // Dynamic catalogs for RBAC editor in tenant portal filtered against platform config
+  const { data: rawRbacCatalog = { templates: [], businessTypes: [], defaultRoles: [] } } = useQuery({
     queryKey: ["/api/tenant", orgId, "rbac", "catalog"],
     enabled: !!orgId,
+    retry: false,
     queryFn: async () => {
       const tRes = await fetch(`/api/tenants/by-org-id/${orgId}`);
-      const t = tRes.ok ? await tRes.json() : null;
-      if (!t) return { templates: [], businessTypes: [] };
+      if (!tRes.ok) throw new Error("Failed to resolve tenant");
+      const t = await tRes.json();
       const token =
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
-      const [tplRes, btRes] = await Promise.all([
+      const [tplRes, btRes, drRes] = await Promise.all([
         fetch(`/api/tenant/${t.id}/rbac/catalog/templates`, {
           headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
         }),
         fetch(`/api/tenant/${t.id}/rbac/catalog/business-types`, {
           headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
         }),
+        fetch(`/api/rbac-config/default-roles`),
       ]);
-      const templates = tplRes.ok ? await tplRes.json() : [];
-      const businessTypes = btRes.ok ? await btRes.json() : [];
-      return { templates, businessTypes } as any;
+      if (!tplRes.ok || !btRes.ok || !drRes.ok) throw new Error("Failed to fetch RBAC catalog");
+      const templates = await tplRes.json();
+      const businessTypes = await btRes.json();
+      const defaultRoles = await drRes.json();
+      return { templates, businessTypes, defaultRoles } as any;
     },
+    onError: () =>
+      toast({ title: "Failed to load RBAC catalog", variant: "destructive" }),
   });
+
+  const rbacCatalog = {
+    templates: (rawRbacCatalog.templates || []).filter((t: any) =>
+      (platformRbac.templates || []).some(
+        (p: any) => p.id === t.id || p.name?.toLowerCase() === t.name?.toLowerCase()
+      )
+    ),
+    businessTypes: (rawRbacCatalog.businessTypes || []).filter((b: any) =>
+      (platformRbac.businessTypes || []).some(
+        (p: any) => p.id === b.id || p.name?.toLowerCase() === b.name?.toLowerCase()
+      )
+    ),
+    defaultRoles: (rawRbacCatalog.defaultRoles || []).filter((r: any) =>
+      (platformRbac.roles || []).some(
+        (p: any) => p.id === r.id || p.name?.toLowerCase() === r.name?.toLowerCase()
+      )
+    ),
+  };
+
+  // Ensure permission template and business type remain valid against platform admin config
+  useEffect(() => {
+    if (!rbacSettings) return;
+    const pt = (rbacSettings as any).permissionTemplate;
+    if (pt &&
+      !(platformRbac.templates || []).some(
+        (t: any) => t.id === pt || t.name?.toLowerCase() === pt
+      )
+    ) {
+      toast({ title: "Permission template revoked", description: pt, variant: "destructive" });
+      delete (rbacSettings as any).permissionTemplate;
+    }
+    const bt = (rbacSettings as any).businessType;
+    if (bt &&
+      !(platformRbac.businessTypes || []).some(
+        (b: any) => b.id === bt || b.name?.toLowerCase() === bt
+      )
+    ) {
+      toast({ title: "Business type revoked", description: bt, variant: "destructive" });
+      delete (rbacSettings as any).businessType;
+    }
+  }, [rbacSettings, platformRbac.templates, platformRbac.businessTypes]);
+
+  // Active sessions for module diagnostics
+  const {
+    data: activeSessions = [],
+    error: activeSessionsError,
+    refetch: refetchSessions,
+  } = useQuery({
+    queryKey: ["/auth/sessions", tenant?.id],
+    enabled: !!tenant?.id,
+    retry: 3,
+    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 4000),
+    queryFn: async () => {
+      setSessionDiagnostics(d => ({ ...d, lastAttempt: Date.now(), attempts: d.attempts + 1 }));
+      const res = await fetch(`/auth/sessions`, { headers: getAuthHeaders() });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch sessions (${res.status})`);
+      }
+      return res.json();
+    },
+    onError: (err: any) => {
+      console.error("Failed to load sessions", err);
+      setSessionDiagnostics(d => ({
+        ...d,
+        lastError: err.message,
+        logs: [...d.logs, { time: Date.now(), error: err.message }],
+      }));
+      toast({
+        title: "Failed to load sessions",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+    onSuccess: () => setSessionDiagnostics({ attempts: 0, logs: [] }),
+  });
+
+  const revokeSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const res = await fetch(`/auth/sessions/${sessionId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to revoke session");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/auth/sessions", tenant?.id] });
+      toast({ title: "Session revoked" });
+    },
+    onError: (err: any) =>
+      toast({ title: "Revoke failed", description: err.message, variant: "destructive" }),
+  });
+
+  const handleAddCustomPermission = async () => {
+    const v = newCustomPermission.trim();
+    if (!v) return;
+    try {
+      const next = Array.from(
+        new Set([...( (rbacSettings as any)?.customPermissions || []), v])
+      );
+      const token =
+        localStorage.getItem(`tenant_token_${orgId}`) ||
+        localStorage.getItem("tenant_token") || "";
+      if (!tenant?.id) return;
+      const res = await fetch(`/api/tenant/${tenant.id}/rbac/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ customPermissions: next }),
+      });
+      if (!res.ok) throw new Error("Failed to save custom permission");
+      setNewCustomPermission("");
+      queryClient.invalidateQueries({
+        queryKey: ["/api/tenant", "rbac", "settings", orgId],
+      });
+    } catch (e: any) {
+      toast({ title: "Failed to add", description: e.message, variant: "destructive" });
+    }
+  };
 
   // User CRUD operations
   const deleteUserMutation = useMutation({
@@ -287,14 +457,6 @@ export default function TenantDashboard() {
     );
   }
 
-  // Get tenant data from API with real-time polling
-  const { data: tenant } = useQuery({
-    queryKey: [`/api/tenants/by-org-id/${orgId}`],
-    enabled: !!orgId,
-    refetchInterval: 5000, // Poll every 5 seconds for module changes
-    refetchIntervalInBackground: true,
-  }) as { data: any };
-
   // Guard: Only tenant admin (adminEmail) can access the portal
   if (user && tenant && user.email.toLowerCase() !== (tenant.adminEmail || "").toLowerCase()) {
     return (
@@ -376,7 +538,7 @@ export default function TenantDashboard() {
     },
   }) as { data: any[] };
 
-  const { data: tenantRoles = [] } = useQuery({
+  const { data: tenantRolesRaw = [] } = useQuery({
     queryKey: ["/api/v2/rbac/roles", tenant?.id],
     enabled: !!tenant?.id,
     queryFn: async () => {
@@ -390,6 +552,28 @@ export default function TenantDashboard() {
     },
   }) as { data: any[] };
 
+  const [tenantRoles, setTenantRoles] = useState<any[]>([]);
+
+  useEffect(() => {
+    const defaultIds = new Set((rbacCatalog.defaultRoles || []).map((r: any) => r.id));
+    const filtered = (tenantRolesRaw || []).filter(
+      (r: any) => !r.isDefault || defaultIds.has(r.id)
+    );
+    if (tenantRolesRaw.length && filtered.length < tenantRolesRaw.length) {
+      const revoked = tenantRolesRaw.filter(
+        (r: any) => r.isDefault && !defaultIds.has(r.id)
+      );
+      toast({
+        title: "Role revoked",
+        description: `Removed default roles: ${revoked
+          .map((r: any) => r.name)
+          .join(", ")}`,
+        variant: "destructive",
+      });
+    }
+    setTenantRoles(filtered);
+  }, [tenantRolesRaw, rbacCatalog.defaultRoles]);
+
   const [userRolesMap, setUserRolesMap] = useState<Record<string, any[]>>({});
 
   const fetchUserRoles = async () => {
@@ -400,12 +584,14 @@ export default function TenantDashboard() {
     const t = tRes.ok ? await tRes.json() : null;
     if (!t) return;
     const map: Record<string, any[]> = {};
+    const defaultIds = new Set((rbacCatalog.defaultRoles || []).map((r: any) => r.id));
     await Promise.all(
       (tenantUsers as any[]).map(async (u: any) => {
         const res = await fetch(`/api/v2/rbac/users/${u.id}/roles`, {
           headers: { Authorization: `Bearer ${token}`, "x-tenant-id": t.id || "" },
         });
-        map[u.id] = res.ok ? await res.json() : [];
+        const rolesData = res.ok ? await res.json() : [];
+        map[u.id] = rolesData.filter((r: any) => !r.isDefault || defaultIds.has(r.id));
       })
     );
     setUserRolesMap(map);
@@ -413,7 +599,7 @@ export default function TenantDashboard() {
 
   useEffect(() => {
     fetchUserRoles();
-  }, [tenantUsers, tenant?.id, orgId]);
+  }, [tenantUsers, tenant?.id, orgId, rbacCatalog.defaultRoles]);
 
   // Check if tenant is suspended and handle accordingly
   if (tenant && tenant.status === "suspended") {
@@ -820,6 +1006,7 @@ export default function TenantDashboard() {
                       <UserModal
                         title="Add New User"
                         tenantId={tenant?.id}
+                        orgId={orgId}
                         roles={tenantRoles as any[]}
                         onSuccess={() => {
                           setShowAddUserModal(false);
@@ -914,6 +1101,7 @@ export default function TenantDashboard() {
                 <UserModal
                   title="Edit User"
                   tenantId={tenant?.id}
+                  orgId={orgId}
                   user={selectedUser}
                   onSuccess={() => {
                     setShowEditUserModal(false);
@@ -951,6 +1139,7 @@ export default function TenantDashboard() {
                     <RoleModal
                       title="Add New Role"
                       tenantId={tenant?.id}
+                      orgId={orgId}
                       availablePermissions={availablePermissions}
                       onSuccess={() => {
                         setShowAddRoleModal(false);
@@ -1118,6 +1307,7 @@ export default function TenantDashboard() {
               <RoleModal
                 title="Edit Role"
                 tenantId={tenant?.id}
+                orgId={orgId}
                 role={selectedRole}
                 availablePermissions={availablePermissions}
                 onSuccess={() => {
@@ -1145,7 +1335,7 @@ export default function TenantDashboard() {
                       <div>
                         <Label className="text-xs">Permission Template</Label>
                         <Select
-                          defaultValue={(rbacSettings as any)?.permissionTemplate || "standard"}
+                          defaultValue={(rbacSettings as any)?.permissionTemplate || (rbacCatalog.templates[0]?.id || "standard")}
                           onValueChange={val => ((rbacSettings as any).permissionTemplate = val)}
                         >
                           <SelectTrigger>
@@ -1169,7 +1359,7 @@ export default function TenantDashboard() {
                       <div>
                         <Label className="text-xs">Business Type</Label>
                         <Select
-                          defaultValue={(rbacSettings as any)?.businessType || "general"}
+                          defaultValue={(rbacSettings as any)?.businessType || (rbacCatalog.businessTypes[0]?.id || "general")}
                           onValueChange={val => ((rbacSettings as any).businessType = val)}
                         >
                           <SelectTrigger>
@@ -1196,28 +1386,84 @@ export default function TenantDashboard() {
                       <div className="flex gap-2">
                         <Input
                           placeholder="e.g., invoices.approve"
+                          value={newCustomPermission}
+                          onChange={e => setNewCustomPermission(e.target.value)}
                           onKeyDown={e => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              const v = (e.target as HTMLInputElement).value.trim();
-                              if (!v) return;
-                              const arr = Array.from(
-                                new Set([
-                                  ...(((rbacSettings as any).customPermissions || []) as string[]),
-                                  v,
-                                ])
-                              );
-                              (rbacSettings as any).customPermissions = arr;
-                              (e.target as HTMLInputElement).value = "";
-                              queryClient.invalidateQueries({
-                                queryKey: ["/api/tenant", "rbac", "settings", orgId],
-                              });
+                              void handleAddCustomPermission();
                             }
                           }}
                         />
-                        <Button variant="secondary">Add</Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => void handleAddCustomPermission()}
+                        >
+                          Add
+                        </Button>
                       </div>
                     </div>
+                    {activeSessionsError && (
+                      <div className="flex flex-col gap-1 text-xs text-red-600">
+                        <div className="flex items-center gap-2">
+                          <span>Failed to load sessions</span>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => void refetchSessions()}
+                            data-testid="button-retry-sessions"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                        {sessionDiagnostics.lastError && (
+                          <div className="text-slate-500" data-testid="session-diagnostics">
+                            Last error at {sessionDiagnostics.lastAttempt ? new Date(sessionDiagnostics.lastAttempt).toLocaleString() : "unknown"}
+                            : {sessionDiagnostics.lastError} (attempt {sessionDiagnostics.attempts})
+                            {sessionDiagnostics.logs.length > 0 && (
+                              <ul className="mt-1 list-disc pl-4">
+                                {sessionDiagnostics.logs.map((l, i) => (
+                                  <li key={i}>{new Date(l.time).toLocaleString()}: {l.error}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {activeSessions.length > 0 && (
+                      <div>
+                        <Label className="text-xs">Active Sessions</Label>
+                        <ul className="text-sm text-slate-600 pl-0">
+                          {activeSessions.map((s: any) => (
+                            <li key={s.id} className="flex items-center justify-between border-b py-1">
+                              <span>
+                                {s.userId}
+                                {s.createdAt ? ` (${new Date(s.createdAt).toLocaleString()})` : ""}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="xs"
+                                onClick={() => revokeSessionMutation.mutate(s.id)}
+                                data-testid={`button-revoke-session-${s.id}`}
+                              >
+                                Revoke
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {rbacCatalog.defaultRoles.length > 0 && (
+                      <div>
+                        <Label className="text-xs">Default Roles</Label>
+                        <ul className="text-sm text-slate-600 list-disc pl-4">
+                          {rbacCatalog.defaultRoles.map((r: any) => (
+                            <li key={r.id}>{r.name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <div className="flex justify-end">
                       <Button
                         onClick={async () => {
@@ -1808,12 +2054,14 @@ export default function TenantDashboard() {
 function UserModal({
   title,
   tenantId,
+  orgId,
   user,
   roles,
   onSuccess,
 }: {
   title: string;
   tenantId?: string;
+  orgId: string;
   user?: any;
   roles?: any[];
   onSuccess: () => void;
@@ -1987,12 +2235,14 @@ function UserModal({
 function RoleModal({
   title,
   tenantId,
+  orgId,
   role,
   availablePermissions,
   onSuccess,
 }: {
   title: string;
   tenantId?: string;
+  orgId: string;
   role?: any;
   availablePermissions?: string[];
   onSuccess: () => void;
