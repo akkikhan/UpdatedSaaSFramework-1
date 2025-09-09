@@ -12,6 +12,7 @@ export interface TenantInfo {
   enabledModules: string[];
   moduleConfigs?: any;
   loggingApiKey?: string;
+  rbacApiKey?: string;
 }
 
 const BASE = localStorage.getItem("claims_base") || "http://localhost:5000";
@@ -43,6 +44,10 @@ export class TenantService {
 
   get loggingKey() {
     return this.tenant$.value?.loggingApiKey || null;
+  }
+
+  get rbacKey() {
+    return this.tenant$.value?.rbacApiKey || null;
   }
 
   fetchByOrgId(orgId: string) {

@@ -1,12 +1,13 @@
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { getToken, getRbacProfile, hasPermission } from "@saas-framework/auth-client";
+import { TenantService } from "./tenant.service";
 
 const BASE = localStorage.getItem("claims_base") || "http://localhost:5000";
 
 @Injectable({ providedIn: "root" })
 export class RbacService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private tenant: TenantService) {}
 
   async profile() {
     return await getRbacProfile(BASE);
@@ -14,6 +15,26 @@ export class RbacService {
 
   async can(permission: string, profile?: { permissions: string[] }) {
     return await hasPermission(permission, profile, BASE);
+  }
+
+  private apiHeaders(): HttpHeaders {
+    const key = this.tenant.rbacKey;
+    if (!key) throw new Error("RBAC API key missing");
+    return new HttpHeaders({ "X-API-Key": key });
+  }
+
+  listRoles() {
+    return this.http.get<any[]>(`${BASE}/api/v2/rbac/roles`, {
+      headers: this.apiHeaders(),
+    });
+  }
+
+  createRole(name: string, permissions: string[]) {
+    return this.http.post(
+      `${BASE}/api/v2/rbac/roles`,
+      { name, permissions },
+      { headers: this.apiHeaders() }
+    );
   }
 
   private getUserIdFromToken(): string | null {

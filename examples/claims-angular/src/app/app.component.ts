@@ -41,21 +41,29 @@ import { filter } from "rxjs/operators";
             <mat-icon class="nav-icon">dashboard</mat-icon>
             <span class="nav-text">Dashboard</span>
           </a>
-          <a mat-list-item routerLink="/claims" class="nav-item">
-            <mat-icon class="nav-icon">assignment</mat-icon>
-            <span class="nav-text">Claims</span>
-            <span class="nav-badge">2</span>
-          </a>
+            <a mat-list-item routerLink="/claims" class="nav-item">
+              <mat-icon class="nav-icon">assignment</mat-icon>
+              <span class="nav-text">Claims</span>
+              <span class="nav-badge">2</span>
+            </a>
+            <a mat-list-item routerLink="/activity" class="nav-item">
+              <mat-icon class="nav-icon">insights</mat-icon>
+              <span class="nav-text">Activity</span>
+            </a>
 
           <h4 class="nav-section-title">ACCOUNT</h4>
-          <a mat-list-item routerLink="/logs" class="nav-item">
-            <mat-icon class="nav-icon">list_alt</mat-icon>
-            <span class="nav-text">Activity Logs</span>
-          </a>
-          <a mat-list-item routerLink="/profile" class="nav-item">
-            <mat-icon class="nav-icon">person</mat-icon>
-            <span class="nav-text">Profile</span>
-          </a>
+            <a mat-list-item routerLink="/logs" class="nav-item">
+              <mat-icon class="nav-icon">list_alt</mat-icon>
+              <span class="nav-text">Activity Logs</span>
+            </a>
+            <a mat-list-item routerLink="/rbac" class="nav-item">
+              <mat-icon class="nav-icon">security</mat-icon>
+              <span class="nav-text">Roles</span>
+            </a>
+            <a mat-list-item routerLink="/profile" class="nav-item">
+              <mat-icon class="nav-icon">person</mat-icon>
+              <span class="nav-text">Profile</span>
+            </a>
         </mat-nav-list>
       </mat-sidenav>
 
