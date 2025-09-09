@@ -282,71 +282,100 @@ export default function RBACConfigPage() {
   };
 
   return (
-    <div data-testid="rbac-config-page">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-800" data-testid="title-rbac-config">
-                RBAC Configuration
-              </h3>
-              <p className="text-slate-600 text-sm mt-1">
-                Manage permission templates, business types, and default roles for tenant onboarding
-              </p>
+    <div data-testid="rbac-config-page" className="aspire-page-container">
+      {/* Aspire Page Header */}
+      <div className="aspire-page-header">
+        <div className="aspire-header-content">
+          <div className="aspire-header-text">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="aspire-page-title" data-testid="title-rbac-config">
+                  RBAC Configuration
+                </h1>
+                <p className="aspire-page-subtitle">
+                  Manage permission templates, business types, and default roles for tenant
+                  onboarding
+                </p>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3" data-testid="tabs-rbac-config">
-              <TabsTrigger value="templates" data-testid="tab-templates">
+      <div className="aspire-content-wrapper">
+        <div className="aspire-main-card">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="aspire-tabs-container">
+            <TabsList className="aspire-tabs-list" data-testid="tabs-rbac-config">
+              <TabsTrigger
+                value="templates"
+                data-testid="tab-templates"
+                className="aspire-tab-trigger"
+              >
                 <Shield className="h-4 w-4 mr-2" />
                 Permission Templates
               </TabsTrigger>
-              <TabsTrigger value="business-types" data-testid="tab-business-types">
+              <TabsTrigger
+                value="business-types"
+                data-testid="tab-business-types"
+                className="aspire-tab-trigger"
+              >
                 <Building2 className="h-4 w-4 mr-2" />
                 Business Types
               </TabsTrigger>
-              <TabsTrigger value="default-roles" data-testid="tab-default-roles">
+              <TabsTrigger
+                value="default-roles"
+                data-testid="tab-default-roles"
+                className="aspire-tab-trigger"
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Default Roles
               </TabsTrigger>
             </TabsList>
 
             {/* Permission Templates Tab */}
-            <TabsContent value="templates" data-testid="card-permission-templates">
-              <div className="p-6 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                      <Shield className="h-5 w-5" />
-                      Permission Templates
-                    </h4>
-                    <p className="text-slate-600 text-sm mt-1">
-                      Define reusable permission sets for different business scenarios
-                    </p>
+            <TabsContent
+              value="templates"
+              data-testid="card-permission-templates"
+              className="aspire-tab-content"
+            >
+              <div className="aspire-section-header">
+                <div className="aspire-section-info">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Shield className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <h4 className="aspire-section-title">Permission Templates</h4>
+                      <p className="aspire-section-description">
+                        Define reusable permission sets for different business scenarios
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    onClick={() =>
-                      setEditingTemplate({
-                        id: "",
-                        name: "",
-                        description: "",
-                        permissions: [],
-                        roles: [],
-                        businessTypes: [],
-                        isDefault: false,
-                        isActive: true,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                      })
-                    }
-                    data-testid="button-add-template"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Template
-                  </Button>
                 </div>
+                <Button
+                  onClick={() =>
+                    setEditingTemplate({
+                      id: "",
+                      name: "",
+                      description: "",
+                      permissions: [],
+                      roles: [],
+                      businessTypes: [],
+                      isDefault: false,
+                      isActive: true,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    })
+                  }
+                  data-testid="button-add-template"
+                  className="aspire-primary-btn"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Template
+                </Button>
               </div>
               <div className="p-6">
                 <div className="grid gap-4">
@@ -361,30 +390,35 @@ export default function RBACConfigPage() {
                     (permissionTemplatesQuery.data as any[])?.map((template: any) => (
                       <Card
                         key={template.id}
-                        className="border border-slate-200 hover:border-slate-300 transition-colors"
+                        className="aspire-data-card"
                         data-testid={`template-card-${template.id}`}
                       >
                         <CardContent className="p-6">
                           <div className="flex items-start justify-between">
-                            <div className="space-y-3 flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3
-                                  className="font-semibold text-slate-900 text-lg"
-                                  data-testid={`template-name-${template.id}`}
-                                >
-                                  {template.name}
-                                </h3>
-                                {template.isDefault && (
-                                  <Badge
-                                    variant="secondary"
-                                    data-testid={`template-default-${template.id}`}
+                            <div className="space-y-4 flex-1">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                  <Shield className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                  <h3
+                                    className="aspire-card-title"
+                                    data-testid={`template-name-${template.id}`}
                                   >
-                                    Default
-                                  </Badge>
-                                )}
+                                    {template.name}
+                                  </h3>
+                                  {template.isDefault && (
+                                    <Badge
+                                      className="aspire-badge bg-green-100 text-green-700 text-xs px-2 py-1"
+                                      data-testid={`template-default-${template.id}`}
+                                    >
+                                      Default
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                               <p
-                                className="text-sm text-slate-600 leading-relaxed"
+                                className="aspire-card-description"
                                 data-testid={`template-description-${template.id}`}
                               >
                                 {template.description}
@@ -915,10 +949,7 @@ export default function RBACConfigPage() {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const perm = newTemplatePermission.trim();
-                        if (
-                          perm &&
-                          !editingTemplate.permissions.includes(perm)
-                        ) {
+                        if (perm && !editingTemplate.permissions.includes(perm)) {
                           setEditingTemplate({
                             ...editingTemplate,
                             permissions: [...editingTemplate.permissions, perm],
@@ -933,10 +964,7 @@ export default function RBACConfigPage() {
                     variant="secondary"
                     onClick={() => {
                       const perm = newTemplatePermission.trim();
-                      if (
-                        perm &&
-                        !editingTemplate.permissions.includes(perm)
-                      ) {
+                      if (perm && !editingTemplate.permissions.includes(perm)) {
                         setEditingTemplate({
                           ...editingTemplate,
                           permissions: [...editingTemplate.permissions, perm],
@@ -948,7 +976,8 @@ export default function RBACConfigPage() {
                     Add
                   </Button>
                 </div>
-                {editingTemplate.permissions.filter(p => !availablePermissions.includes(p)).length > 0 && (
+                {editingTemplate.permissions.filter(p => !availablePermissions.includes(p)).length >
+                  0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {editingTemplate.permissions
                       .filter(p => !availablePermissions.includes(p))
@@ -1328,10 +1357,7 @@ export default function RBACConfigPage() {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const perm = newRolePermission.trim();
-                        if (
-                          perm &&
-                          !editingRole.permissions.includes(perm)
-                        ) {
+                        if (perm && !editingRole.permissions.includes(perm)) {
                           setEditingRole({
                             ...editingRole,
                             permissions: [...editingRole.permissions, perm],
@@ -1346,10 +1372,7 @@ export default function RBACConfigPage() {
                     variant="secondary"
                     onClick={() => {
                       const perm = newRolePermission.trim();
-                      if (
-                        perm &&
-                        !editingRole.permissions.includes(perm)
-                      ) {
+                      if (perm && !editingRole.permissions.includes(perm)) {
                         setEditingRole({
                           ...editingRole,
                           permissions: [...editingRole.permissions, perm],
@@ -1361,7 +1384,8 @@ export default function RBACConfigPage() {
                     Add
                   </Button>
                 </div>
-                {editingRole.permissions.filter(p => !availablePermissions.includes(p)).length > 0 && (
+                {editingRole.permissions.filter(p => !availablePermissions.includes(p)).length >
+                  0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {editingRole.permissions
                       .filter(p => !availablePermissions.includes(p))
@@ -1500,14 +1524,16 @@ export default function RBACConfigPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Note about implementation */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Settings className="h-5 w-5 text-blue-600 mt-0.5" />
+      {/* Implementation Note */}
+      <Card className="aspire-info-card">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Settings className="h-5 w-5 text-blue-600" />
+            </div>
             <div>
-              <h4 className="font-medium text-blue-900">RBAC Configuration Implementation</h4>
-              <p className="text-sm text-blue-700 mt-1">
+              <h4 className="aspire-info-title">RBAC Configuration Implementation</h4>
+              <p className="aspire-info-description">
                 This RBAC configuration system allows Platform Admins to define templates, business
                 types, and default roles. When tenants are onboarded, they inherit these
                 configurations and can then customize their tenant-specific roles and permissions

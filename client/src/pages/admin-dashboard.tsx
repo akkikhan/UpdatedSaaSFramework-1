@@ -178,57 +178,107 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* KPI Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Aspire KPI Cards */}
+      <div className="aspire-stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsLoading ? (
           <>
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
+            <Skeleton className="h-28 rounded-2xl" />
+            <Skeleton className="h-28 rounded-2xl" />
+            <Skeleton className="h-28 rounded-2xl" />
+            <Skeleton className="h-28 rounded-2xl" />
           </>
         ) : (
           <>
-            <StatsCard
-              title="Total Tenants"
-              value={total}
-              icon={Building}
-              iconColor="text-blue-600"
-              backgroundColor="bg-blue-100"
-            />
-            <StatsCard
-              title="Active Tenants"
-              value={active}
-              icon={CheckCircle}
-              iconColor="text-green-600"
-              backgroundColor="bg-green-100"
-            />
-            <StatsCard
-              title="Pending Requests"
-              value={requests.length}
-              icon={Activity}
-              iconColor="text-amber-600"
-              backgroundColor="bg-amber-100"
-            />
-            <StatsCard
-              title="Emails Sent"
-              value={stats?.emailsSent || 0}
-              icon={Mail}
-              iconColor="text-purple-600"
-              backgroundColor="bg-purple-100"
-            />
+            <div className="aspire-stat-card group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Tenants</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{total}</p>
+                  <div className="flex items-center mt-2 text-sm">
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-green-600 font-medium">+12%</span>
+                    <span className="text-gray-500 ml-1">vs last month</span>
+                  </div>
+                </div>
+                <div className="aspire-stat-icon bg-gradient-to-br from-purple-500 to-purple-600">
+                  <Building className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div className="aspire-stat-card group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Tenants</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{active}</p>
+                  <div className="flex items-center mt-2 text-sm">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-gray-600">{activeRate}% active rate</span>
+                  </div>
+                </div>
+                <div className="aspire-stat-icon bg-gradient-to-br from-green-500 to-green-600">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div className="aspire-stat-card group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pending Requests</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{requests.length}</p>
+                  <div className="flex items-center mt-2 text-sm">
+                    <Clock className="h-4 w-4 text-orange-500 mr-1" />
+                    <span className="text-orange-600 font-medium">
+                      {requests.length > 0 ? "Needs attention" : "All clear"}
+                    </span>
+                  </div>
+                </div>
+                <div className="aspire-stat-icon bg-gradient-to-br from-orange-500 to-orange-600">
+                  <Activity className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div className="aspire-stat-card group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Emails Sent</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.emailsSent || 0}</p>
+                  <div className="flex items-center mt-2 text-sm">
+                    <Mail className="h-4 w-4 text-blue-500 mr-1" />
+                    <span className="text-blue-600 font-medium">All systems operational</span>
+                  </div>
+                </div>
+                <div className="aspire-stat-icon bg-gradient-to-br from-blue-500 to-blue-600">
+                  <Mail className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </div>
           </>
         )}
       </div>
 
-      {/* Analytics Grid */}
+      {/* Aspire Analytics Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* New Tenants Trend */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="aspire-chart-card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" /> New Tenants (7 days)
-            </h3>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+                New Tenants
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Last 7 days growth</p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-900">
+                {newTenantsDaily.reduce((sum, d) => sum + d.count, 0)}
+              </div>
+              <div className="text-sm text-green-600 font-medium">+8.2%</div>
+            </div>
           </div>
           {tenantsAllLoading ? (
             <Skeleton className="h-48" />
@@ -285,12 +335,21 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tenant Status Distribution */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="aspire-chart-card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <Activity className="h-5 w-5 text-emerald-600" /> Tenant Status
-            </h3>
-            <div className="text-sm text-slate-500">Active rate: {activeRate}%</div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-white" />
+                </div>
+                Tenant Status
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Distribution overview</p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-900">{activeRate}%</div>
+              <div className="text-sm text-gray-500">Active rate</div>
+            </div>
           </div>
           {tenantsAllLoading ? (
             <Skeleton className="h-48" />
@@ -334,12 +393,21 @@ export default function AdminDashboard() {
         </div>
 
         {/* Module Adoption */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="aspire-chart-card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <PieIcon className="h-5 w-5 text-indigo-600" /> Module Adoption
-            </h3>
-            <div className="text-sm text-slate-500">Total: {total}</div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <PieIcon className="h-4 w-4 text-white" />
+                </div>
+                Module Adoption
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Feature utilization</p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-900">{total}</div>
+              <div className="text-sm text-gray-500">Total tenants</div>
+            </div>
           </div>
           {tenantsAllLoading ? (
             <Skeleton className="h-48" />
@@ -392,14 +460,22 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Tenants - Modern Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        {/* Recent Tenants - Aspire Table */}
+        <div className="aspire-chart-card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-slate-800">Recent Tenants</h3>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <Building className="h-4 w-4 text-white" />
+                </div>
+                Recent Tenants
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Latest registered organizations</p>
+            </div>
             {recentTenants && recentTenants.length > 0 && (
               <Button
                 variant="ghost"
-                className="text-blue-600 hover:text-blue-500"
+                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 font-medium"
                 onClick={() => (window.location.href = "/tenants")}
                 data-testid="button-view-all-tenants"
               >

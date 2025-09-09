@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -73,6 +73,7 @@
   body {
     @apply bg-background text-foreground;
     font-family:
+      "DM Sans",
       "Inter",
       -apple-system,
       BlinkMacSystemFont,
@@ -167,18 +168,17 @@ body {
   overflow: hidden;
 }
 
+/* Aspire Admin Layout Styles */
 .admin-layout {
   height: 100vh;
   overflow: hidden;
 }
 
-.admin-content {
+.aspire-content {
   height: calc(100vh - 80px);
   overflow-y: auto;
   overflow-x: hidden;
 }
-
-/* removed legacy .tenant-portal container (admin-embedded portal) */
 
 .page-container {
   height: 100%;
@@ -192,20 +192,154 @@ body {
   overflow-x: hidden;
 }
 
-.stat-icon {
-  @apply w-12 h-12 rounded-lg flex items-center justify-center;
+/* Aspire Sidebar Styles */
+.aspire-sidebar {
+  position: relative;
+  background: #ffffff;
+  font-family: "DM Sans", "Inter", sans-serif;
 }
 
+.aspire-sidebar h1 {
+  font-family: "DM Sans", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #111827;
+  letter-spacing: -0.025em;
+}
+
+.aspire-sidebar-header {
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.aspire-sidebar-header p {
+  font-family: "DM Sans", "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #8b5cf6;
+}
+
+.aspire-sidebar-footer {
+  background: #ffffff;
+  border-top: 1px solid #f3f4f6;
+}
+
+.aspire-sidebar-footer .text-sm {
+  font-family: "DM Sans", "Inter", sans-serif;
+  font-weight: 600;
+}
+
+/* Aspire Navigation Styles */
+.aspire-nav-item {
+  @apply flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 text-gray-600 hover:bg-purple-50 hover:text-purple-700;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.aspire-nav-item.active {
+  @apply bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+}
+
+.aspire-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Aspire Header Styles - Exact Reference Match */
+.aspire-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.aspire-header h1 {
+  font-family: "DM Sans", "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  color: #111827;
+  letter-spacing: -0.025em;
+}
+
+.aspire-header input[type="text"] {
+  font-family: "DM Sans", "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 0.875rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.aspire-header input[type="text"]:focus {
+  background: #ffffff;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* Stat Icon Styles */
+.stat-icon {
+  @apply w-12 h-12 rounded-xl flex items-center justify-center;
+  background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Aspire Dashboard Components */
+.aspire-stats-grid {
+  margin-bottom: 2rem;
+}
+
+.aspire-stat-card {
+  @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.aspire-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.aspire-stat-icon {
+  @apply w-12 h-12 rounded-xl flex items-center justify-center shadow-lg;
+  transition: transform 0.3s ease;
+}
+
+.aspire-stat-card:hover .aspire-stat-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.aspire-chart-card {
+  @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.aspire-chart-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+
+/* Legacy nav-item for backward compatibility */
 .nav-item {
   @apply flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors duration-200;
 }
 
 .nav-item.active {
-  @apply bg-blue-50 text-blue-700;
+  @apply bg-purple-50 text-purple-700;
 }
 
 .nav-item:not(.active) {
-  @apply text-slate-600 hover:bg-slate-100;
+  @apply text-gray-600 hover:bg-gray-100;
 }
 
 .table-row {

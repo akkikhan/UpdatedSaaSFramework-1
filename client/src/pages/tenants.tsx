@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Copy,
   ExternalLink,
+  Building,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -32,14 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormLabel, FormMessage } from "@/components/ui/form";
 import { useTenants, useUpdateTenantStatus, useResendOnboardingEmail } from "@/hooks/use-tenants";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -499,58 +493,83 @@ export default function TenantsPage() {
   }
 
   return (
-    <div>
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-800">Tenant Management</h3>
-              <p className="text-slate-600 text-sm mt-1">Manage all your platform tenants</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="Search tenants..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2"
-                  data-testid="input-search-tenants"
-                  aria-label="Search tenants"
-                />
-                <Search className="absolute left-3 top-3 text-slate-400" size={16} />
-              </div>
-              <Button
-                onClick={() => setLocation("/tenants/wizard")}
-                className="btn-primary flex items-center space-x-2"
-                data-testid="button-add-tenant"
-              >
-                <Plus size={16} />
-                <span>Add Tenant</span>
-              </Button>
-            </div>
+    <div className="aspire-page-container space-y-8">
+      {/* Aspire Header */}
+      <div className="aspire-page-header flex items-start justify-between">
+        <div className="space-y-3">
+          <h1 className="aspire-page-title text-3xl font-bold text-gray-900">Tenant Management</h1>
+          <p className="aspire-page-subtitle text-gray-600 text-lg max-w-2xl">
+            Manage all your platform tenants, their configurations, and access permissions
+          </p>
+        </div>
+        <Button
+          onClick={() => setLocation("/tenants/wizard")}
+          className="aspire-primary-btn bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+          data-testid="button-add-tenant"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Add New Tenant
+        </Button>
+      </div>
+
+      {/* Search and Filters Section */}
+      <div className="aspire-search-section bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1 max-w-md">
+            <Search
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
+            <Input
+              type="text"
+              placeholder="Search tenants by name, email, or organization..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-12 pr-4 py-3 border-gray-200 rounded-xl font-medium text-gray-700 placeholder-gray-400 focus:border-purple-300 focus:ring-purple-100"
+              data-testid="input-search-tenants"
+              aria-label="Search tenants"
+            />
           </div>
         </div>
+      </div>
 
-        {/* Table */}
+      {/* Tenants Table Card */}
+      <div className="aspire-table-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Aspire Table */}
         <div className="overflow-x-auto">
           {isLoading ? (
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
+            <div className="p-8 space-y-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded-lg w-1/4"></div>
+                <div className="space-y-3">
+                  <div className="h-20 bg-gray-100 rounded-xl"></div>
+                  <div className="h-20 bg-gray-100 rounded-xl"></div>
+                  <div className="h-20 bg-gray-100 rounded-xl"></div>
+                </div>
+              </div>
             </div>
           ) : (
-            <Table>
+            <Table className="aspire-table">
               <TableHeader>
-                <TableRow>
-                  <TableHead className="px-6 py-3">Tenant</TableHead>
-                  <TableHead className="px-6 py-3">Status</TableHead>
-                  <TableHead className="px-6 py-3">Created</TableHead>
-                  <TableHead className="px-6 py-3">Modules</TableHead>
-                  <TableHead className="px-6 py-3">API Keys</TableHead>
-                  <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                <TableRow className="border-gray-100">
+                  <TableHead className="px-8 py-4 text-sm font-semibold text-gray-700 bg-gray-50">
+                    Organization
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-sm font-semibold text-gray-700 bg-gray-50">
+                    Status
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-sm font-semibold text-gray-700 bg-gray-50">
+                    Created
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-sm font-semibold text-gray-700 bg-gray-50">
+                    Modules
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-sm font-semibold text-gray-700 bg-gray-50">
+                    API Keys
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-sm font-semibold text-gray-700 bg-gray-50 text-right">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -558,76 +577,82 @@ export default function TenantsPage() {
                   filteredTenants.map(tenant => (
                     <TableRow
                       key={tenant.id}
-                      className="table-row"
+                      className="aspire-table-row border-gray-100 hover:bg-purple-50/30 transition-colors duration-200"
                       data-testid={`tenant-row-${tenant.orgId}`}
                     >
-                      <TableCell className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <span className="text-blue-600 font-semibold text-sm">
+                      <TableCell className="px-8 py-6">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
+                            <span className="text-white font-bold text-sm">
                               {(tenant.name || tenant.orgId || "--").substring(0, 2).toUpperCase()}
                             </span>
                           </div>
-                          <div>
-                            <p className="font-medium text-slate-800">{tenant.name}</p>
-                            <p className="text-sm text-slate-500">{tenant.orgId}</p>
-                            <p className="text-sm text-slate-500">{tenant.adminEmail}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 text-base">{tenant.name}</p>
+                            <p className="text-sm text-gray-500 font-medium">{tenant.orgId}</p>
+                            <p className="text-sm text-gray-400">{tenant.adminEmail}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <span
-                          className={`status-badge ${
+                      <TableCell className="px-6 py-6">
+                        <Badge
+                          className={`aspire-badge font-semibold px-3 py-1 rounded-full text-xs ${
                             tenant.status === "active"
-                              ? "status-active"
+                              ? "bg-green-100 text-green-700 border-green-200"
                               : tenant.status === "pending"
-                                ? "status-pending"
-                                : "status-suspended"
+                                ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                                : "bg-red-100 text-red-700 border-red-200"
                           }`}
                           data-testid={`status-${tenant.orgId}`}
                         >
                           {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
-                        </span>
+                        </Badge>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-sm text-slate-500">
-                        {tenant.createdAt ? format(new Date(tenant.createdAt), "MMM d, yyyy") : "—"}
+                      <TableCell className="px-6 py-6">
+                        <div className="text-sm font-medium text-gray-700">
+                          {tenant.createdAt
+                            ? format(new Date(tenant.createdAt), "MMM d, yyyy")
+                            : "—"}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {tenant.createdAt ? format(new Date(tenant.createdAt), "h:mm a") : ""}
+                        </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {(tenant.enabledModules || []).map(m => (
+                      <TableCell className="px-6 py-6">
+                        <div className="flex flex-wrap gap-1.5 max-w-48">
+                          {(tenant.enabledModules || []).slice(0, 3).map(m => (
                             <span
                               key={m}
-                              className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded"
+                              className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium border border-purple-200"
                             >
                               {m.toUpperCase()}
                             </span>
                           ))}
+                          {(tenant.enabledModules || []).length > 3 && (
+                            <span className="text-xs text-gray-500 px-2 py-1">
+                              +{(tenant.enabledModules || []).length - 3} more
+                            </span>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="text-xs text-slate-500">
-                            Auth:{" "}
-                            {tenant.authApiKey
-                              ? `${tenant.authApiKey.substring(0, 12)}...`
-                              : "not generated"}
+                      <TableCell className="px-6 py-6">
+                        <div className="space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-500 font-medium">Auth:</span>
+                            <span className="font-mono text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                              {tenant.authApiKey ? `${tenant.authApiKey.substring(0, 8)}...` : "—"}
+                            </span>
                           </div>
-                          <div className="text-xs text-slate-500">
-                            RBAC:{" "}
-                            {tenant.rbacApiKey
-                              ? `${tenant.rbacApiKey.substring(0, 12)}...`
-                              : "not generated"}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            Logging:{" "}
-                            {(tenant as any).loggingApiKey
-                              ? `${(tenant as any).loggingApiKey.substring(0, 12)}...`
-                              : "not generated"}
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-500 font-medium">RBAC:</span>
+                            <span className="font-mono text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                              {tenant.rbacApiKey ? `${tenant.rbacApiKey.substring(0, 8)}...` : "—"}
+                            </span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end space-x-2">
+                      <TableCell className="px-6 py-6 text-right">
+                        <div className="flex items-center justify-end space-x-1">
                           {(() => {
                             const providers = (tenant.moduleConfigs as any)?.auth?.providers || [];
                             const hasSSO = Array.isArray(providers)
@@ -642,93 +667,97 @@ export default function TenantsPage() {
                             const needsAttention = hasPending || (hasRBAC && !hasSSO);
                             return (
                               <Button
-                                variant={needsAttention ? "secondary" : "ghost"}
+                                className={`aspire-action-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${
+                                  needsAttention
+                                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200"
+                                    : "bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200"
+                                }`}
                                 size="sm"
                                 onClick={() => setLocation(`/tenants/${tenant.id}/attention`)}
                                 title="Manage tenant modules"
                                 data-testid={`button-manage-${tenant.orgId}`}
                               >
-                                {needsAttention ? "Needs Attention" : "Manage"}
+                                {needsAttention ? "⚠️ Attention" : "Manage"}
                               </Button>
                             );
                           })()}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-slate-400 hover:text-slate-600"
+                            className="aspire-icon-btn w-8 h-8 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                             title="Open Tenant Portal"
                             onClick={() =>
                               tenant.orgId && window.open(`/tenant/${tenant.orgId}/login`, "_blank")
                             }
                             data-testid={`button-portal-${tenant.orgId}`}
                           >
-                            <ExternalLink size={16} />
+                            <ExternalLink size={14} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-slate-400 hover:text-slate-600"
+                            className="aspire-icon-btn w-8 h-8 p-0 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
                             title="View Details"
                             onClick={() => handleViewTenant(tenant)}
                             data-testid={`button-view-${tenant.orgId}`}
                           >
-                            <Eye size={16} />
+                            <Eye size={14} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-slate-400 hover:text-slate-600"
+                            className="aspire-icon-btn w-8 h-8 p-0 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200"
                             title="Send Email"
                             onClick={() => handleResendEmail(tenant.id)}
                             disabled={resendEmail.isPending}
                             data-testid={`button-email-${tenant.orgId}`}
                           >
-                            <Mail size={16} />
+                            <Mail size={14} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-slate-400 hover:text-slate-600"
+                            className="aspire-icon-btn w-8 h-8 p-0 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
                             title="Edit"
                             onClick={() => handleEditTenant(tenant)}
                             data-testid={`button-edit-${tenant.orgId}`}
                           >
-                            <Edit size={16} />
+                            <Edit size={14} />
                           </Button>
                           {tenant.status === "active" ? (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-red-400 hover:text-red-600"
+                              className="aspire-icon-btn w-8 h-8 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"
                               title="Suspend"
                               onClick={() => handleStatusChange(tenant.id, "suspended")}
                               disabled={updateTenantStatus.isPending}
                               data-testid={`button-suspend-${tenant.orgId}`}
                             >
-                              <Pause size={16} />
+                              <Pause size={14} />
                             </Button>
                           ) : tenant.status === "pending" ? (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-red-400 hover:text-red-600"
+                              className="aspire-icon-btn w-8 h-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                               title="Delete"
                               onClick={() => handleDeleteTenant(tenant)}
                               data-testid={`button-delete-${tenant.orgId}`}
                             >
-                              <Trash size={16} />
+                              <Trash size={14} />
                             </Button>
                           ) : (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-green-400 hover:text-green-600"
+                              className="aspire-icon-btn w-8 h-8 p-0 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
                               title="Activate"
                               onClick={() => handleStatusChange(tenant.id, "active")}
                               disabled={updateTenantStatus.isPending}
                               data-testid={`button-activate-${tenant.orgId}`}
                             >
-                              <CheckCircle size={16} />
+                              <CheckCircle size={14} />
                             </Button>
                           )}
                         </div>
@@ -737,10 +766,31 @@ export default function TenantsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                      {searchQuery
-                        ? "No tenants found matching your search."
-                        : "No tenants found. Create your first tenant to get started."}
+                    <TableCell colSpan={6} className="text-center py-16">
+                      <div className="aspire-empty-state space-y-4">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+                          <Building className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {searchQuery ? "No tenants found" : "No tenants yet"}
+                          </h3>
+                          <p className="text-gray-500 max-w-sm mx-auto">
+                            {searchQuery
+                              ? "Try adjusting your search terms or clearing the search to see all tenants."
+                              : "Get started by creating your first tenant organization."}
+                          </p>
+                        </div>
+                        {!searchQuery && (
+                          <Button
+                            onClick={() => setLocation("/tenants/wizard")}
+                            className="aspire-primary-btn bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-2 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create First Tenant
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}

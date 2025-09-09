@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aspire Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        background: #f8fafc;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        grid-template-rows: 1fr;
+      }
+
+      /* Left Sidebar */
+      .sidebar {
+        background: linear-gradient(180deg, #4c1d95 0%, #3730a3 50%, #1e1b4b 100%);
+        color: white;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sidebar::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(139, 92, 246, 0.1) 0%,
+          rgba(79, 70, 229, 0.1) 100%
+        );
+        pointer-events: none;
+      }
+
+      .sidebar-header {
+        padding: 24px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        z-index: 1;
+      }
+
+      .logo {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        color: white;
+      }
+
+      .brand-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: white;
+      }
+
+      .nav-menu {
+        flex: 1;
+        padding: 20px 0;
+        position: relative;
+        z-index: 1;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        gap: 12px;
+        position: relative;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+
+      .nav-item.active {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-right: 3px solid #f59e0b;
+      }
+
+      .nav-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nav-section {
+        margin-top: 32px;
+      }
+
+      .nav-section-title {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0 20px 12px;
+      }
+
+      .user-section {
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        z-index: 1;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .user-details {
+        flex: 1;
+      }
+
+      .user-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 2px;
+      }
+
+      .user-email {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      /* Main Content Area */
+      .main-content {
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .top-header {
+        background: white;
+        padding: 16px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .page-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .search-container {
+        position: relative;
+      }
+
+      .search-input {
+        width: 300px;
+        padding: 8px 16px 8px 40px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #3730a3;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(55, 48, 163, 0.1);
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .date-selector {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .notification-badge {
+        position: relative;
+        cursor: pointer;
+      }
+
+      .notification-dot {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 8px;
+        height: 8px;
+        background: #ef4444;
+        border-radius: 50%;
+        border: 2px solid white;
+      }
+
+      /* Dashboard Content */
+      .dashboard-content {
+        flex: 1;
+        padding: 32px;
+        overflow-y: auto;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+
+      .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+
+      .stat-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+      }
+
+      .stat-card.primary::before {
+        background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+      }
+
+      .stat-card.warning::before {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      }
+
+      .stat-card.success::before {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .stat-card.danger::before {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .stat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: white;
+      }
+
+      .stat-icon.primary {
+        background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+      }
+
+      .stat-icon.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      }
+
+      .stat-icon.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .stat-icon.danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .stat-title {
+        font-size: 14px;
+        color: #64748b;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 8px;
+      }
+
+      .stat-change {
+        font-size: 12px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .stat-change.positive {
+        color: #10b981;
+      }
+
+      .stat-change.negative {
+        color: #ef4444;
+      }
+
+      /* Chart and Map Section */
+      .dashboard-row {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+
+      .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+      }
+
+      .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .chart-placeholder {
+        height: 300px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        font-size: 14px;
+        border: 2px dashed #e2e8f0;
+      }
+
+      .device-stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        text-align: center;
+      }
+
+      .device-chart {
+        width: 200px;
+        height: 200px;
+        margin: 20px auto;
+        border-radius: 50%;
+        background: conic-gradient(
+          #8b5cf6 0deg 140deg,
+          #f59e0b 140deg 230deg,
+          #ef4444 230deg 280deg,
+          #a855f7 280deg 360deg
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .device-chart::before {
+        content: "";
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+      }
+
+      .device-total {
+        position: relative;
+        z-index: 1;
+        font-size: 32px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .device-breakdown {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 24px;
+      }
+
+      .device-item {
+        text-align: center;
+      }
+
+      .device-icon {
+        width: 24px;
+        height: 24px;
+        margin: 0 auto 8px;
+        opacity: 0.7;
+      }
+
+      .device-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 4px;
+      }
+
+      .device-percentage {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      /* Regional Stats Table */
+      .regional-stats {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        overflow: hidden;
+      }
+
+      .regional-header {
+        padding: 24px 24px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .regional-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .view-detail-btn {
+        color: #3730a3;
+        font-size: 14px;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .regional-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .regional-table th,
+      .regional-table td {
+        padding: 16px 24px;
+        text-align: left;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .regional-table th {
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: #f8fafc;
+      }
+
+      .regional-table td {
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      .region-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .region-change {
+        font-size: 12px;
+        font-weight: 500;
+        margin-left: 8px;
+      }
+
+      .region-change.positive {
+        color: #10b981;
+      }
+
+      .region-change.negative {
+        color: #ef4444;
+      }
+
+      /* Additional Utility Classes */
+      .course-badge {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+      }
+
+      .settings-icon {
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+      }
+
+      .header-user-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .header-user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        color: white;
+      }
+
+      .header-user-name {
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      .header-dropdown-arrow {
+        color: #64748b;
+      }
+
+      .chart-settings {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      .map-description {
+        margin-top: 8px;
+        display: block;
+      }
+
+      .region-flag-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .transactions-section {
+        margin-top: 32px;
+      }
+
+      .transactions-placeholder {
+        padding: 48px;
+        text-align: center;
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      .transactions-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+      }
+
+      .transactions-subtitle {
+        font-size: 12px;
+        margin-top: 8px;
+        opacity: 0.7;
+      }
+
+      .help-settings-spacing {
+        margin-bottom: 16px;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        body {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: -250px;
+          height: 100vh;
+          z-index: 1000;
+          transition: left 0.3s ease;
+        }
+
+        .sidebar.open {
+          left: 0;
+        }
+
+        .dashboard-row {
+          grid-template-columns: 1fr;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .search-input {
+          width: 200px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .dashboard-content {
+          padding: 16px;
+        }
+
+        .top-header {
+          padding: 16px;
+          flex-direction: column;
+          gap: 16px;
+          align-items: stretch;
+        }
+
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .stat-value {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">A</div>
+        <div class="brand-name">aspire</div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-item">
+          <div class="nav-icon">📱</div>
+          Main menu
+        </a>
+
+        <a href="#" class="nav-item active">
+          <div class="nav-icon">📊</div>
+          Dashboard
+        </a>
+
+        <a href="#" class="nav-item">
+          <div class="nav-icon">📚</div>
+          Courses
+          <span class="course-badge">12</span>
+        </a>
+
+        <a href="#" class="nav-item">
+          <div class="nav-icon">📈</div>
+          Progress
+        </a>
+
+        <a href="#" class="nav-item">
+          <div class="nav-icon">📅</div>
+          Schedule
+        </a>
+
+        <a href="#" class="nav-item">
+          <div class="nav-icon">💬</div>
+          Messages
+        </a>
+
+        <a href="#" class="nav-item">
+          <div class="nav-icon">📋</div>
+          Activity
+        </a>
+
+        <a href="#" class="nav-item">
+          <div class="nav-icon">👥</div>
+          Team
+        </a>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Other</div>
+          <a href="#" class="nav-item">
+            <div class="nav-icon">🧩</div>
+            Modules
+          </a>
+
+          <a href="#" class="nav-item">
+            <div class="nav-icon">💰</div>
+            Sales
+          </a>
+
+          <a href="#" class="nav-item">
+            <div class="nav-icon">🎓</div>
+            Students
+          </a>
+        </div>
+      </nav>
+
+      <div class="user-section">
+        <div class="nav-section-title help-settings-spacing">Help center</div>
+        <div class="nav-section-title help-settings-spacing">Settings</div>
+
+        <div class="user-info">
+          <div class="user-avatar">C</div>
+          <div class="user-details">
+            <div class="user-name">Chad</div>
+            <div class="user-email">chad@gmail.com</div>
+          </div>
+          <div class="settings-icon">⚙️</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Top Header -->
+      <div class="top-header">
+        <div class="header-left">
+          <h1 class="page-title">Overview</h1>
+          <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search your course" />
+            <div class="search-icon">🔍</div>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <div class="date-selector">
+            <span>Monday, 6th March</span>
+            <span>📅</span>
+          </div>
+
+          <div class="notification-badge">
+            <span>🔔</span>
+            <div class="notification-dot"></div>
+          </div>
+
+          <div class="header-user-container">
+            <div class="header-user-avatar">C</div>
+            <span class="header-user-name">Chad</span>
+            <span class="header-dropdown-arrow">⌄</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div class="dashboard-content">
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+          <div class="stat-card primary">
+            <div class="stat-header">
+              <div class="stat-icon primary">👥</div>
+            </div>
+            <div class="stat-title">Total students</div>
+            <div class="stat-value">4 289</div>
+            <div class="stat-change positive">↗ +8.65%</div>
+          </div>
+
+          <div class="stat-card warning">
+            <div class="stat-header">
+              <div class="stat-icon warning">👁</div>
+            </div>
+            <div class="stat-title">Total visits</div>
+            <div class="stat-value">134k</div>
+            <div class="stat-change positive">↗ +2.36%</div>
+          </div>
+
+          <div class="stat-card danger">
+            <div class="stat-header">
+              <div class="stat-icon danger">⚡</div>
+            </div>
+            <div class="stat-title">Realtime users</div>
+            <div class="stat-value">562</div>
+            <div class="stat-change positive">↗ +2.38%</div>
+          </div>
+
+          <div class="stat-card success">
+            <div class="stat-header">
+              <div class="stat-icon success">⏱</div>
+            </div>
+            <div class="stat-title">Visits duration</div>
+            <div class="stat-value">6h 8m</div>
+            <div class="stat-change positive">↗ +9.39%</div>
+          </div>
+        </div>
+
+        <!-- Charts and Maps Row -->
+        <div class="dashboard-row">
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3 class="chart-title">Visit by device</h3>
+              <div class="chart-settings">
+                <span>⚙️</span>
+              </div>
+            </div>
+            <div class="chart-placeholder">
+              🗺️ Interactive World Map<br />
+              <small class="map-description"
+                >Global visitor distribution with location markers</small
+              >
+            </div>
+          </div>
+
+          <div class="device-stats-card">
+            <div class="chart-header">
+              <h3 class="chart-title">Visit by device</h3>
+            </div>
+            <div class="device-chart">
+              <div class="device-total">9 234</div>
+            </div>
+            <div class="device-breakdown">
+              <div class="device-item">
+                <div class="device-icon">🖥️</div>
+                <div class="device-label">Desktop</div>
+                <div class="device-percentage">64.2%</div>
+              </div>
+              <div class="device-item">
+                <div class="device-icon">📱</div>
+                <div class="device-label">Mobile</div>
+                <div class="device-percentage">26.3%</div>
+              </div>
+              <div class="device-item">
+                <div class="device-icon">💻</div>
+                <div class="device-label">Tablet</div>
+                <div class="device-percentage">9.5%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Regional Statistics -->
+        <div class="regional-stats">
+          <div class="regional-header">
+            <h3 class="regional-title">Top region</h3>
+            <a href="#" class="view-detail-btn">View detail</a>
+          </div>
+          <table class="regional-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Order ID</th>
+                <th>Category</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="region-flag-container">
+                    <span>🇺🇸</span>
+                    <strong>USA</strong>
+                  </div>
+                </td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>
+                  <span class="region-value">2 251</span>
+                  <span class="region-change positive">↗ +12.3%</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="region-flag-container">
+                    <span>🇯🇵</span>
+                    <strong>Japan</strong>
+                  </div>
+                </td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>
+                  <span class="region-value">2 210</span>
+                  <span class="region-change positive">↗ +1.0%</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="region-flag-container">
+                    <span>🇬🇧</span>
+                    <strong>UK</strong>
+                  </div>
+                </td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>
+                  <span class="region-value">1 182</span>
+                  <span class="region-change positive">↗ +8.21%</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="region-flag-container">
+                    <span>🇩🇪</span>
+                    <strong>Germany</strong>
+                  </div>
+                </td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>
+                  <span class="region-value">839</span>
+                  <span class="region-change positive">↗ +6.32%</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Recent Transactions Section -->
+        <div class="transactions-section">
+          <div class="regional-stats">
+            <div class="regional-header">
+              <h3 class="regional-title">Recent transactions</h3>
+              <div class="chart-settings">
+                <span>⚙️</span>
+              </div>
+            </div>
+            <div class="transactions-placeholder">
+              <div class="transactions-icon">📊</div>
+              <div>Recent transaction data will be displayed here</div>
+              <div class="transactions-subtitle">
+                Connect your payment gateway to view transaction history
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Mobile menu toggle functionality
+      function toggleSidebar() {
+        const sidebar = document.querySelector(".sidebar");
+        sidebar.classList.toggle("open");
+      }
+
+      // Add mobile menu button if needed
+      if (window.innerWidth <= 1024) {
+        const header = document.querySelector(".top-header .header-left");
+        const menuButton = document.createElement("button");
+        menuButton.innerHTML = "☰";
+        menuButton.style.cssText =
+          "background: none; border: none; font-size: 20px; cursor: pointer; margin-right: 16px;";
+        menuButton.onclick = toggleSidebar;
+        header.insertBefore(menuButton, header.firstChild);
+      }
+
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener("click", e => {
+        const sidebar = document.querySelector(".sidebar");
+        const isClickInsideSidebar = sidebar.contains(e.target);
+        const isMenuButton = e.target.innerHTML === "☰";
+
+        if (!isClickInsideSidebar && !isMenuButton && window.innerWidth <= 1024) {
+          sidebar.classList.remove("open");
+        }
+      });
+
+      // Smooth scrolling for navigation
+      document.querySelectorAll('.nav-item[href^="#"]').forEach(link => {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          // Add smooth scrolling logic here if needed
+        });
+      });
+
+      // Add active state management
+      document.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", () => {
+          document.querySelectorAll(".nav-item").forEach(nav => nav.classList.remove("active"));
+          item.classList.add("active");
+        });
+      });
+    </script>
+  </body>
+</html>
