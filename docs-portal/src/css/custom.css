@@ -24,3 +24,23 @@
 .navbar__link--active {
   color: var(--ifm-color-primary-lightest);
 }
+
+/* Improve visual appearance of the docs landing hero */
+.hero {
+  background: linear-gradient(
+    135deg,
+    var(--ifm-color-primary) 0%,
+    var(--ifm-color-primary-dark) 100%
+  );
+  color: #fff;
+}
+
+/* Footer styling to match navbar */
+.footer {
+  background-color: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.footer__link-item:hover {
+  color: var(--ifm-color-primary-lightest);
+}
