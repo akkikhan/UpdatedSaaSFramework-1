@@ -1,4 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
 :root {
   --ifm-color-primary: #1976d2;
+  --ifm-color-primary-dark: #1565c0;
+  --ifm-color-primary-darker: #0d47a1;
+  --ifm-color-primary-darkest: #0b3c91;
+  --ifm-color-primary-light: #2196f3;
+  --ifm-color-primary-lighter: #64b5f6;
+  --ifm-color-primary-lightest: #bbdefb;
   --ifm-font-family-base: 'Roboto', sans-serif;
+}
+
+.navbar {
+  background-color: var(--ifm-color-primary);
+}
+
+.navbar__title,
+.navbar__link {
+  color: #fff;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  color: var(--ifm-color-primary-lightest);
 }

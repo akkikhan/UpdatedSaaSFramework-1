@@ -17,12 +17,17 @@ export default {
   },
   themeConfig: {
     navbar: {
+      style: 'primary',
       title: 'SaaS Docs',
       items: [
         { type: 'docSidebar', sidebarId: 'defaultSidebar', position: 'left', label: 'Docs' },
         { type: 'docsVersionDropdown', position: 'right' },
         { href: 'https://github.com/', label: 'GitHub', position: 'right' }
       ],
+    },
+    colorMode: {
+      defaultMode: 'light',
+      disableSwitch: true,
     },
     prism: {
       theme: prismThemes.github,
