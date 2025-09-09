@@ -26,6 +26,19 @@ export default function TenantAttentionPage() {
     data: Array<{ id: string; tenantId: string; details?: { moduleId?: string; action?: string } }>;
   };
 
+  // All hooks must be called before any early returns
+  const { data: ssoProviders = [] } = useSsoProviders();
+  const { data: permissionTemplates = [] } = usePermissionTemplates();
+  const queryClient = useQueryClient();
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => api.approveModuleRequest(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/module-requests"] }),
+  });
+  const dismissMutation = useMutation({
+    mutationFn: (id: string) => api.dismissModuleRequest(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/module-requests"] }),
+  });
+
   if (isLoading) {
     return <div className="p-4">Loading tenant data...</div>;
   }
@@ -36,26 +49,13 @@ export default function TenantAttentionPage() {
 
   const tenantRequests = pendingRequests.filter(r => r.tenantId === tenant.id);
 
-  const { data: ssoProviders = [] } = useSsoProviders();
   const authProviders = (tenant.moduleConfigs as any)?.auth?.providers || [];
   const providerStatus = (type: string) =>
     authProviders.some((p: any) => p.type === type) ? "Active" : "Missing";
   const rbacEnabled =
     Array.isArray(tenant.enabledModules) && tenant.enabledModules.includes("rbac");
-
-  const { data: permissionTemplates = [] } = usePermissionTemplates();
   const templateId = (tenant.moduleConfigs as any)?.rbac?.permissionTemplate;
   const currentTemplate = permissionTemplates.find((t: any) => t.id === templateId);
-
-  const queryClient = useQueryClient();
-  const approveMutation = useMutation({
-    mutationFn: (id: string) => api.approveModuleRequest(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/module-requests"] }),
-  });
-  const dismissMutation = useMutation({
-    mutationFn: (id: string) => api.dismissModuleRequest(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/module-requests"] }),
-  });
 
   const approveAll = async () => {
     await Promise.all(tenantRequests.map(r => api.approveModuleRequest(r.id)));
@@ -176,7 +176,7 @@ export default function TenantAttentionPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="space-y-1.5">
-              {ssoProviders.map(p => (
+              {ssoProviders.map((p: any) => (
                 <div key={p.id} className="flex items-center justify-between text-sm">
                   <span>{p.label}</span>
                   <Badge variant={providerStatus(p.id) === "Active" ? "default" : "destructive"}>
