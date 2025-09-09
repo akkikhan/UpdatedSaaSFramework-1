@@ -983,6 +983,89 @@
         transform: translateX(24px);
       }
 
+      /* Alert and Info Messages */
+      .alert-info {
+        margin: 0;
+        padding: 12px;
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 6px;
+        color: #1e40af;
+      }
+
+      .module-disabled-info {
+        color: #6b7280;
+        font-style: italic;
+        padding: 12px;
+      }
+
+      .api-usage-info {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 8px;
+      }
+
+      .security-notice {
+        margin-top: 24px;
+        padding: 16px;
+        background: #fffbeb;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+      }
+
+      .security-notice-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .security-notice-icon {
+        font-size: 18px;
+      }
+
+      .security-notice-title {
+        color: #92400e;
+        font-weight: bold;
+      }
+
+      .security-notice-content {
+        color: #92400e;
+        font-size: 14px;
+      }
+
+      /* Section Card Styles */
+      .section-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        margin-bottom: 24px;
+      }
+
+      .card-header {
+        padding: 24px 32px 0 32px;
+        border-bottom: 1px solid #f1f5f9;
+        margin-bottom: 0;
+      }
+
+      .card-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 8px 0;
+      }
+
+      .card-subtitle {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0 0 24px 0;
+        line-height: 1.5;
+      }
+
+      .card-content {
+        padding: 0 32px 32px 32px;
+      }
+
       /* Chart and Map Section */
       .dashboard-row {
         display: grid;
@@ -1555,271 +1638,641 @@
 
       <!-- Dashboard Content -->
       <div class="dashboard-content">
-        <!-- Statistics Cards -->
-        <div class="stats-grid">
-          <div class="stat-card primary">
-            <div class="stat-header">
-              <div class="stat-icon primary">👥</div>
-              <div class="stat-actions">
-                <span class="stat-badge active">Live</span>
+        <!-- Overview Tab Content (default active) -->
+        <div id="overview" class="tab-content active">
+          <!-- Statistics Cards -->
+          <div class="stats-grid">
+            <div class="stat-card primary">
+              <div class="stat-header">
+                <div class="stat-icon primary">👥</div>
+                <div class="stat-actions">
+                  <span class="stat-badge active">Live</span>
+                </div>
+              </div>
+              <div class="stat-title">Active Users</div>
+              <div class="stat-value">2,847</div>
+              <div class="stat-change positive">
+                <span class="change-icon">↗</span>
+                <span class="change-value">+12.3%</span>
+                <span class="change-period">vs last month</span>
               </div>
             </div>
-            <div class="stat-title">Active Users</div>
-            <div class="stat-value">2,847</div>
-            <div class="stat-change positive">
-              <span class="change-icon">↗</span>
-              <span class="change-value">+12.3%</span>
-              <span class="change-period">vs last month</span>
+
+            <div class="stat-card warning">
+              <div class="stat-header">
+                <div class="stat-icon warning">📊</div>
+                <div class="stat-actions">
+                  <span class="stat-badge trending">Trending</span>
+                </div>
+              </div>
+              <div class="stat-title">API Requests</div>
+              <div class="stat-value">847.2k</div>
+              <div class="stat-change positive">
+                <span class="change-icon">↗</span>
+                <span class="change-value">+28.4%</span>
+                <span class="change-period">vs last month</span>
+              </div>
+            </div>
+
+            <div class="stat-card success">
+              <div class="stat-header">
+                <div class="stat-icon success">💰</div>
+                <div class="stat-actions">
+                  <span class="stat-badge success">Paid</span>
+                </div>
+              </div>
+              <div class="stat-title">Monthly Revenue</div>
+              <div class="stat-value">$24,589</div>
+              <div class="stat-change positive">
+                <span class="change-icon">↗</span>
+                <span class="change-value">+15.7%</span>
+                <span class="change-period">vs last month</span>
+              </div>
+            </div>
+
+            <div class="stat-card info">
+              <div class="stat-header">
+                <div class="stat-icon info">⚡</div>
+                <div class="stat-actions">
+                  <span class="stat-badge excellent">99.9%</span>
+                </div>
+              </div>
+              <div class="stat-title">System Uptime</div>
+              <div class="stat-value">99.97%</div>
+              <div class="stat-change neutral">
+                <span class="change-icon">━</span>
+                <span class="change-value">+0.02%</span>
+                <span class="change-period">vs last month</span>
+              </div>
             </div>
           </div>
 
-          <div class="stat-card warning">
-            <div class="stat-header">
-              <div class="stat-icon warning">📊</div>
-              <div class="stat-actions">
-                <span class="stat-badge trending">Trending</span>
+          <!-- Secondary Metrics Row -->
+          <div class="secondary-metrics">
+            <div class="metric-row">
+              <div class="mini-card">
+                <div class="mini-card-icon">🔑</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">API Keys</div>
+                  <div class="mini-card-value">12</div>
+                  <div class="mini-card-status active">Active</div>
+                </div>
               </div>
-            </div>
-            <div class="stat-title">API Requests</div>
-            <div class="stat-value">847.2k</div>
-            <div class="stat-change positive">
-              <span class="change-icon">↗</span>
-              <span class="change-value">+28.4%</span>
-              <span class="change-period">vs last month</span>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">🔒</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Security Events</div>
+                  <div class="mini-card-value">3</div>
+                  <div class="mini-card-status warning">This Week</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">📱</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Mobile Sessions</div>
+                  <div class="mini-card-value">67%</div>
+                  <div class="mini-card-status success">+5.2%</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">⚡</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Avg Response</div>
+                  <div class="mini-card-value">142ms</div>
+                  <div class="mini-card-status excellent">Excellent</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">💾</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Storage Used</div>
+                  <div class="mini-card-value">2.1GB</div>
+                  <div class="mini-card-status neutral">of 10GB</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">🌍</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Global Regions</div>
+                  <div class="mini-card-value">8</div>
+                  <div class="mini-card-status active">Deployed</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="stat-card success">
-            <div class="stat-header">
-              <div class="stat-icon success">💰</div>
-              <div class="stat-actions">
-                <span class="stat-badge success">Paid</span>
+          <!-- Charts and Maps Row -->
+          <div class="dashboard-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">Visit by device</h3>
+                <div class="chart-settings">
+                  <span>⚙️</span>
+                </div>
+              </div>
+              <div class="chart-placeholder">
+                🗺️ Interactive World Map<br />
+                <small class="map-description"
+                  >Global visitor distribution with location markers</small
+                >
               </div>
             </div>
-            <div class="stat-title">Monthly Revenue</div>
-            <div class="stat-value">$24,589</div>
-            <div class="stat-change positive">
-              <span class="change-icon">↗</span>
-              <span class="change-value">+15.7%</span>
-              <span class="change-period">vs last month</span>
+
+            <div class="device-stats-card">
+              <div class="chart-header">
+                <h3 class="chart-title">Visit by device</h3>
+              </div>
+              <div class="device-chart">
+                <div class="device-total">9 234</div>
+              </div>
+              <div class="device-breakdown">
+                <div class="device-item">
+                  <div class="device-icon">🖥️</div>
+                  <div class="device-label">Desktop</div>
+                  <div class="device-percentage">64.2%</div>
+                </div>
+                <div class="device-item">
+                  <div class="device-icon">📱</div>
+                  <div class="device-label">Mobile</div>
+                  <div class="device-percentage">26.3%</div>
+                </div>
+                <div class="device-item">
+                  <div class="device-icon">💻</div>
+                  <div class="device-label">Tablet</div>
+                  <div class="device-percentage">9.5%</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="stat-card info">
-            <div class="stat-header">
-              <div class="stat-icon info">⚡</div>
-              <div class="stat-actions">
-                <span class="stat-badge excellent">99.9%</span>
-              </div>
-            </div>
-            <div class="stat-title">System Uptime</div>
-            <div class="stat-value">99.97%</div>
-            <div class="stat-change neutral">
-              <span class="change-icon">━</span>
-              <span class="change-value">+0.02%</span>
-              <span class="change-period">vs last month</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Secondary Metrics Row -->
-        <div class="secondary-metrics">
-          <div class="metric-row">
-            <div class="mini-card">
-              <div class="mini-card-icon">🔑</div>
-              <div class="mini-card-content">
-                <div class="mini-card-title">API Keys</div>
-                <div class="mini-card-value">12</div>
-                <div class="mini-card-status active">Active</div>
-              </div>
-            </div>
-
-            <div class="mini-card">
-              <div class="mini-card-icon">🔒</div>
-              <div class="mini-card-content">
-                <div class="mini-card-title">Security Events</div>
-                <div class="mini-card-value">3</div>
-                <div class="mini-card-status warning">This Week</div>
-              </div>
-            </div>
-
-            <div class="mini-card">
-              <div class="mini-card-icon">📱</div>
-              <div class="mini-card-content">
-                <div class="mini-card-title">Mobile Sessions</div>
-                <div class="mini-card-value">67%</div>
-                <div class="mini-card-status success">+5.2%</div>
-              </div>
-            </div>
-
-            <div class="mini-card">
-              <div class="mini-card-icon">⚡</div>
-              <div class="mini-card-content">
-                <div class="mini-card-title">Avg Response</div>
-                <div class="mini-card-value">142ms</div>
-                <div class="mini-card-status excellent">Excellent</div>
-              </div>
-            </div>
-
-            <div class="mini-card">
-              <div class="mini-card-icon">💾</div>
-              <div class="mini-card-content">
-                <div class="mini-card-title">Storage Used</div>
-                <div class="mini-card-value">2.1GB</div>
-                <div class="mini-card-status neutral">of 10GB</div>
-              </div>
-            </div>
-
-            <div class="mini-card">
-              <div class="mini-card-icon">🌍</div>
-              <div class="mini-card-content">
-                <div class="mini-card-title">Global Regions</div>
-                <div class="mini-card-value">8</div>
-                <div class="mini-card-status active">Deployed</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Charts and Maps Row -->
-        <div class="dashboard-row">
-          <div class="chart-card">
-            <div class="chart-header">
-              <h3 class="chart-title">Visit by device</h3>
-              <div class="chart-settings">
-                <span>⚙️</span>
-              </div>
-            </div>
-            <div class="chart-placeholder">
-              🗺️ Interactive World Map<br />
-              <small class="map-description"
-                >Global visitor distribution with location markers</small
-              >
-            </div>
-          </div>
-
-          <div class="device-stats-card">
-            <div class="chart-header">
-              <h3 class="chart-title">Visit by device</h3>
-            </div>
-            <div class="device-chart">
-              <div class="device-total">9 234</div>
-            </div>
-            <div class="device-breakdown">
-              <div class="device-item">
-                <div class="device-icon">🖥️</div>
-                <div class="device-label">Desktop</div>
-                <div class="device-percentage">64.2%</div>
-              </div>
-              <div class="device-item">
-                <div class="device-icon">📱</div>
-                <div class="device-label">Mobile</div>
-                <div class="device-percentage">26.3%</div>
-              </div>
-              <div class="device-item">
-                <div class="device-icon">💻</div>
-                <div class="device-label">Tablet</div>
-                <div class="device-percentage">9.5%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Regional Statistics -->
-        <div class="regional-stats">
-          <div class="regional-header">
-            <h3 class="regional-title">Top region</h3>
-            <a href="#" class="view-detail-btn">View detail</a>
-          </div>
-          <table class="regional-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Date</th>
-                <th>Order ID</th>
-                <th>Category</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div class="region-flag-container">
-                    <span>🇺🇸</span>
-                    <strong>USA</strong>
-                  </div>
-                </td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>
-                  <span class="region-value">2 251</span>
-                  <span class="region-change positive">↗ +12.3%</span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="region-flag-container">
-                    <span>🇯🇵</span>
-                    <strong>Japan</strong>
-                  </div>
-                </td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>
-                  <span class="region-value">2 210</span>
-                  <span class="region-change positive">↗ +1.0%</span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="region-flag-container">
-                    <span>🇬🇧</span>
-                    <strong>UK</strong>
-                  </div>
-                </td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>
-                  <span class="region-value">1 182</span>
-                  <span class="region-change positive">↗ +8.21%</span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="region-flag-container">
-                    <span>🇩🇪</span>
-                    <strong>Germany</strong>
-                  </div>
-                </td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>
-                  <span class="region-value">839</span>
-                  <span class="region-change positive">↗ +6.32%</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Recent Transactions Section -->
-        <div class="transactions-section">
+          <!-- Regional Statistics -->
           <div class="regional-stats">
             <div class="regional-header">
-              <h3 class="regional-title">Recent transactions</h3>
-              <div class="chart-settings">
-                <span>⚙️</span>
+              <h3 class="regional-title">Top region</h3>
+              <a href="#" class="view-detail-btn">View detail</a>
+            </div>
+            <table class="regional-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Date</th>
+                  <th>Order ID</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇺🇸</span>
+                      <strong>USA</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">2 251</span>
+                    <span class="region-change positive">↗ +12.3%</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇯🇵</span>
+                      <strong>Japan</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">2 210</span>
+                    <span class="region-change positive">↗ +1.0%</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇬🇧</span>
+                      <strong>UK</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">1 182</span>
+                    <span class="region-change positive">↗ +8.21%</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇩🇪</span>
+                      <strong>Germany</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">839</span>
+                    <span class="region-change positive">↗ +6.32%</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Recent Transactions Section -->
+          <div class="transactions-section">
+            <div class="regional-stats">
+              <div class="regional-header">
+                <h3 class="regional-title">Recent transactions</h3>
+                <div class="chart-settings">
+                  <span>⚙️</span>
+                </div>
+              </div>
+              <div class="transactions-placeholder">
+                <div class="transactions-icon">📊</div>
+                <div>Recent transaction data will be displayed here</div>
+                <div class="transactions-subtitle">
+                  Connect your payment gateway to view transaction history
+                </div>
               </div>
             </div>
-            <div class="transactions-placeholder">
-              <div class="transactions-icon">📊</div>
-              <div>Recent transaction data will be displayed here</div>
-              <div class="transactions-subtitle">
-                Connect your payment gateway to view transaction history
+          </div>
+        </div>
+        <!-- End Overview Tab -->
+
+        <!-- Authentication Tab Content -->
+        <div id="authentication" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">Authentication Providers</h2>
+              <p class="card-subtitle">Configure your authentication methods and providers</p>
+            </div>
+            <div class="card-content">
+              <div class="auth-section">
+                <h3>OAuth Providers</h3>
+
+                <div class="auth-provider enabled">
+                  <div class="provider-info">
+                    <div class="provider-icon">🏢</div>
+                    <div class="provider-details">
+                      <h4>Azure Active Directory</h4>
+                      <p>Microsoft Azure AD OAuth integration</p>
+                    </div>
+                  </div>
+                  <div class="toggle-switch enabled"></div>
+                </div>
+
+                <div class="auth-provider">
+                  <div class="provider-info">
+                    <div class="provider-icon">🔒</div>
+                    <div class="provider-details">
+                      <h4>Auth0</h4>
+                      <p>Auth0 universal authentication platform</p>
+                    </div>
+                  </div>
+                  <div class="toggle-switch"></div>
+                </div>
+
+                <div class="auth-provider">
+                  <div class="provider-info">
+                    <div class="provider-icon">🌐</div>
+                    <div class="provider-details">
+                      <h4>Google OAuth</h4>
+                      <p>Google account authentication</p>
+                    </div>
+                  </div>
+                  <div class="toggle-switch"></div>
+                </div>
+              </div>
+
+              <div class="auth-section">
+                <h3>SAML Configuration</h3>
+                <div class="config-row">
+                  <span class="config-key">SAML Endpoint</span>
+                  <span class="config-value">https://your-domain.com/saml</span>
+                </div>
+                <div class="config-row">
+                  <span class="config-key">Entity ID</span>
+                  <span class="config-value">urn:your-domain:saml</span>
+                </div>
+                <div class="config-row">
+                  <span class="config-key">Certificate</span>
+                  <span class="config-value">✅ Valid until Dec 2025</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modules Tab Content -->
+        <div id="modules" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">Available Modules</h2>
+              <p class="card-subtitle">Manage your application modules and request changes</p>
+            </div>
+            <div class="card-content">
+              <div class="module-grid">
+                <!-- Core Authentication Module -->
+                <div class="module-card enabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Core Authentication</div>
+                      <div class="module-description">
+                        Basic JWT authentication and user management system
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge required">Required</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">✅ Active</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Users</span>
+                      <span class="config-value">12 registered</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">JWT Expiry</span>
+                      <span class="config-value">24 hours</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <div class="module-disabled-info">
+                      Core authentication module is required and cannot be disabled.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- RBAC Module -->
+                <div class="module-card enabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Role-Based Access Control</div>
+                      <div class="module-description">
+                        Advanced role and permission management system with granular access controls
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge enabled">Enabled</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">✅ Active</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Roles</span>
+                      <span class="config-value">5 configured</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Permissions</span>
+                      <span class="config-value">23 defined</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <button class="btn btn-danger" onclick="requestModuleChange('rbac', 'disable')">
+                      Request Disable
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Logging Module -->
+                <div class="module-card disabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Advanced Logging</div>
+                      <div class="module-description">
+                        Comprehensive logging system with analytics and monitoring capabilities
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge disabled">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">❌ Inactive</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Log Retention</span>
+                      <span class="config-value">Not configured</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Storage</span>
+                      <span class="config-value">Not allocated</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <button
+                      class="btn btn-primary"
+                      onclick="requestModuleChange('logging', 'enable')"
+                    >
+                      Request Enable
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Email Service Module -->
+                <div class="module-card enabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Email Service</div>
+                      <div class="module-description">
+                        SMTP email integration for notifications and user communications
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge enabled">Enabled</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">✅ Active</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Provider</span>
+                      <span class="config-value">Office365</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Monthly Quota</span>
+                      <span class="config-value">1,247 / 10,000</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <button class="btn btn-secondary">Configure</button>
+                    <button
+                      class="btn btn-danger"
+                      onclick="requestModuleChange('email', 'disable')"
+                    >
+                      Request Disable
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs Tab Content -->
+        <div id="logs" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">System Logs & Monitoring</h2>
+              <p class="card-subtitle">Monitor system activity and debug issues</p>
+            </div>
+            <div class="card-content">
+              <div class="log-container">
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:23:15</span>
+                  <span class="log-level info">INFO</span>
+                  User authentication successful - user@example.com
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:22:48</span>
+                  <span class="log-level success">SUCCESS</span>
+                  API key validation completed successfully
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:22:31</span>
+                  <span class="log-level warning">WARN</span>
+                  Rate limit approaching for API endpoint /api/users
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:21:16</span>
+                  <span class="log-level info">INFO</span>
+                  Database connection pool initialized - 10 connections
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:20:45</span>
+                  <span class="log-level error">ERROR</span>
+                  Failed to send email notification - SMTP timeout
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:19:32</span>
+                  <span class="log-level info">INFO</span>
+                  Module 'rbac' initialized successfully
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:18:21</span>
+                  <span class="log-level success">SUCCESS</span>
+                  Tenant configuration updated - modules: [auth, rbac, email]
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:17:09</span>
+                  <span class="log-level info">INFO</span>
+                  Server startup completed - listening on port 5000
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Keys Tab Content -->
+        <div id="api-keys" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">API Keys Management</h2>
+              <p class="card-subtitle">Manage your API keys for different services</p>
+            </div>
+            <div class="card-content">
+              <!-- Authentication API Key -->
+              <div class="api-section">
+                <h3>🔐 Authentication Service API Key</h3>
+                <div class="api-key-container">
+                  <div class="api-key-display" id="authApiKey">
+                    ••••••••••••••••••••••••••••••••
+                  </div>
+                  <div class="api-key-actions">
+                    <button
+                      class="btn btn-secondary"
+                      id="toggleAuthKey"
+                      onclick="toggleApiKey('auth')"
+                    >
+                      👁️ Show Key
+                    </button>
+                    <button class="btn btn-primary" onclick="copyApiKey('auth')">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="api-usage-info">
+                  <strong>Usage:</strong> Use this key to authenticate API requests to the
+                  authentication service.
+                </div>
+              </div>
+
+              <!-- RBAC API Key -->
+              <div class="api-section">
+                <h3>🛡️ RBAC Service API Key</h3>
+                <div class="api-key-container">
+                  <div class="api-key-display" id="rbacApiKey">
+                    ••••••••••••••••••••••••••••••••
+                  </div>
+                  <div class="api-key-actions">
+                    <button
+                      class="btn btn-secondary"
+                      id="toggleRbacKey"
+                      onclick="toggleApiKey('rbac')"
+                    >
+                      👁️ Show Key
+                    </button>
+                    <button class="btn btn-primary" onclick="copyApiKey('rbac')">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="api-usage-info">
+                  <strong>Usage:</strong> Required for role and permission management operations.
+                </div>
+              </div>
+
+              <!-- Logging API Key -->
+              <div class="api-section">
+                <h3>📊 Logging Service API Key</h3>
+                <div class="api-key-container">
+                  <div class="api-key-display" id="loggingApiKey">
+                    ••••••••••••••••••••••••••••••••
+                  </div>
+                  <div class="api-key-actions">
+                    <button
+                      class="btn btn-secondary"
+                      id="toggleLoggingKey"
+                      onclick="toggleApiKey('logging')"
+                    >
+                      👁️ Show Key
+                    </button>
+                    <button class="btn btn-primary" onclick="copyApiKey('logging')">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="api-usage-info">
+                  <strong>Usage:</strong> Access logging data and analytics endpoints.
+                </div>
+              </div>
+
+              <div class="security-notice">
+                <div class="security-notice-header">
+                  <span class="security-notice-icon">⚠️</span>
+                  <strong class="security-notice-title">Security Notice</strong>
+                </div>
+                <div class="security-notice-content">
+                  Keep your API keys secure and never expose them in client-side code. Rotate keys
+                  regularly and monitor usage for any suspicious activity.
+                </div>
               </div>
             </div>
           </div>
@@ -1832,6 +2285,119 @@
       const sidebar = document.getElementById("sidebar");
       const sidebarOverlay = document.getElementById("sidebarOverlay");
       const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+
+      // API Keys data - would be loaded from API in real implementation
+      const apiKeys = {
+        auth: "auth_1234567890abcdef1234567890abcdef",
+        rbac: "rbac_abcdef1234567890abcdef1234567890",
+        logging: "logging_fedcba0987654321fedcba0987654321",
+      };
+
+      const keyVisibility = {
+        auth: false,
+        rbac: false,
+        logging: false,
+      };
+
+      // Tab functionality
+      function showTab(tabName) {
+        console.log("Showing tab:", tabName);
+
+        // Hide all tab contents
+        const contents = document.querySelectorAll(".tab-content");
+        contents.forEach(content => content.classList.remove("active"));
+
+        // Remove active class from all nav items
+        const navItems = document.querySelectorAll(".nav-item");
+        navItems.forEach(nav => nav.classList.remove("active"));
+
+        // Show selected tab content
+        const selectedTab = document.getElementById(tabName);
+        if (selectedTab) {
+          selectedTab.classList.add("active");
+          console.log("Activated tab content:", tabName);
+        } else {
+          console.warn("Tab content not found:", tabName);
+        }
+
+        // Add active class to corresponding nav item
+        const navItem = document.querySelector(`.nav-item[href="#${tabName}"]`);
+        if (navItem) {
+          navItem.classList.add("active");
+          console.log("Activated nav item:", tabName);
+        } else {
+          console.warn("Nav item not found for:", tabName);
+        }
+
+        // Update page title
+        const pageTitle = document.querySelector(".page-title");
+        if (pageTitle && navItem) {
+          const navText = navItem.textContent.trim();
+          pageTitle.textContent = navText;
+          console.log("Updated page title to:", navText);
+        }
+      }
+
+      function requestModuleChange(moduleId, action) {
+        console.log("Module change requested:", moduleId, action);
+
+        // In real implementation, this would make an API call
+        const actionText = action === "enable" ? "enable" : "disable";
+        const message = `Request to ${actionText} ${moduleId} module has been sent to the Platform Administrator. You'll receive an email notification once it's processed.`;
+
+        if (confirm(`Are you sure you want to request to ${actionText} the ${moduleId} module?`)) {
+          alert(message);
+
+          // Update UI to show request pending
+          const moduleCard = event.target.closest(".module-card");
+          const actionsDiv = moduleCard.querySelector(".module-actions");
+          actionsDiv.innerHTML = `
+            <div class="alert-info">
+              <strong>Request Pending:</strong> Your ${actionText} request is being reviewed by the Platform Administrator.
+            </div>
+          `;
+        }
+      }
+
+      function toggleApiKey(keyType) {
+        console.log("Toggling API key:", keyType);
+
+        const isVisible = keyVisibility[keyType];
+        const keyElement = document.getElementById(`${keyType}ApiKey`);
+        const toggleButton = document.getElementById(
+          `toggle${keyType.charAt(0).toUpperCase() + keyType.slice(1)}Key`
+        );
+
+        if (isVisible) {
+          keyElement.textContent = "••••••••••••••••••••••••••••••••";
+          toggleButton.textContent = "👁️ Show Key";
+          keyVisibility[keyType] = false;
+        } else {
+          keyElement.textContent = apiKeys[keyType];
+          toggleButton.textContent = "🙈 Hide Key";
+          keyVisibility[keyType] = true;
+        }
+      }
+
+      function copyApiKey(keyType) {
+        console.log("Copying API key:", keyType);
+
+        const keyValue = apiKeys[keyType];
+        navigator.clipboard.writeText(keyValue).then(() => {
+          // Visual feedback
+          const button = event.target;
+          const originalText = button.textContent;
+          button.textContent = "✅ Copied!";
+          button.style.background = "#10b981";
+          button.style.color = "white";
+
+          setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = "";
+            button.style.color = "";
+          }, 2000);
+        });
+      }
 
       // Mobile menu toggle functionality
       function toggleSidebar() {
@@ -1866,29 +2432,22 @@
         link.addEventListener("click", e => {
           e.preventDefault();
 
-          // Remove active class from all nav items
-          document.querySelectorAll(".nav-item").forEach(nav => nav.classList.remove("active"));
+          const href = link.getAttribute("href");
+          const tabName = href.substring(1); // Remove the # symbol
 
-          // Add active class to clicked item (unless it's help or settings)
-          if (
-            !link.getAttribute("href").includes("help") &&
-            !link.getAttribute("href").includes("settings")
-          ) {
-            link.classList.add("active");
+          // Skip system links (help, settings)
+          if (href.includes("help") || href.includes("settings")) {
+            return;
           }
+
+          // Show the corresponding tab
+          showTab(tabName);
 
           // Close mobile menu if open
           if (window.innerWidth <= 1024 && sidebar.classList.contains("open")) {
             sidebar.classList.remove("open");
             sidebarOverlay.classList.remove("active");
             document.body.style.overflow = "";
-          }
-
-          // Update page title based on selected nav item
-          const pageTitle = document.querySelector(".page-title");
-          const navText = link.textContent.trim();
-          if (pageTitle && navText !== "Main menu") {
-            pageTitle.textContent = navText;
           }
         });
       });
@@ -1913,12 +2472,20 @@
         });
       });
 
-      // Initialize - set default active state if none exists
-      if (!document.querySelector(".nav-item.active")) {
-        const overviewItem = document.querySelector('.nav-item[href="#overview"]');
-        if (overviewItem) {
-          overviewItem.classList.add("active");
-        }
+      // Initialize - set default active state and show overview tab
+      function initializeDashboard() {
+        // Show overview tab by default
+        showTab("overview");
+      }
+
+      // Call initialization when DOM is loaded
+      document.addEventListener("DOMContentLoaded", initializeDashboard);
+
+      // Also call immediately if DOM is already loaded
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initializeDashboard);
+      } else {
+        initializeDashboard();
       }
     </script>
   </body>

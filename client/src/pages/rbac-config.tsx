@@ -282,20 +282,20 @@ export default function RBACConfigPage() {
   };
 
   return (
-    <div data-testid="rbac-config-page" className="rbac-page-container">
-      {/* Page Header */}
-      <div className="rbac-page-header">
-        <div className="rbac-header-content">
-          <div className="rbac-header-text">
+    <div data-testid="rbac-config-page" className="aspire-page-container">
+      {/* Aspire Page Header */}
+      <div className="aspire-page-header">
+        <div className="aspire-header-content">
+          <div className="aspire-header-text">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="rbac-page-title" data-testid="title-rbac-config">
+                <h1 className="aspire-page-title" data-testid="title-rbac-config">
                   RBAC Configuration
                 </h1>
-                <p className="rbac-page-subtitle">
+                <p className="aspire-page-subtitle">
                   Manage permission templates, business types, and default roles for tenant
                   onboarding
                 </p>
@@ -304,15 +304,14 @@ export default function RBACConfigPage() {
           </div>
         </div>
       </div>
-
-      <div className="rbac-content-wrapper">
-        <div className="rbac-main-card">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="rbac-tabs-container">
-            <TabsList className="rbac-tabs-list" data-testid="tabs-rbac-config">
+      <div className="aspire-content-wrapper">
+        <div className="aspire-main-card">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="aspire-tabs-list" data-testid="tabs-rbac-config">
               <TabsTrigger
                 value="templates"
                 data-testid="tab-templates"
-                className="rbac-tab-trigger"
+                className="aspire-tab-trigger"
               >
                 <Shield className="h-4 w-4 mr-2" />
                 Permission Templates
@@ -320,7 +319,7 @@ export default function RBACConfigPage() {
               <TabsTrigger
                 value="business-types"
                 data-testid="tab-business-types"
-                className="rbac-tab-trigger"
+                className="aspire-tab-trigger"
               >
                 <Building2 className="h-4 w-4 mr-2" />
                 Business Types
@@ -328,7 +327,7 @@ export default function RBACConfigPage() {
               <TabsTrigger
                 value="default-roles"
                 data-testid="tab-default-roles"
-                className="rbac-tab-trigger"
+                className="aspire-tab-trigger"
               >
                 <Users className="h-4 w-4 mr-2" />
                 Default Roles
@@ -459,25 +458,29 @@ export default function RBACConfigPage() {
                                   </div>
                                 </div>
                               )}
-                              <div className="flex items-start gap-2">
-                                <span className="text-xs font-medium text-slate-700 mt-1">
+                              <div className="flex items-start gap-3">
+                                <span className="text-sm font-medium text-gray-700 mt-1">
                                   Business Types:
                                 </span>
-                                <div className="flex gap-1 flex-wrap">
+                                <div className="flex gap-2 flex-wrap">
                                   {template.businessTypes.map((type: any) => (
-                                    <Badge key={type} variant="secondary" className="text-xs">
+                                    <Badge
+                                      key={type}
+                                      className="aspire-badge bg-blue-100 text-blue-700 text-xs px-3 py-1"
+                                    >
                                       {type}
                                     </Badge>
                                   ))}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex gap-2 ml-4">
+                            <div className="flex gap-2 ml-6">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setPreviewTemplate(template)}
                                 data-testid={`button-preview-template-${template.id}`}
+                                className="aspire-icon-btn aspire-btn-blue"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -486,16 +489,18 @@ export default function RBACConfigPage() {
                                 size="sm"
                                 onClick={() => setEditingTemplate(template)}
                                 data-testid={`button-edit-template-${template.id}`}
+                                className="aspire-icon-btn aspire-btn-indigo"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
                               {!template.isDefault && (
                                 <Button
-                                  variant="destructive"
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => deleteTemplateMutation.mutate(template.id)}
                                   disabled={deleteTemplateMutation.isPending}
                                   data-testid={`button-delete-template-${template.id}`}
+                                  className="aspire-icon-btn aspire-btn-red"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -513,18 +518,20 @@ export default function RBACConfigPage() {
             {/* Business Types Tab */}
             <TabsContent
               value="business-types"
-              className="space-y-6"
+              className="aspire-tab-content"
               data-testid="card-business-types"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-                <div>
-                  <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Business Types
-                  </h4>
-                  <p className="text-slate-600 text-sm mt-1">
-                    Configure business types with specific compliance requirements
-                  </p>
+              <div className="aspire-section-header">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Building2 className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="aspire-section-title">Business Types</h4>
+                    <p className="aspire-section-description">
+                      Configure business types with specific compliance requirements
+                    </p>
+                  </div>
                 </div>
                 <Button
                   onClick={() =>
@@ -542,6 +549,7 @@ export default function RBACConfigPage() {
                     })
                   }
                   data-testid="button-add-business-type"
+                  className="aspire-primary-btn"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Business Type
@@ -824,7 +832,6 @@ export default function RBACConfigPage() {
           </Tabs>
         </div>
       </div>
-
       {/* Template Preview Dialog */}
       <Dialog open={!!previewTemplate} onOpenChange={open => !open && setPreviewTemplate(null)}>
         <DialogContent className="max-w-lg">
@@ -875,7 +882,6 @@ export default function RBACConfigPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Template Dialog */}
       <Dialog
         open={!!editingTemplate}
@@ -1093,7 +1099,6 @@ export default function RBACConfigPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Business Type Dialog */}
       <Dialog
         open={!!editingBusinessType}
@@ -1247,7 +1252,6 @@ export default function RBACConfigPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Default Role Dialog */}
       <Dialog
         open={!!editingRole}
@@ -1523,7 +1527,6 @@ export default function RBACConfigPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Implementation Note */}
       <Card className="rbac-info-card">
         <CardContent className="p-6">
