@@ -1,5 +1,10 @@
 $ErrorActionPreference = "Continue"
 
+# Ensure API keys are available for logging and email notifications
+if (-not $env:LOGGING_API_KEY -or -not $env:EMAIL_API_KEY) {
+    Write-Host "Warning: LOGGING_API_KEY or EMAIL_API_KEY not set; logging or email notifications may be disabled." -ForegroundColor Yellow
+}
+
 Write-Host "Building SDK packages (auth-client, auth, logging, rbac)..." -ForegroundColor Cyan
 try {
     Push-Location "$PSScriptRoot/../packages/auth-client"; npm install; npm run build; Pop-Location

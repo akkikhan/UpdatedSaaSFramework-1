@@ -32,6 +32,16 @@ export const routes: Routes = [
     loadComponent: () => import("./pages/logs.component").then(m => m.LogsComponent),
   },
   {
+    path: "activity",
+    canActivate: [canActivate],
+    loadComponent: () => import("./pages/activity-dashboard.component").then(m => m.ActivityDashboardComponent),
+  },
+  {
+    path: "rbac",
+    canActivate: [canActivate],
+    loadComponent: () => import("./pages/rbac.component").then(m => m.RbacComponent),
+  },
+  {
     path: "profile",
     canActivate: [canActivate],
     loadComponent: () => import("./pages/profile.component").then(m => m.ProfileComponent),
