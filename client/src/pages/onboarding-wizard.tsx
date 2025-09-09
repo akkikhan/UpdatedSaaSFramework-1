@@ -138,6 +138,12 @@ export default function OnboardingWizard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createTenant = useCreateTenant();
+  const GUID_REGEX =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  const defaultAzureRedirect =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/api/auth/azure/callback`
+      : "";
   // Dynamic RBAC options from Platform Admin config APIs (hooks must be top-level)
   const { data: permissionTemplates = [] } = useQuery({
     queryKey: ["/api/rbac-config/permission-templates"],
@@ -171,7 +177,22 @@ export default function OnboardingWizard() {
       adminName: "",
       sendEmail: true,
       enabledModules: [],
-      moduleConfigs: {},
+      moduleConfigs: {
+        auth: {
+          providers: [],
+          azureAd: {
+            tenantId: "",
+            clientId: "",
+            clientSecret: "",
+            redirectUri: defaultAzureRedirect,
+          },
+          auth0: {
+            domain: "",
+            clientId: "",
+            clientSecret: "",
+          },
+        },
+      },
       metadata: {
         adminName: "",
         companyWebsite: "",
@@ -210,6 +231,26 @@ export default function OnboardingWizard() {
       }
     }
     if (currentStep === 2) {
+      const providers = form.getValues("moduleConfigs.auth.providers") as string[] | undefined;
+      const fields: string[] = ["moduleConfigs.auth.providers"];
+      if (providers?.includes("auth0")) {
+        fields.push(
+          "moduleConfigs.auth.auth0.domain",
+          "moduleConfigs.auth.auth0.clientId",
+          "moduleConfigs.auth.auth0.clientSecret"
+        );
+      }
+      if (providers?.includes("azure-ad")) {
+        fields.push(
+          "moduleConfigs.auth.azureAd.tenantId",
+          "moduleConfigs.auth.azureAd.clientId",
+          "moduleConfigs.auth.azureAd.clientSecret",
+          "moduleConfigs.auth.azureAd.redirectUri"
+        );
+      }
+      fieldsToValidate = fields as any;
+    }
+    if (currentStep === 2) {
       const mods = (form.getValues("enabledModules") || []) as string[];
       if (mods.includes("rbac")) {
         const roles =
@@ -239,6 +280,36 @@ export default function OnboardingWizard() {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const verifyAzureAd = async () => {
+    try {
+      const token = localStorage.getItem("platformAdminToken") || "";
+      const cfg = form.getValues("moduleConfigs.auth.azureAd");
+      const res = await fetch("/api/platform/azure-ad/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(cfg),
+      });
+      const data = await res.json();
+      if (res.ok && data?.valid)
+        toast({ title: "Azure AD verified", description: "Credentials are valid" });
+      else
+        toast({
+          title: "Verification failed",
+          description: data?.message || "Unable to verify credentials",
+          variant: "destructive",
+        });
+    } catch (e: any) {
+      toast({
+        title: "Verification failed",
+        description: e?.message || "Unknown error",
+        variant: "destructive",
+      });
     }
   };
 
@@ -712,6 +783,7 @@ export default function OnboardingWizard() {
                               <FormField
                                 control={form.control}
                                 name="moduleConfigs.auth.providers"
+                                rules={{ required: "Select at least one provider" }}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Select Authentication Providers</FormLabel>
@@ -772,6 +844,9 @@ export default function OnboardingWizard() {
                                     <FormField
                                       control={form.control}
                                       name="moduleConfigs.auth.auth0.domain"
+                                      rules={{
+                                        required: "Domain is required",
+                                      }}
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel>
@@ -783,12 +858,14 @@ export default function OnboardingWizard() {
                                           <FormControl>
                                             <Input {...field} placeholder="your-tenant.auth0.com" />
                                           </FormControl>
+                                          <FormMessage />
                                         </FormItem>
                                       )}
                                     />
                                     <FormField
                                       control={form.control}
                                       name="moduleConfigs.auth.auth0.clientId"
+                                      rules={{ required: "Client ID is required" }}
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel>
@@ -800,12 +877,14 @@ export default function OnboardingWizard() {
                                           <FormControl>
                                             <Input {...field} placeholder="Your Auth0 Client ID" />
                                           </FormControl>
+                                          <FormMessage />
                                         </FormItem>
                                       )}
                                     />
                                     <FormField
                                       control={form.control}
                                       name="moduleConfigs.auth.auth0.clientSecret"
+                                      rules={{ required: "Client Secret is required" }}
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel>
@@ -821,6 +900,7 @@ export default function OnboardingWizard() {
                                               placeholder="Your Auth0 Client Secret"
                                             />
                                           </FormControl>
+                                          <FormMessage />
                                         </FormItem>
                                       )}
                                     />
@@ -836,6 +916,13 @@ export default function OnboardingWizard() {
                                     <FormField
                                       control={form.control}
                                       name="moduleConfigs.auth.azureAd.tenantId"
+                                      rules={{
+                                        required: "Tenant ID is required",
+                                        pattern: {
+                                          value: GUID_REGEX,
+                                          message: "Must be a valid GUID",
+                                        },
+                                      }}
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel>
@@ -847,12 +934,20 @@ export default function OnboardingWizard() {
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Tenant ID" />
                                           </FormControl>
+                                          <FormMessage />
                                         </FormItem>
                                       )}
                                     />
                                     <FormField
                                       control={form.control}
                                       name="moduleConfigs.auth.azureAd.clientId"
+                                      rules={{
+                                        required: "Client ID is required",
+                                        pattern: {
+                                          value: GUID_REGEX,
+                                          message: "Must be a valid GUID",
+                                        },
+                                      }}
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel>
@@ -864,12 +959,14 @@ export default function OnboardingWizard() {
                                           <FormControl>
                                             <Input {...field} placeholder="Your Azure Client ID" />
                                           </FormControl>
+                                          <FormMessage />
                                         </FormItem>
                                       )}
                                     />
                                     <FormField
                                       control={form.control}
                                       name="moduleConfigs.auth.azureAd.clientSecret"
+                                      rules={{ required: "Client Secret is required" }}
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel>
@@ -885,9 +982,36 @@ export default function OnboardingWizard() {
                                               placeholder="Your Azure Client Secret"
                                             />
                                           </FormControl>
+                                          <FormMessage />
                                         </FormItem>
                                       )}
                                     />
+                                    <FormField
+                                      control={form.control}
+                                      name="moduleConfigs.auth.azureAd.redirectUri"
+                                      rules={{
+                                        required: "Redirect URI is required",
+                                        pattern: {
+                                          value: /^https?:\/\//i,
+                                          message: "Must be a valid URL",
+                                        },
+                                      }}
+                                      render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                          <FormLabel>Redirect URI</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} placeholder={defaultAzureRedirect} />
+                                          </FormControl>
+                                          <FormDescription>Callback URL configured in Azure AD</FormDescription>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <div className="col-span-2 flex justify-end">
+                                      <Button type="button" variant="secondary" onClick={verifyAzureAd}>
+                                        Verify
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               )}
