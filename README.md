@@ -11,7 +11,6 @@ Install dependencies (root and docs portal) with:
 ```bash
 npm install
 ```
-
 ### Commands
 
 ```bash

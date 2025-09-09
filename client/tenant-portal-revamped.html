@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Portal - SaaS Framework</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        /* Layout Container */
+        .dashboard-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styling - Matching Reference */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #6366f1 0%, #4338ca 100%);
+            color: white;
+            flex-shrink: 0;
+            overflow-y: auto;
+            box-shadow: 4px 0 24px rgba(99, 102, 241, 0.15);
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 32px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0 20px 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-right: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-right-color: white;
+        }
+
+        .nav-item i {
+            width: 20px;
+            margin-right: 12px;
+            font-size: 16px;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header - Matching Reference */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-left h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 320px;
+            padding: 10px 16px 10px 40px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #6366f1;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .user-profile:hover {
+            background: #f8fafc;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            background: #f8fafc;
+        }
+
+        /* Metric Cards Grid - Matching Reference */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .metric-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .metric-icon.blue { background: #dbeafe; color: #2563eb; }
+        .metric-icon.green { background: #dcfce7; color: #16a34a; }
+        .metric-icon.purple { background: #f3e8ff; color: #9333ea; }
+        .metric-icon.orange { background: #fed7aa; color: #ea580c; }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .metric-change {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        .metric-change.positive {
+            color: #16a34a;
+        }
+
+        .metric-change.negative {
+            color: #dc2626;
+        }
+
+        /* Content Sections */
+        .content-section {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: between;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .section-content {
+            padding: 24px;
+        }
+
+        /* Module Cards */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .module-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .module-card.enabled {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .module-card.disabled {
+            border-color: #e2e8f0;
+            background: #f8fafc;
+            opacity: 0.7;
+        }
+
+        .module-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .module-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .module-info p {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.active {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-badge.disabled {
+            background: #64748b;
+            color: white;
+        }
+
+        .status-badge.required {
+            background: #f59e0b;
+            color: white;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        th {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            background: #f8fafc;
+        }
+
+        td {
+            font-size: 14px;
+            color: #334155;
+        }
+
+        /* API Key Display */
+        .api-key-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+
+        .api-key-text {
+            flex: 1;
+            color: #1e293b;
+        }
+
+        /* Hidden content for tabs */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+            
+            .content {
+                padding: 24px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 16px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: fixed;
+                top: 0;
+                left: -100%;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .header {
+                padding: 16px 20px;
+            }
+            
+            .search-box input {
+                width: 200px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="logo-text">SaaS Portal</div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main Menu</div>
+                    <a href="#" class="nav-item active" onclick="showTab('overview')">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Overview</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showTab('modules')">
+                        <i class="fas fa-cubes"></i>
+                        <span>Modules</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showTab('authentication')">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Authentication</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showTab('logs')">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Logs & Monitoring</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showTab('api-keys')">
+                        <i class="fas fa-key"></i>
+                        <span>API Keys</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Other</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Help Center</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 id="page-title">Overview</h1>
+                    <p class="header-subtitle" id="page-subtitle">Monitor your tenant portal performance and manage services</p>
+                </div>
+                <div class="header-right">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search your portal...">
+                    </div>
+                    <div class="user-profile">
+                        <div class="user-avatar">AD</div>
+                        <div class="user-info">
+                            <div class="user-name">Admin User</div>
+                            <div class="user-email">admin@tenant.com</div>
+                        </div>
+                        <i class="fas fa-chevron-down" style="color: #64748b; font-size: 12px;"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Overview Tab -->
+                <div id="overview" class="tab-content active">
+                    <!-- Metrics Cards -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Total Users</span>
+                                <div class="metric-icon blue">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value">4,289</div>
+                            <div class="metric-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+8.63%</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">API Calls</span>
+                                <div class="metric-icon orange">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value">134k</div>
+                            <div class="metric-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+2.38%</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Active Sessions</span>
+                                <div class="metric-icon green">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value">562</div>
+                            <div class="metric-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+2.38%</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Uptime</span>
+                                <div class="metric-icon purple">
+                                    <i class="fas fa-server"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value">99.9%</div>
+                            <div class="metric-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+2.57%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Modules Overview -->
+                    <div class="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">
+                                    <i class="fas fa-cubes"></i>
+                                    Active Modules
+                                </h2>
+                                <p class="section-subtitle">Currently enabled modules and their status</p>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                            <div class="modules-grid">
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>Core Authentication</h3>
+                                            <p>JWT authentication and user management system</p>
+                                        </div>
+                                        <span class="status-badge required">Required</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px;">
+                                        <div><strong>Status:</strong> ✅ Active</div>
+                                        <div><strong>Users:</strong> 12 registered</div>
+                                    </div>
+                                </div>
+
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>Role-Based Access Control</h3>
+                                            <p>Advanced role and permission management</p>
+                                        </div>
+                                        <span class="status-badge active">Active</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px;">
+                                        <div><strong>Roles:</strong> 5 configured</div>
+                                        <div><strong>Permissions:</strong> 23 defined</div>
+                                    </div>
+                                </div>
+
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>Logging & Monitoring</h3>
+                                            <p>Application logs and monitoring system</p>
+                                        </div>
+                                        <span class="status-badge active">Active</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px;">
+                                        <div><strong>Log Level:</strong> Info</div>
+                                        <div><strong>Retention:</strong> 30 days</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">
+                                    <i class="fas fa-history"></i>
+                                    Recent Activity
+                                </h2>
+                                <p class="section-subtitle">Latest system events and user actions</p>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Event</th>
+                                            <th>User</th>
+                                            <th>Time</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>User authentication successful</td>
+                                            <td>user@example.com</td>
+                                            <td>2 minutes ago</td>
+                                            <td><span class="status-badge active">Success</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>API key generated</td>
+                                            <td>admin@tenant.com</td>
+                                            <td>5 minutes ago</td>
+                                            <td><span class="status-badge active">Success</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Role permission updated</td>
+                                            <td>admin@tenant.com</td>
+                                            <td>12 minutes ago</td>
+                                            <td><span class="status-badge active">Success</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modules Tab -->
+                <div id="modules" class="tab-content">
+                    <div class="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">
+                                    <i class="fas fa-cubes"></i>
+                                    Module Management
+                                </h2>
+                                <p class="section-subtitle">Manage your application modules and request changes</p>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                            <div class="modules-grid">
+                                <!-- Core Authentication Module -->
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>Core Authentication</h3>
+                                            <p>Basic JWT authentication and user management system</p>
+                                        </div>
+                                        <span class="status-badge required">Required</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0;">
+                                        <div><strong>Status:</strong> ✅ Active</div>
+                                        <div><strong>Users:</strong> 12 registered</div>
+                                        <div><strong>JWT Expiry:</strong> 24 hours</div>
+                                        <div><strong>Last Login:</strong> 2 mins ago</div>
+                                    </div>
+                                </div>
+
+                                <!-- RBAC Module -->
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>Role-Based Access Control</h3>
+                                            <p>Advanced role and permission management system</p>
+                                        </div>
+                                        <span class="status-badge active">Active</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0;">
+                                        <div><strong>Roles:</strong> 5 configured</div>
+                                        <div><strong>Permissions:</strong> 23 defined</div>
+                                        <div><strong>Policies:</strong> 8 active</div>
+                                        <div><strong>Last Update:</strong> 1 hour ago</div>
+                                    </div>
+                                    <div style="margin-top: 16px;">
+                                        <button class="btn btn-secondary" onclick="requestModuleChange('rbac', 'disable')">
+                                            Request Disable
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Logging Module -->
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>Logging & Monitoring</h3>
+                                            <p>Application logs, search functionality, and basic alerts</p>
+                                        </div>
+                                        <span class="status-badge active">Active</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0;">
+                                        <div><strong>Log Level:</strong> Info</div>
+                                        <div><strong>Retention:</strong> 30 days</div>
+                                        <div><strong>Storage:</strong> 2.4 GB</div>
+                                        <div><strong>Last Entry:</strong> 30 secs ago</div>
+                                    </div>
+                                    <div style="margin-top: 16px;">
+                                        <button class="btn btn-primary" onclick="showTab('logs')">View Logs</button>
+                                        <button class="btn btn-secondary" onclick="requestModuleChange('logging', 'disable')">
+                                            Request Disable
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Email Module (Disabled) -->
+                                <div class="module-card disabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>Email Service</h3>
+                                            <p>Email notifications and template management</p>
+                                        </div>
+                                        <span class="status-badge disabled">Disabled</span>
+                                    </div>
+                                    <div style="margin-top: 16px;">
+                                        <button class="btn btn-primary" onclick="requestModuleChange('email', 'enable')">
+                                            Request Enable
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- File Storage Module (Disabled) -->
+                                <div class="module-card disabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>File Storage</h3>
+                                            <p>File upload, storage, and management capabilities</p>
+                                        </div>
+                                        <span class="status-badge disabled">Disabled</span>
+                                    </div>
+                                    <div style="margin-top: 16px;">
+                                        <button class="btn btn-primary" onclick="requestModuleChange('storage', 'enable')">
+                                            Request Enable
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Authentication Tab -->
+                <div id="authentication" class="tab-content">
+                    <div class="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Authentication & Providers
+                                </h2>
+                                <p class="section-subtitle">Configure authentication providers and security settings</p>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
+                                <!-- Azure AD Provider -->
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>🔵 Azure AD / Entra ID</h3>
+                                            <p>Microsoft Azure Active Directory integration</p>
+                                        </div>
+                                        <span class="status-badge active">Configured</span>
+                                    </div>
+                                    <div style="margin: 16px 0;">
+                                        <div><strong>Tenant ID:</strong> abc123...</div>
+                                        <div><strong>Client ID:</strong> def456...</div>
+                                        <div><strong>Status:</strong> ✅ Connected</div>
+                                    </div>
+                                    <button class="btn btn-secondary">Reconfigure</button>
+                                </div>
+
+                                <!-- Auth0 Provider -->
+                                <div class="module-card disabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>🟠 Auth0</h3>
+                                            <p>Auth0 identity platform integration</p>
+                                        </div>
+                                        <span class="status-badge disabled">Not Configured</span>
+                                    </div>
+                                    <div style="margin: 16px 0;">
+                                        <div><strong>Domain:</strong> Not set</div>
+                                        <div><strong>Client ID:</strong> Not set</div>
+                                        <div><strong>Status:</strong> ❌ Not connected</div>
+                                    </div>
+                                    <button class="btn btn-primary">Configure Auth0</button>
+                                </div>
+
+                                <!-- SAML Provider -->
+                                <div class="module-card disabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>🟡 SAML SSO</h3>
+                                            <p>Generic SAML 2.0 provider integration</p>
+                                        </div>
+                                        <span class="status-badge disabled">Not Configured</span>
+                                    </div>
+                                    <div style="margin: 16px 0;">
+                                        <div><strong>IdP URL:</strong> Not set</div>
+                                        <div><strong>Certificate:</strong> Not uploaded</div>
+                                        <div><strong>Status:</strong> ❌ Not configured</div>
+                                    </div>
+                                    <button class="btn btn-primary">Configure SAML</button>
+                                </div>
+
+                                <!-- Local Authentication -->
+                                <div class="module-card enabled">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>🔐 Local Authentication</h3>
+                                            <p>Email/password authentication fallback</p>
+                                        </div>
+                                        <span class="status-badge active">Active</span>
+                                    </div>
+                                    <div style="margin: 16px 0;">
+                                        <div><strong>Password Policy:</strong> Strong</div>
+                                        <div><strong>JWT Expiry:</strong> 24 hours</div>
+                                        <div><strong>Status:</strong> ✅ Enabled</div>
+                                    </div>
+                                    <button class="btn btn-secondary">Configure Policy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div id="logs" class="tab-content">
+                    <div class="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">
+                                    <i class="fas fa-chart-bar"></i>
+                                    Logs & Monitoring
+                                </h2>
+                                <p class="section-subtitle">View application logs and configure monitoring settings</p>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                            <!-- Log Controls -->
+                            <div style="display: flex; gap: 16px; margin-bottom: 24px; align-items: center;">
+                                <select style="padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                                    <option value="all">All Levels</option>
+                                    <option value="error">Error</option>
+                                    <option value="warning">Warning</option>
+                                    <option value="info">Info</option>
+                                    <option value="debug">Debug</option>
+                                </select>
+                                <input type="text" placeholder="Filter by category..." style="padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; width: 200px;">
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+
+                            <!-- Log Entries -->
+                            <div style="background: #1e293b; color: #e2e8f0; border-radius: 8px; padding: 20px; font-family: 'Monaco', monospace; font-size: 13px; max-height: 400px; overflow-y: auto;">
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #64748b;">[2024-01-20 10:30:45]</span>
+                                    <span style="color: #10b981; font-weight: bold;">[INFO]</span>
+                                    <span>User authentication successful for user@example.com</span>
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #64748b;">[2024-01-20 10:29:12]</span>
+                                    <span style="color: #f59e0b; font-weight: bold;">[WARNING]</span>
+                                    <span>Rate limit approaching for API endpoint /api/users (80% of limit)</span>
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #64748b;">[2024-01-20 10:25:33]</span>
+                                    <span style="color: #ef4444; font-weight: bold;">[ERROR]</span>
+                                    <span>Failed to connect to external service: timeout after 30s</span>
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #64748b;">[2024-01-20 10:22:15]</span>
+                                    <span style="color: #10b981; font-weight: bold;">[INFO]</span>
+                                    <span>New user registration: user123@domain.com</span>
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #64748b;">[2024-01-20 10:18:47]</span>
+                                    <span style="color: #10b981; font-weight: bold;">[INFO]</span>
+                                    <span>RBAC policy updated: added permission 'user.read' to role 'viewer'</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Logging Configuration -->
+                    <div class="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">
+                                    <i class="fas fa-cog"></i>
+                                    Logging Configuration
+                                </h2>
+                                <p class="section-subtitle">Configure log levels, retention, and monitoring alerts</p>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+                                <div>
+                                    <h4 style="margin-bottom: 12px;">Log Levels</h4>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                                        <label style="display: flex; align-items: center; gap: 6px;">
+                                            <input type="checkbox" checked> Error
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px;">
+                                            <input type="checkbox" checked> Warning
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px;">
+                                            <input type="checkbox" checked> Info
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px;">
+                                            <input type="checkbox"> Debug
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 style="margin-bottom: 12px;">Retention Period</h4>
+                                    <select style="width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                                        <option value="7">7 Days</option>
+                                        <option value="30" selected>30 Days</option>
+                                        <option value="90">90 Days</option>
+                                        <option value="365">1 Year</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <h4 style="margin-bottom: 12px;">PII Redaction</h4>
+                                    <label style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="checkbox"> Enable automatic PII redaction
+                                    </label>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" style="margin-top: 20px;">Save Logging Settings</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Keys Tab -->
+                <div id="api-keys" class="tab-content">
+                    <div class="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">
+                                    <i class="fas fa-key"></i>
+                                    API Keys & Integration
+                                </h2>
+                                <p class="section-subtitle">Manage your application API keys for different services</p>
+                            </div>
+                        </div>
+                        <div class="section-content">
+                            <div style="display: grid; gap: 24px;">
+                                <!-- Authentication API Key -->
+                                <div class="module-card">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>🔐 Authentication API Key</h3>
+                                            <p>Used for user authentication and JWT token management</p>
+                                        </div>
+                                        <button class="btn btn-secondary" onclick="toggleApiKey('auth')">
+                                            <i class="fas fa-eye"></i> Show Key
+                                        </button>
+                                    </div>
+                                    <div class="api-key-container" style="margin: 16px 0;">
+                                        <div class="api-key-text" id="authApiKey">••••••••••••••••••••••••••••••••</div>
+                                        <button class="btn btn-secondary" onclick="copyApiKey('auth')">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                    <div style="font-size: 12px; color: #64748b;">
+                                        Last used: 2 hours ago | Created: Jan 15, 2024
+                                    </div>
+                                </div>
+
+                                <!-- RBAC API Key -->
+                                <div class="module-card">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>👥 RBAC API Key</h3>
+                                            <p>Used for role and permission management operations</p>
+                                        </div>
+                                        <button class="btn btn-secondary" onclick="toggleApiKey('rbac')">
+                                            <i class="fas fa-eye"></i> Show Key
+                                        </button>
+                                    </div>
+                                    <div class="api-key-container" style="margin: 16px 0;">
+                                        <div class="api-key-text" id="rbacApiKey">••••••••••••••••••••••••••••••••</div>
+                                        <button class="btn btn-secondary" onclick="copyApiKey('rbac')">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                    <div style="font-size: 12px; color: #64748b;">
+                                        Last used: 1 day ago | Created: Jan 15, 2024
+                                    </div>
+                                </div>
+
+                                <!-- Logging API Key -->
+                                <div class="module-card">
+                                    <div class="module-header">
+                                        <div class="module-info">
+                                            <h3>📊 Logging API Key</h3>
+                                            <p>Used to ingest and query logs via /logging/* endpoints</p>
+                                        </div>
+                                        <button class="btn btn-secondary" onclick="toggleApiKey('logging')">
+                                            <i class="fas fa-eye"></i> Show Key
+                                        </button>
+                                    </div>
+                                    <div class="api-key-container" style="margin: 16px 0;">
+                                        <div class="api-key-text" id="loggingApiKey">••••••••••••••••••••••••••••••••</div>
+                                        <button class="btn btn-secondary" onclick="copyApiKey('logging')">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                    <div style="font-size: 12px; color: #64748b;">
+                                        Last used: 30 minutes ago | Created: Jan 15, 2024
+                                    </div>
+                                    <div style="background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 16px; margin-top: 16px;">
+                                        <strong>Usage Example:</strong>
+                                        <pre style="background: white; padding: 12px; border-radius: 6px; margin-top: 8px; font-size: 11px; overflow-x: auto;">curl -X POST \
+  -H "X-API-Key: logging_..." \
+  -H "Content-Type: application/json" \
+  ${window.location.origin}/api/v2/logging/events \
+  -d '{"level":"info","message":"hello","category":"app"}'</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Sample data - would be loaded from API in real implementation
+        const apiKeys = {
+            auth: "auth_1234567890abcdef1234567890abcdef",
+            rbac: "rbac_abcdef1234567890abcdef1234567890",
+            logging: "logging_fedcba0987654321fedcba0987654321",
+        };
+
+        const keyVisibility = {
+            auth: false,
+            rbac: false,
+            logging: false,
+        };
+
+        const pageTitles = {
+            overview: { title: 'Overview', subtitle: 'Monitor your tenant portal performance and manage services' },
+            modules: { title: 'Module Management', subtitle: 'Manage your application modules and request changes' },
+            authentication: { title: 'Authentication & Providers', subtitle: 'Configure authentication providers and security settings' },
+            logs: { title: 'Logs & Monitoring', subtitle: 'View application logs and configure monitoring settings' },
+            'api-keys': { title: 'API Keys & Integration', subtitle: 'Manage your application API keys for different services' }
+        };
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            // Remove active class from all nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked nav item
+            event.target.classList.add('active');
+
+            // Update page title
+            if (pageTitles[tabName]) {
+                document.getElementById('page-title').textContent = pageTitles[tabName].title;
+                document.getElementById('page-subtitle').textContent = pageTitles[tabName].subtitle;
+            }
+        }
+
+        function requestModuleChange(moduleId, action) {
+            const actionText = action === "enable" ? "enable" : "disable";
+            const message = `Request to ${actionText} ${moduleId} module has been sent to the Platform Administrator. You'll receive an email notification once it's processed.`;
+
+            if (confirm(`Are you sure you want to request to ${actionText} the ${moduleId} module?`)) {
+                alert(message);
+            }
+        }
+
+        function toggleApiKey(keyType) {
+            const isVisible = keyVisibility[keyType];
+            const keyElement = document.getElementById(`${keyType}ApiKey`);
+            const toggleButton = event.target;
+
+            if (isVisible) {
+                keyElement.textContent = "••••••••••••••••••••••••••••••••";
+                toggleButton.innerHTML = '<i class="fas fa-eye"></i> Show Key';
+                keyVisibility[keyType] = false;
+            } else {
+                keyElement.textContent = apiKeys[keyType];
+                toggleButton.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Key';
+                keyVisibility[keyType] = true;
+            }
+        }
+
+        function copyApiKey(keyType) {
+            const keyValue = apiKeys[keyType];
+            navigator.clipboard.writeText(keyValue).then(() => {
+                const button = event.target;
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                button.style.background = '#10b981';
+                button.style.color = 'white';
+
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.style.background = '';
+                    button.style.color = '';
+                }, 2000);
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set initial tab
+            showTab('overview');
+        });
+    </script>
+</body>
+</html>

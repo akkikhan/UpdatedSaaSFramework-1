@@ -203,21 +203,23 @@ export default function OnboardingWizard() {
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <div className="flex">
         {/* Sidebar Navigation */}
-        <div className="w-80 bg-gray-50 border-r border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h1 className="text-xl font-semibold text-gray-900">Tenant Setup</h1>
-            <p className="text-sm text-gray-600 mt-1">Configure your new organization</p>
+        <div className="w-80 bg-white shadow-lg">
+          <div className="p-6 border-b">
+            <h1 className="text-xl font-bold text-slate-900">Tenant Onboarding</h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Set up a new tenant with guided configuration
+            </p>
           </div>
 
           <div className="p-6">
             {/* Progress Indicator */}
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-700">Progress</span>
-                <span className="text-sm text-gray-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">Progress</span>
+                <span className="text-sm text-slate-500">
                   {currentStep + 1} of {STEPS.length}
                 </span>
               </div>
@@ -235,14 +237,14 @@ export default function OnboardingWizard() {
                 return (
                   <div
                     key={step.id}
-                    className={`flex items-center p-3 rounded-md transition-all cursor-pointer ${
+                    className={`flex items-center p-3 rounded-lg transition-all cursor-pointer ${
                       isActive
-                        ? "bg-blue-50 border border-blue-200 text-blue-700"
+                        ? "bg-blue-50 border-2 border-blue-200 text-blue-700"
                         : isCompleted
                           ? "bg-green-50 border border-green-200 text-green-700 hover:bg-green-100"
                           : isAccessible
-                            ? "border border-gray-200 text-gray-700 hover:bg-gray-50"
-                            : "border border-gray-100 text-gray-400"
+                            ? "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            : "border border-slate-100 text-slate-400"
                     }`}
                     onClick={() => isAccessible && setCurrentStep(index)}
                   >
@@ -252,7 +254,7 @@ export default function OnboardingWizard() {
                           ? "bg-green-600 text-white"
                           : isActive
                             ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-400"
+                            : "bg-slate-100 text-slate-400"
                       }`}
                     >
                       {isCompleted ? (
@@ -276,14 +278,14 @@ export default function OnboardingWizard() {
         <div className="flex-1 overflow-hidden">
           <div className="p-8">
             {/* Dynamic Header */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-3">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
                 {React.createElement(STEPS[currentStep].icon, {
                   className: "w-6 h-6 text-blue-600",
                 })}
                 {STEPS[currentStep].title}
               </h2>
-              <p className="text-gray-600 mt-2">{STEPS[currentStep].description}</p>
+              <p className="text-slate-600 mt-1">{STEPS[currentStep].description}</p>
             </div>
 
             {/* Form Content */}
@@ -297,7 +299,7 @@ export default function OnboardingWizard() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Card className="border border-gray-200 shadow-sm bg-white">
+                    <Card className="border-0 shadow-lg bg-white">
                       <CardContent className="p-8 space-y-6">
                         {/* Step 1: Basic Information */}
                         {currentStep === 0 && (
@@ -411,7 +413,7 @@ export default function OnboardingWizard() {
                               control={form.control}
                               name="sendEmail"
                               render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gray-200 p-4 bg-gray-50">
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-slate-50">
                                   <FormControl>
                                     <Checkbox
                                       checked={field.value}
@@ -579,7 +581,7 @@ export default function OnboardingWizard() {
                 </AnimatePresence>
 
                 {/* Navigation Buttons */}
-                <div className="flex justify-between pt-6 border-t border-gray-200 bg-white p-6 rounded-lg">
+                <div className="flex justify-between pt-6 border-t bg-white p-6 rounded-lg shadow-sm">
                   <Button
                     type="button"
                     variant="outline"
