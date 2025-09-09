@@ -1,0 +1,25 @@
+{
+  "id": "getting-started/faqs",
+  "title": "FAQs",
+  "description": "Where do I get API keys?",
+  "source": "@site/docs/getting-started/faqs.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/faqs",
+  "permalink": "/next/getting-started/faqs",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/getting-started/faqs.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Quickstart",
+    "permalink": "/next/getting-started/quickstart"
+  },
+  "next": {
+    "title": "SDK Integration Overview",
+    "permalink": "/next/sdk-integration/overview"
+  }
+}

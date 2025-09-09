@@ -1,0 +1,346 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": false,
+          "path": "/next",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "getting-started/faqs",
+              "path": "/next/getting-started/faqs",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "getting-started/prerequisites",
+              "path": "/next/getting-started/prerequisites",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "getting-started/quickstart",
+              "path": "/next/getting-started/quickstart",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "intro",
+              "path": "/next/intro",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/client-sdk",
+              "path": "/next/modules/auth/client-sdk",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/overview",
+              "path": "/next/modules/auth/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/server-setup",
+              "path": "/next/modules/auth/server-setup",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/troubleshooting",
+              "path": "/next/modules/auth/troubleshooting",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/email/overview",
+              "path": "/next/modules/email/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/email/providers",
+              "path": "/next/modules/email/providers",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/email/template-management",
+              "path": "/next/modules/email/template-management",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/logging/overview",
+              "path": "/next/modules/logging/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/logging/quickstart",
+              "path": "/next/modules/logging/quickstart",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/logging/sinks",
+              "path": "/next/modules/logging/sinks",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/rbac/examples",
+              "path": "/next/modules/rbac/examples",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/rbac/overview",
+              "path": "/next/modules/rbac/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/rbac/policy-model",
+              "path": "/next/modules/rbac/policy-model",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "platform-admin/portal-overview",
+              "path": "/next/platform-admin/portal-overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "platform-admin/sdk-guide",
+              "path": "/next/platform-admin/sdk-guide",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/auth",
+              "path": "/next/reference/api/auth",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/email",
+              "path": "/next/reference/api/email",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/logging",
+              "path": "/next/reference/api/logging",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/rbac",
+              "path": "/next/reference/api/rbac",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/architecture",
+              "path": "/next/reference/architecture",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/cli",
+              "path": "/next/reference/cli",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/configuration",
+              "path": "/next/sdk-integration/configuration",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/examples/browser",
+              "path": "/next/sdk-integration/examples/browser",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/examples/node",
+              "path": "/next/sdk-integration/examples/node",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/installation",
+              "path": "/next/sdk-integration/installation",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/overview",
+              "path": "/next/sdk-integration/overview",
+              "sidebar": "defaultSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "defaultSidebar": {
+              "link": {
+                "path": "/next/intro",
+                "label": "intro"
+              }
+            }
+          }
+        },
+        {
+          "name": "1.0",
+          "label": "1.0",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "getting-started/faqs",
+              "path": "/getting-started/faqs",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "getting-started/prerequisites",
+              "path": "/getting-started/prerequisites",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "getting-started/quickstart",
+              "path": "/getting-started/quickstart",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "intro",
+              "path": "/intro",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/client-sdk",
+              "path": "/modules/auth/client-sdk",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/overview",
+              "path": "/modules/auth/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/server-setup",
+              "path": "/modules/auth/server-setup",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/auth/troubleshooting",
+              "path": "/modules/auth/troubleshooting",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/email/overview",
+              "path": "/modules/email/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/email/providers",
+              "path": "/modules/email/providers",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/email/template-management",
+              "path": "/modules/email/template-management",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/logging/overview",
+              "path": "/modules/logging/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/logging/quickstart",
+              "path": "/modules/logging/quickstart",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/logging/sinks",
+              "path": "/modules/logging/sinks",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/rbac/examples",
+              "path": "/modules/rbac/examples",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/rbac/overview",
+              "path": "/modules/rbac/overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "modules/rbac/policy-model",
+              "path": "/modules/rbac/policy-model",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "platform-admin/portal-overview",
+              "path": "/platform-admin/portal-overview",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "platform-admin/sdk-guide",
+              "path": "/platform-admin/sdk-guide",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/auth",
+              "path": "/reference/api/auth",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/email",
+              "path": "/reference/api/email",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/logging",
+              "path": "/reference/api/logging",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/api/rbac",
+              "path": "/reference/api/rbac",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/architecture",
+              "path": "/reference/architecture",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "reference/cli",
+              "path": "/reference/cli",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/configuration",
+              "path": "/sdk-integration/configuration",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/examples/browser",
+              "path": "/sdk-integration/examples/browser",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/examples/node",
+              "path": "/sdk-integration/examples/node",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/installation",
+              "path": "/sdk-integration/installation",
+              "sidebar": "defaultSidebar"
+            },
+            {
+              "id": "sdk-integration/overview",
+              "path": "/sdk-integration/overview",
+              "sidebar": "defaultSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "defaultSidebar": {
+              "link": {
+                "path": "/intro",
+                "label": "intro"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

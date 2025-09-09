@@ -1,0 +1,25 @@
+{
+  "id": "modules/logging/sinks",
+  "title": "Log Sinks",
+  "description": "The logging service supports multiple outputs:",
+  "source": "@site/docs/modules/logging/sinks.md",
+  "sourceDirName": "modules/logging",
+  "slug": "/modules/logging/sinks",
+  "permalink": "/next/modules/logging/sinks",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/logging/sinks.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Logging Quickstart",
+    "permalink": "/next/modules/logging/quickstart"
+  },
+  "next": {
+    "title": "Email Module Overview",
+    "permalink": "/next/modules/email/overview"
+  }
+}

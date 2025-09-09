@@ -1,0 +1,25 @@
+{
+  "id": "sdk-integration/configuration",
+  "title": "Configuration",
+  "description": "Configuration is identical across modules. Each client accepts an API key and a base URL pointing",
+  "source": "@site/docs/sdk-integration/configuration.md",
+  "sourceDirName": "sdk-integration",
+  "slug": "/sdk-integration/configuration",
+  "permalink": "/next/sdk-integration/configuration",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/sdk-integration/configuration.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Installation",
+    "permalink": "/next/sdk-integration/installation"
+  },
+  "next": {
+    "title": "Node Example",
+    "permalink": "/next/sdk-integration/examples/node"
+  }
+}

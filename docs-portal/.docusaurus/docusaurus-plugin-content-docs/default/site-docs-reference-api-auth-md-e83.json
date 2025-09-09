@@ -1,0 +1,25 @@
+{
+  "id": "reference/api/auth",
+  "title": "Auth API",
+  "description": "| Endpoint | Description |",
+  "source": "@site/docs/reference/api/auth.md",
+  "sourceDirName": "reference/api",
+  "slug": "/reference/api/auth",
+  "permalink": "/next/reference/api/auth",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/api/auth.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "SDK Guide",
+    "permalink": "/next/platform-admin/sdk-guide"
+  },
+  "next": {
+    "title": "RBAC API",
+    "permalink": "/next/reference/api/rbac"
+  }
+}

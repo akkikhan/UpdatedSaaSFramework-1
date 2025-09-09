@@ -1,0 +1,25 @@
+{
+  "id": "reference/cli",
+  "title": "CLI Reference",
+  "description": "Install the CLI globally:",
+  "source": "@site/versioned_docs/version-1.0/reference/cli.md",
+  "sourceDirName": "reference",
+  "slug": "/reference/cli",
+  "permalink": "/reference/cli",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/reference/cli.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Email API",
+    "permalink": "/reference/api/email"
+  },
+  "next": {
+    "title": "Architecture Overview",
+    "permalink": "/reference/architecture"
+  }
+}

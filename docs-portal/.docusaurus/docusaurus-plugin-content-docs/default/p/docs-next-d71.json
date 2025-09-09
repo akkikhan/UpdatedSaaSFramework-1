@@ -1,0 +1,488 @@
+{
+  "version": {
+    "pluginId": "default",
+    "version": "current",
+    "label": "Next",
+    "banner": "unreleased",
+    "badge": true,
+    "noIndex": false,
+    "className": "docs-version-current",
+    "isLast": false,
+    "docsSidebars": {
+      "defaultSidebar": [
+        {
+          "type": "link",
+          "label": "SaaS Platform Documentation",
+          "href": "/docs/next/intro",
+          "docId": "intro",
+          "unlisted": false
+        },
+        {
+          "type": "category",
+          "label": "Getting Started",
+          "items": [
+            {
+              "type": "link",
+              "label": "Prerequisites",
+              "href": "/docs/next/getting-started/prerequisites",
+              "docId": "getting-started/prerequisites",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "Quickstart",
+              "href": "/docs/next/getting-started/quickstart",
+              "docId": "getting-started/quickstart",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "FAQs",
+              "href": "/docs/next/getting-started/faqs",
+              "docId": "getting-started/faqs",
+              "unlisted": false
+            }
+          ],
+          "collapsed": true,
+          "collapsible": true
+        },
+        {
+          "type": "category",
+          "label": "SDK Integration",
+          "items": [
+            {
+              "type": "link",
+              "label": "SDK Integration Overview",
+              "href": "/docs/next/sdk-integration/overview",
+              "docId": "sdk-integration/overview",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "Installation",
+              "href": "/docs/next/sdk-integration/installation",
+              "docId": "sdk-integration/installation",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "Configuration",
+              "href": "/docs/next/sdk-integration/configuration",
+              "docId": "sdk-integration/configuration",
+              "unlisted": false
+            },
+            {
+              "type": "category",
+              "label": "Examples",
+              "items": [
+                {
+                  "type": "link",
+                  "label": "Node Example",
+                  "href": "/docs/next/sdk-integration/examples/node",
+                  "docId": "sdk-integration/examples/node",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Browser Example",
+                  "href": "/docs/next/sdk-integration/examples/browser",
+                  "docId": "sdk-integration/examples/browser",
+                  "unlisted": false
+                }
+              ],
+              "collapsed": true,
+              "collapsible": true
+            }
+          ],
+          "collapsed": true,
+          "collapsible": true
+        },
+        {
+          "type": "category",
+          "label": "Modules",
+          "items": [
+            {
+              "type": "category",
+              "label": "Auth",
+              "items": [
+                {
+                  "type": "link",
+                  "label": "Auth Module Overview",
+                  "href": "/docs/next/modules/auth/overview",
+                  "docId": "modules/auth/overview",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Server Setup",
+                  "href": "/docs/next/modules/auth/server-setup",
+                  "docId": "modules/auth/server-setup",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Client SDK",
+                  "href": "/docs/next/modules/auth/client-sdk",
+                  "docId": "modules/auth/client-sdk",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Troubleshooting",
+                  "href": "/docs/next/modules/auth/troubleshooting",
+                  "docId": "modules/auth/troubleshooting",
+                  "unlisted": false
+                }
+              ],
+              "collapsed": true,
+              "collapsible": true
+            },
+            {
+              "type": "category",
+              "label": "RBAC",
+              "items": [
+                {
+                  "type": "link",
+                  "label": "RBAC Module Overview",
+                  "href": "/docs/next/modules/rbac/overview",
+                  "docId": "modules/rbac/overview",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Policy Model",
+                  "href": "/docs/next/modules/rbac/policy-model",
+                  "docId": "modules/rbac/policy-model",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "RBAC Examples",
+                  "href": "/docs/next/modules/rbac/examples",
+                  "docId": "modules/rbac/examples",
+                  "unlisted": false
+                }
+              ],
+              "collapsed": true,
+              "collapsible": true
+            },
+            {
+              "type": "category",
+              "label": "Logging",
+              "items": [
+                {
+                  "type": "link",
+                  "label": "Logging Module Overview",
+                  "href": "/docs/next/modules/logging/overview",
+                  "docId": "modules/logging/overview",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Logging Quickstart",
+                  "href": "/docs/next/modules/logging/quickstart",
+                  "docId": "modules/logging/quickstart",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Log Sinks",
+                  "href": "/docs/next/modules/logging/sinks",
+                  "docId": "modules/logging/sinks",
+                  "unlisted": false
+                }
+              ],
+              "collapsed": true,
+              "collapsible": true
+            },
+            {
+              "type": "category",
+              "label": "Email",
+              "items": [
+                {
+                  "type": "link",
+                  "label": "Email Module Overview",
+                  "href": "/docs/next/modules/email/overview",
+                  "docId": "modules/email/overview",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Template Management",
+                  "href": "/docs/next/modules/email/template-management",
+                  "docId": "modules/email/template-management",
+                  "unlisted": false
+                },
+                {
+                  "type": "link",
+                  "label": "Email Providers",
+                  "href": "/docs/next/modules/email/providers",
+                  "docId": "modules/email/providers",
+                  "unlisted": false
+                }
+              ],
+              "collapsed": true,
+              "collapsible": true
+            }
+          ],
+          "collapsed": true,
+          "collapsible": true
+        },
+        {
+          "type": "category",
+          "label": "Platform Admin",
+          "items": [
+            {
+              "type": "link",
+              "label": "Platform Admin Portal Overview",
+              "href": "/docs/next/platform-admin/portal-overview",
+              "docId": "platform-admin/portal-overview",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "SDK Guide",
+              "href": "/docs/next/platform-admin/sdk-guide",
+              "docId": "platform-admin/sdk-guide",
+              "unlisted": false
+            }
+          ],
+          "collapsed": true,
+          "collapsible": true
+        },
+        {
+          "type": "category",
+          "label": "Reference",
+          "items": [
+            {
+              "type": "link",
+              "label": "Auth API",
+              "href": "/docs/next/reference/api/auth",
+              "docId": "reference/api/auth",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "RBAC API",
+              "href": "/docs/next/reference/api/rbac",
+              "docId": "reference/api/rbac",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "Logging API",
+              "href": "/docs/next/reference/api/logging",
+              "docId": "reference/api/logging",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "Email API",
+              "href": "/docs/next/reference/api/email",
+              "docId": "reference/api/email",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "CLI Reference",
+              "href": "/docs/next/reference/cli",
+              "docId": "reference/cli",
+              "unlisted": false
+            },
+            {
+              "type": "link",
+              "label": "Architecture Overview",
+              "href": "/docs/next/reference/architecture",
+              "docId": "reference/architecture",
+              "unlisted": false
+            }
+          ],
+          "collapsed": true,
+          "collapsible": true
+        }
+      ]
+    },
+    "docs": {
+      "getting-started/faqs": {
+        "id": "getting-started/faqs",
+        "title": "FAQs",
+        "description": "Where do I get API keys?",
+        "sidebar": "defaultSidebar"
+      },
+      "getting-started/prerequisites": {
+        "id": "getting-started/prerequisites",
+        "title": "Prerequisites",
+        "description": "Before integrating with the platform make sure you have the following:",
+        "sidebar": "defaultSidebar"
+      },
+      "getting-started/quickstart": {
+        "id": "getting-started/quickstart",
+        "title": "Quickstart",
+        "description": "Follow these steps to get a demo tenant running in minutes:",
+        "sidebar": "defaultSidebar"
+      },
+      "intro": {
+        "id": "intro",
+        "title": "SaaS Platform Documentation",
+        "description": "Welcome to the official documentation for the SaaS Framework. These pages walk you through",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/auth/client-sdk": {
+        "id": "modules/auth/client-sdk",
+        "title": "Client SDK",
+        "description": "Install the client package and initiate the login flow from your application:",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/auth/overview": {
+        "id": "modules/auth/overview",
+        "title": "Auth Module Overview",
+        "description": "The Auth module provides secure multi‑tenant authentication. It supports Azure AD single sign‑on",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/auth/server-setup": {
+        "id": "modules/auth/server-setup",
+        "title": "Server Setup",
+        "description": "1. Install the service and its dependencies:",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/auth/troubleshooting": {
+        "id": "modules/auth/troubleshooting",
+        "title": "Troubleshooting",
+        "description": "Common issues and fixes:",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/email/overview": {
+        "id": "modules/email/overview",
+        "title": "Email Module Overview",
+        "description": "Use the Email module to send transactional messages such as password resets and onboarding",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/email/providers": {
+        "id": "modules/email/providers",
+        "title": "Email Providers",
+        "description": "Supported providers include SMTP, SendGrid, and AWS SES. Configure credentials for each tenant in",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/email/template-management": {
+        "id": "modules/email/template-management",
+        "title": "Template Management",
+        "description": "Create and edit templates in the admin portal under Email > Templates. Templates support",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/logging/overview": {
+        "id": "modules/logging/overview",
+        "title": "Logging Module Overview",
+        "description": "The Logging module records structured events and routes them to storage or external sinks. Each",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/logging/quickstart": {
+        "id": "modules/logging/quickstart",
+        "title": "Logging Quickstart",
+        "description": "Logs are batched and sent to the platform where they can be viewed in the admin portal or forwarded",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/logging/sinks": {
+        "id": "modules/logging/sinks",
+        "title": "Log Sinks",
+        "description": "The logging service supports multiple outputs:",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/rbac/examples": {
+        "id": "modules/rbac/examples",
+        "title": "RBAC Examples",
+        "description": "",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/rbac/overview": {
+        "id": "modules/rbac/overview",
+        "title": "RBAC Module Overview",
+        "description": "The RBAC module enforces fine‑grained permissions per tenant. Roles group permissions and are",
+        "sidebar": "defaultSidebar"
+      },
+      "modules/rbac/policy-model": {
+        "id": "modules/rbac/policy-model",
+        "title": "Policy Model",
+        "description": "Policies are JSON documents that describe roles and their allowed actions. A minimal example:",
+        "sidebar": "defaultSidebar"
+      },
+      "platform-admin/portal-overview": {
+        "id": "platform-admin/portal-overview",
+        "title": "Platform Admin Portal Overview",
+        "description": "The web‑based admin portal is where you create tenants, issue API keys, and manage module",
+        "sidebar": "defaultSidebar"
+      },
+      "platform-admin/sdk-guide": {
+        "id": "platform-admin/sdk-guide",
+        "title": "SDK Guide",
+        "description": "From the admin portal's SDK Integration section you can download language‑specific SDK packages",
+        "sidebar": "defaultSidebar"
+      },
+      "reference/api/auth": {
+        "id": "reference/api/auth",
+        "title": "Auth API",
+        "description": "| Endpoint | Description |",
+        "sidebar": "defaultSidebar"
+      },
+      "reference/api/email": {
+        "id": "reference/api/email",
+        "title": "Email API",
+        "description": "| Endpoint | Description |",
+        "sidebar": "defaultSidebar"
+      },
+      "reference/api/logging": {
+        "id": "reference/api/logging",
+        "title": "Logging API",
+        "description": "| Endpoint | Description |",
+        "sidebar": "defaultSidebar"
+      },
+      "reference/api/rbac": {
+        "id": "reference/api/rbac",
+        "title": "RBAC API",
+        "description": "| Endpoint | Description |",
+        "sidebar": "defaultSidebar"
+      },
+      "reference/architecture": {
+        "id": "reference/architecture",
+        "title": "Architecture Overview",
+        "description": "The platform follows a modular microservice architecture. Core services include Auth, RBAC,",
+        "sidebar": "defaultSidebar"
+      },
+      "reference/cli": {
+        "id": "reference/cli",
+        "title": "CLI Reference",
+        "description": "Install the CLI globally:",
+        "sidebar": "defaultSidebar"
+      },
+      "sdk-integration/configuration": {
+        "id": "sdk-integration/configuration",
+        "title": "Configuration",
+        "description": "Configuration is identical across modules. Each client accepts an API key and a base URL pointing",
+        "sidebar": "defaultSidebar"
+      },
+      "sdk-integration/examples/browser": {
+        "id": "sdk-integration/examples/browser",
+        "title": "Browser Example",
+        "description": "After authentication, the SDK stores tokens in localStorage so subsequent API calls include the",
+        "sidebar": "defaultSidebar"
+      },
+      "sdk-integration/examples/node": {
+        "id": "sdk-integration/examples/node",
+        "title": "Node Example",
+        "description": "",
+        "sidebar": "defaultSidebar"
+      },
+      "sdk-integration/installation": {
+        "id": "sdk-integration/installation",
+        "title": "Installation",
+        "description": "Install the SDK packages using your preferred package manager. The example below installs all",
+        "sidebar": "defaultSidebar"
+      },
+      "sdk-integration/overview": {
+        "id": "sdk-integration/overview",
+        "title": "SDK Integration Overview",
+        "description": "The SaaS Framework ships with lightweight SDKs that simplify communicating with the platform",
+        "sidebar": "defaultSidebar"
+      }
+    }
+  }
+}

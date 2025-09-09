@@ -1,0 +1,25 @@
+{
+  "id": "sdk-integration/overview",
+  "title": "SDK Integration Overview",
+  "description": "The SaaS Framework ships with lightweight SDKs that simplify communicating with the platform",
+  "source": "@site/docs/sdk-integration/overview.md",
+  "sourceDirName": "sdk-integration",
+  "slug": "/sdk-integration/overview",
+  "permalink": "/next/sdk-integration/overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/sdk-integration/overview.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "FAQs",
+    "permalink": "/next/getting-started/faqs"
+  },
+  "next": {
+    "title": "Installation",
+    "permalink": "/next/sdk-integration/installation"
+  }
+}

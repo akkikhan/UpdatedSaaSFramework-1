@@ -1,0 +1,25 @@
+{
+  "id": "modules/auth/client-sdk",
+  "title": "Client SDK",
+  "description": "Install the client package and initiate the login flow from your application:",
+  "source": "@site/versioned_docs/version-1.0/modules/auth/client-sdk.md",
+  "sourceDirName": "modules/auth",
+  "slug": "/modules/auth/client-sdk",
+  "permalink": "/modules/auth/client-sdk",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/auth/client-sdk.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Server Setup",
+    "permalink": "/modules/auth/server-setup"
+  },
+  "next": {
+    "title": "Troubleshooting",
+    "permalink": "/modules/auth/troubleshooting"
+  }
+}

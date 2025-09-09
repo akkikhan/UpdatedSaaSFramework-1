@@ -1,0 +1,25 @@
+{
+  "id": "reference/api/rbac",
+  "title": "RBAC API",
+  "description": "| Endpoint | Description |",
+  "source": "@site/docs/reference/api/rbac.md",
+  "sourceDirName": "reference/api",
+  "slug": "/reference/api/rbac",
+  "permalink": "/next/reference/api/rbac",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/api/rbac.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Auth API",
+    "permalink": "/next/reference/api/auth"
+  },
+  "next": {
+    "title": "Logging API",
+    "permalink": "/next/reference/api/logging"
+  }
+}

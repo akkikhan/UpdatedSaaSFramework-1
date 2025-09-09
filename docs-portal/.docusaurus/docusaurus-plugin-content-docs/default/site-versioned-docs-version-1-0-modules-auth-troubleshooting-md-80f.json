@@ -1,0 +1,25 @@
+{
+  "id": "modules/auth/troubleshooting",
+  "title": "Troubleshooting",
+  "description": "Common issues and fixes:",
+  "source": "@site/versioned_docs/version-1.0/modules/auth/troubleshooting.md",
+  "sourceDirName": "modules/auth",
+  "slug": "/modules/auth/troubleshooting",
+  "permalink": "/modules/auth/troubleshooting",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/auth/troubleshooting.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Client SDK",
+    "permalink": "/modules/auth/client-sdk"
+  },
+  "next": {
+    "title": "RBAC Module Overview",
+    "permalink": "/modules/rbac/overview"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "reference/api/email",
+  "title": "Email API",
+  "description": "| Endpoint | Description |",
+  "source": "@site/docs/reference/api/email.md",
+  "sourceDirName": "reference/api",
+  "slug": "/reference/api/email",
+  "permalink": "/next/reference/api/email",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/api/email.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Logging API",
+    "permalink": "/next/reference/api/logging"
+  },
+  "next": {
+    "title": "CLI Reference",
+    "permalink": "/next/reference/cli"
+  }
+}

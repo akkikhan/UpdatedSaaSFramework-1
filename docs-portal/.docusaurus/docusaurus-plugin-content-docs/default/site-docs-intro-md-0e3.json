@@ -1,0 +1,21 @@
+{
+  "id": "intro",
+  "title": "intro",
+  "description": "SaaS Platform Documentation",
+  "source": "@site/docs/intro.md",
+  "sourceDirName": ".",
+  "slug": "/intro",
+  "permalink": "/next/intro",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/intro.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "next": {
+    "title": "Prerequisites",
+    "permalink": "/next/getting-started/prerequisites"
+  }
+}

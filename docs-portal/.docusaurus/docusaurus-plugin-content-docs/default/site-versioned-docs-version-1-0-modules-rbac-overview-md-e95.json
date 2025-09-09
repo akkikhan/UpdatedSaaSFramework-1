@@ -1,0 +1,25 @@
+{
+  "id": "modules/rbac/overview",
+  "title": "RBAC Module Overview",
+  "description": "The RBAC module enforces fine‑grained permissions per tenant. Roles group permissions and are",
+  "source": "@site/versioned_docs/version-1.0/modules/rbac/overview.md",
+  "sourceDirName": "modules/rbac",
+  "slug": "/modules/rbac/overview",
+  "permalink": "/modules/rbac/overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/rbac/overview.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Troubleshooting",
+    "permalink": "/modules/auth/troubleshooting"
+  },
+  "next": {
+    "title": "Policy Model",
+    "permalink": "/modules/rbac/policy-model"
+  }
+}

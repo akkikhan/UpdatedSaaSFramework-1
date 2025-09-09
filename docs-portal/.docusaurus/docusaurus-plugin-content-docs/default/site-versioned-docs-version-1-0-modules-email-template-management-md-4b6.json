@@ -1,0 +1,25 @@
+{
+  "id": "modules/email/template-management",
+  "title": "Template Management",
+  "description": "Create and edit templates in the admin portal under Email > Templates. Templates support",
+  "source": "@site/versioned_docs/version-1.0/modules/email/template-management.md",
+  "sourceDirName": "modules/email",
+  "slug": "/modules/email/template-management",
+  "permalink": "/modules/email/template-management",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/email/template-management.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Email Module Overview",
+    "permalink": "/modules/email/overview"
+  },
+  "next": {
+    "title": "Email Providers",
+    "permalink": "/modules/email/providers"
+  }
+}

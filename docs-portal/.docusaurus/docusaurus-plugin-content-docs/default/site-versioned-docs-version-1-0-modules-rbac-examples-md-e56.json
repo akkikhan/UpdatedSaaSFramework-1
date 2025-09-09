@@ -1,0 +1,25 @@
+{
+  "id": "modules/rbac/examples",
+  "title": "RBAC Examples",
+  "description": "",
+  "source": "@site/versioned_docs/version-1.0/modules/rbac/examples.md",
+  "sourceDirName": "modules/rbac",
+  "slug": "/modules/rbac/examples",
+  "permalink": "/modules/rbac/examples",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/rbac/examples.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Policy Model",
+    "permalink": "/modules/rbac/policy-model"
+  },
+  "next": {
+    "title": "Logging Module Overview",
+    "permalink": "/modules/logging/overview"
+  }
+}

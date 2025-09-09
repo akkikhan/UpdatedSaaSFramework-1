@@ -1,0 +1,1719 @@
+{
+  "allContent": {
+    "docusaurus-plugin-content-docs": {
+      "default": {
+        "loadedVersions": [
+          {
+            "versionName": "current",
+            "label": "Next",
+            "banner": "unreleased",
+            "badge": true,
+            "noIndex": false,
+            "className": "docs-version-current",
+            "path": "/docs/docs/next",
+            "tagsPath": "/docs/docs/next/tags",
+            "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs",
+            "editUrlLocalized": "https://github.com/your-org/saas-framework/tree/main/docs-portal/i18n/en/docusaurus-plugin-content-docs/current",
+            "isLast": false,
+            "sidebarFilePath": "C:\\Users\\Akki\\Downloads\\Updated Primus\\UpdatedSaaSFramework-1\\docs-portal\\sidebars.js",
+            "contentPath": "C:\\Users\\Akki\\Downloads\\Updated Primus\\UpdatedSaaSFramework-1\\docs-portal\\docs",
+            "contentPathLocalized": "C:\\Users\\Akki\\Downloads\\Updated Primus\\UpdatedSaaSFramework-1\\docs-portal\\i18n\\en\\docusaurus-plugin-content-docs\\current",
+            "docs": [
+              {
+                "id": "getting-started/faqs",
+                "title": "FAQs",
+                "description": "Where do I get API keys?",
+                "source": "@site/docs/getting-started/faqs.md",
+                "sourceDirName": "getting-started",
+                "slug": "/getting-started/faqs",
+                "permalink": "/docs/docs/next/getting-started/faqs",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/getting-started/faqs.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Quickstart",
+                  "permalink": "/docs/docs/next/getting-started/quickstart"
+                },
+                "next": {
+                  "title": "SDK Integration Overview",
+                  "permalink": "/docs/docs/next/sdk-integration/overview"
+                }
+              },
+              {
+                "id": "getting-started/prerequisites",
+                "title": "Prerequisites",
+                "description": "Before integrating with the platform make sure you have the following:",
+                "source": "@site/docs/getting-started/prerequisites.md",
+                "sourceDirName": "getting-started",
+                "slug": "/getting-started/prerequisites",
+                "permalink": "/docs/docs/next/getting-started/prerequisites",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/getting-started/prerequisites.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "SaaS Platform Documentation",
+                  "permalink": "/docs/docs/next/intro"
+                },
+                "next": {
+                  "title": "Quickstart",
+                  "permalink": "/docs/docs/next/getting-started/quickstart"
+                }
+              },
+              {
+                "id": "getting-started/quickstart",
+                "title": "Quickstart",
+                "description": "Follow these steps to get a demo tenant running in minutes:",
+                "source": "@site/docs/getting-started/quickstart.md",
+                "sourceDirName": "getting-started",
+                "slug": "/getting-started/quickstart",
+                "permalink": "/docs/docs/next/getting-started/quickstart",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/getting-started/quickstart.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Prerequisites",
+                  "permalink": "/docs/docs/next/getting-started/prerequisites"
+                },
+                "next": { "title": "FAQs", "permalink": "/docs/docs/next/getting-started/faqs" }
+              },
+              {
+                "id": "intro",
+                "title": "SaaS Platform Documentation",
+                "description": "Welcome to the official documentation for the SaaS Framework. These pages walk you through",
+                "source": "@site/docs/intro.md",
+                "sourceDirName": ".",
+                "slug": "/intro",
+                "permalink": "/docs/docs/next/intro",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/intro.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "next": {
+                  "title": "Prerequisites",
+                  "permalink": "/docs/docs/next/getting-started/prerequisites"
+                }
+              },
+              {
+                "id": "modules/auth/client-sdk",
+                "title": "Client SDK",
+                "description": "Install the client package and initiate the login flow from your application:",
+                "source": "@site/docs/modules/auth/client-sdk.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/client-sdk",
+                "permalink": "/docs/docs/next/modules/auth/client-sdk",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/auth/client-sdk.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Server Setup",
+                  "permalink": "/docs/docs/next/modules/auth/server-setup"
+                },
+                "next": {
+                  "title": "Troubleshooting",
+                  "permalink": "/docs/docs/next/modules/auth/troubleshooting"
+                }
+              },
+              {
+                "id": "modules/auth/overview",
+                "title": "Auth Module Overview",
+                "description": "The Auth module provides secure multi‑tenant authentication. It supports Azure AD single sign‑on",
+                "source": "@site/docs/modules/auth/overview.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/overview",
+                "permalink": "/docs/docs/next/modules/auth/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/auth/overview.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Browser Example",
+                  "permalink": "/docs/docs/next/sdk-integration/examples/browser"
+                },
+                "next": {
+                  "title": "Server Setup",
+                  "permalink": "/docs/docs/next/modules/auth/server-setup"
+                }
+              },
+              {
+                "id": "modules/auth/server-setup",
+                "title": "Server Setup",
+                "description": "1. Install the service and its dependencies:",
+                "source": "@site/docs/modules/auth/server-setup.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/server-setup",
+                "permalink": "/docs/docs/next/modules/auth/server-setup",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/auth/server-setup.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Auth Module Overview",
+                  "permalink": "/docs/docs/next/modules/auth/overview"
+                },
+                "next": {
+                  "title": "Client SDK",
+                  "permalink": "/docs/docs/next/modules/auth/client-sdk"
+                }
+              },
+              {
+                "id": "modules/auth/troubleshooting",
+                "title": "Troubleshooting",
+                "description": "Common issues and fixes:",
+                "source": "@site/docs/modules/auth/troubleshooting.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/troubleshooting",
+                "permalink": "/docs/docs/next/modules/auth/troubleshooting",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/auth/troubleshooting.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Client SDK",
+                  "permalink": "/docs/docs/next/modules/auth/client-sdk"
+                },
+                "next": {
+                  "title": "RBAC Module Overview",
+                  "permalink": "/docs/docs/next/modules/rbac/overview"
+                }
+              },
+              {
+                "id": "modules/email/overview",
+                "title": "Email Module Overview",
+                "description": "Use the Email module to send transactional messages such as password resets and onboarding",
+                "source": "@site/docs/modules/email/overview.md",
+                "sourceDirName": "modules/email",
+                "slug": "/modules/email/overview",
+                "permalink": "/docs/docs/next/modules/email/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/email/overview.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Log Sinks",
+                  "permalink": "/docs/docs/next/modules/logging/sinks"
+                },
+                "next": {
+                  "title": "Template Management",
+                  "permalink": "/docs/docs/next/modules/email/template-management"
+                }
+              },
+              {
+                "id": "modules/email/providers",
+                "title": "Email Providers",
+                "description": "Supported providers include SMTP, SendGrid, and AWS SES. Configure credentials for each tenant in",
+                "source": "@site/docs/modules/email/providers.md",
+                "sourceDirName": "modules/email",
+                "slug": "/modules/email/providers",
+                "permalink": "/docs/docs/next/modules/email/providers",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/email/providers.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Template Management",
+                  "permalink": "/docs/docs/next/modules/email/template-management"
+                },
+                "next": {
+                  "title": "Platform Admin Portal Overview",
+                  "permalink": "/docs/docs/next/platform-admin/portal-overview"
+                }
+              },
+              {
+                "id": "modules/email/template-management",
+                "title": "Template Management",
+                "description": "Create and edit templates in the admin portal under Email > Templates. Templates support",
+                "source": "@site/docs/modules/email/template-management.md",
+                "sourceDirName": "modules/email",
+                "slug": "/modules/email/template-management",
+                "permalink": "/docs/docs/next/modules/email/template-management",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/email/template-management.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Email Module Overview",
+                  "permalink": "/docs/docs/next/modules/email/overview"
+                },
+                "next": {
+                  "title": "Email Providers",
+                  "permalink": "/docs/docs/next/modules/email/providers"
+                }
+              },
+              {
+                "id": "modules/logging/overview",
+                "title": "Logging Module Overview",
+                "description": "The Logging module records structured events and routes them to storage or external sinks. Each",
+                "source": "@site/docs/modules/logging/overview.md",
+                "sourceDirName": "modules/logging",
+                "slug": "/modules/logging/overview",
+                "permalink": "/docs/docs/next/modules/logging/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/logging/overview.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "RBAC Examples",
+                  "permalink": "/docs/docs/next/modules/rbac/examples"
+                },
+                "next": {
+                  "title": "Logging Quickstart",
+                  "permalink": "/docs/docs/next/modules/logging/quickstart"
+                }
+              },
+              {
+                "id": "modules/logging/quickstart",
+                "title": "Logging Quickstart",
+                "description": "Logs are batched and sent to the platform where they can be viewed in the admin portal or forwarded",
+                "source": "@site/docs/modules/logging/quickstart.md",
+                "sourceDirName": "modules/logging",
+                "slug": "/modules/logging/quickstart",
+                "permalink": "/docs/docs/next/modules/logging/quickstart",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/logging/quickstart.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Logging Module Overview",
+                  "permalink": "/docs/docs/next/modules/logging/overview"
+                },
+                "next": {
+                  "title": "Log Sinks",
+                  "permalink": "/docs/docs/next/modules/logging/sinks"
+                }
+              },
+              {
+                "id": "modules/logging/sinks",
+                "title": "Log Sinks",
+                "description": "The logging service supports multiple outputs:",
+                "source": "@site/docs/modules/logging/sinks.md",
+                "sourceDirName": "modules/logging",
+                "slug": "/modules/logging/sinks",
+                "permalink": "/docs/docs/next/modules/logging/sinks",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/logging/sinks.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Logging Quickstart",
+                  "permalink": "/docs/docs/next/modules/logging/quickstart"
+                },
+                "next": {
+                  "title": "Email Module Overview",
+                  "permalink": "/docs/docs/next/modules/email/overview"
+                }
+              },
+              {
+                "id": "modules/rbac/examples",
+                "title": "RBAC Examples",
+                "description": "",
+                "source": "@site/docs/modules/rbac/examples.md",
+                "sourceDirName": "modules/rbac",
+                "slug": "/modules/rbac/examples",
+                "permalink": "/docs/docs/next/modules/rbac/examples",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/rbac/examples.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Policy Model",
+                  "permalink": "/docs/docs/next/modules/rbac/policy-model"
+                },
+                "next": {
+                  "title": "Logging Module Overview",
+                  "permalink": "/docs/docs/next/modules/logging/overview"
+                }
+              },
+              {
+                "id": "modules/rbac/overview",
+                "title": "RBAC Module Overview",
+                "description": "The RBAC module enforces fine‑grained permissions per tenant. Roles group permissions and are",
+                "source": "@site/docs/modules/rbac/overview.md",
+                "sourceDirName": "modules/rbac",
+                "slug": "/modules/rbac/overview",
+                "permalink": "/docs/docs/next/modules/rbac/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/rbac/overview.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Troubleshooting",
+                  "permalink": "/docs/docs/next/modules/auth/troubleshooting"
+                },
+                "next": {
+                  "title": "Policy Model",
+                  "permalink": "/docs/docs/next/modules/rbac/policy-model"
+                }
+              },
+              {
+                "id": "modules/rbac/policy-model",
+                "title": "Policy Model",
+                "description": "Policies are JSON documents that describe roles and their allowed actions. A minimal example:",
+                "source": "@site/docs/modules/rbac/policy-model.md",
+                "sourceDirName": "modules/rbac",
+                "slug": "/modules/rbac/policy-model",
+                "permalink": "/docs/docs/next/modules/rbac/policy-model",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/rbac/policy-model.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "RBAC Module Overview",
+                  "permalink": "/docs/docs/next/modules/rbac/overview"
+                },
+                "next": {
+                  "title": "RBAC Examples",
+                  "permalink": "/docs/docs/next/modules/rbac/examples"
+                }
+              },
+              {
+                "id": "platform-admin/portal-overview",
+                "title": "Platform Admin Portal Overview",
+                "description": "The web‑based admin portal is where you create tenants, issue API keys, and manage module",
+                "source": "@site/docs/platform-admin/portal-overview.md",
+                "sourceDirName": "platform-admin",
+                "slug": "/platform-admin/portal-overview",
+                "permalink": "/docs/docs/next/platform-admin/portal-overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/platform-admin/portal-overview.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Email Providers",
+                  "permalink": "/docs/docs/next/modules/email/providers"
+                },
+                "next": {
+                  "title": "SDK Guide",
+                  "permalink": "/docs/docs/next/platform-admin/sdk-guide"
+                }
+              },
+              {
+                "id": "platform-admin/sdk-guide",
+                "title": "SDK Guide",
+                "description": "From the admin portal's SDK Integration section you can download language‑specific SDK packages",
+                "source": "@site/docs/platform-admin/sdk-guide.md",
+                "sourceDirName": "platform-admin",
+                "slug": "/platform-admin/sdk-guide",
+                "permalink": "/docs/docs/next/platform-admin/sdk-guide",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/platform-admin/sdk-guide.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Platform Admin Portal Overview",
+                  "permalink": "/docs/docs/next/platform-admin/portal-overview"
+                },
+                "next": { "title": "Auth API", "permalink": "/docs/docs/next/reference/api/auth" }
+              },
+              {
+                "id": "reference/api/auth",
+                "title": "Auth API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/docs/reference/api/auth.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/auth",
+                "permalink": "/docs/docs/next/reference/api/auth",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/api/auth.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "SDK Guide",
+                  "permalink": "/docs/docs/next/platform-admin/sdk-guide"
+                },
+                "next": { "title": "RBAC API", "permalink": "/docs/docs/next/reference/api/rbac" }
+              },
+              {
+                "id": "reference/api/email",
+                "title": "Email API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/docs/reference/api/email.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/email",
+                "permalink": "/docs/docs/next/reference/api/email",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/api/email.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Logging API",
+                  "permalink": "/docs/docs/next/reference/api/logging"
+                },
+                "next": { "title": "CLI Reference", "permalink": "/docs/docs/next/reference/cli" }
+              },
+              {
+                "id": "reference/api/logging",
+                "title": "Logging API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/docs/reference/api/logging.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/logging",
+                "permalink": "/docs/docs/next/reference/api/logging",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/api/logging.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "RBAC API",
+                  "permalink": "/docs/docs/next/reference/api/rbac"
+                },
+                "next": { "title": "Email API", "permalink": "/docs/docs/next/reference/api/email" }
+              },
+              {
+                "id": "reference/api/rbac",
+                "title": "RBAC API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/docs/reference/api/rbac.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/rbac",
+                "permalink": "/docs/docs/next/reference/api/rbac",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/api/rbac.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Auth API",
+                  "permalink": "/docs/docs/next/reference/api/auth"
+                },
+                "next": {
+                  "title": "Logging API",
+                  "permalink": "/docs/docs/next/reference/api/logging"
+                }
+              },
+              {
+                "id": "reference/architecture",
+                "title": "Architecture Overview",
+                "description": "The platform follows a modular microservice architecture. Core services include Auth, RBAC,",
+                "source": "@site/docs/reference/architecture.md",
+                "sourceDirName": "reference",
+                "slug": "/reference/architecture",
+                "permalink": "/docs/docs/next/reference/architecture",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/architecture.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "CLI Reference",
+                  "permalink": "/docs/docs/next/reference/cli"
+                }
+              },
+              {
+                "id": "reference/cli",
+                "title": "CLI Reference",
+                "description": "Install the CLI globally:",
+                "source": "@site/docs/reference/cli.md",
+                "sourceDirName": "reference",
+                "slug": "/reference/cli",
+                "permalink": "/docs/docs/next/reference/cli",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/reference/cli.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Email API",
+                  "permalink": "/docs/docs/next/reference/api/email"
+                },
+                "next": {
+                  "title": "Architecture Overview",
+                  "permalink": "/docs/docs/next/reference/architecture"
+                }
+              },
+              {
+                "id": "sdk-integration/configuration",
+                "title": "Configuration",
+                "description": "Configuration is identical across modules. Each client accepts an API key and a base URL pointing",
+                "source": "@site/docs/sdk-integration/configuration.md",
+                "sourceDirName": "sdk-integration",
+                "slug": "/sdk-integration/configuration",
+                "permalink": "/docs/docs/next/sdk-integration/configuration",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/sdk-integration/configuration.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Installation",
+                  "permalink": "/docs/docs/next/sdk-integration/installation"
+                },
+                "next": {
+                  "title": "Node Example",
+                  "permalink": "/docs/docs/next/sdk-integration/examples/node"
+                }
+              },
+              {
+                "id": "sdk-integration/examples/browser",
+                "title": "Browser Example",
+                "description": "After authentication, the SDK stores tokens in localStorage so subsequent API calls include the",
+                "source": "@site/docs/sdk-integration/examples/browser.md",
+                "sourceDirName": "sdk-integration/examples",
+                "slug": "/sdk-integration/examples/browser",
+                "permalink": "/docs/docs/next/sdk-integration/examples/browser",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/sdk-integration/examples/browser.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Node Example",
+                  "permalink": "/docs/docs/next/sdk-integration/examples/node"
+                },
+                "next": {
+                  "title": "Auth Module Overview",
+                  "permalink": "/docs/docs/next/modules/auth/overview"
+                }
+              },
+              {
+                "id": "sdk-integration/examples/node",
+                "title": "Node Example",
+                "description": "",
+                "source": "@site/docs/sdk-integration/examples/node.md",
+                "sourceDirName": "sdk-integration/examples",
+                "slug": "/sdk-integration/examples/node",
+                "permalink": "/docs/docs/next/sdk-integration/examples/node",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/sdk-integration/examples/node.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Configuration",
+                  "permalink": "/docs/docs/next/sdk-integration/configuration"
+                },
+                "next": {
+                  "title": "Browser Example",
+                  "permalink": "/docs/docs/next/sdk-integration/examples/browser"
+                }
+              },
+              {
+                "id": "sdk-integration/installation",
+                "title": "Installation",
+                "description": "Install the SDK packages using your preferred package manager. The example below installs all",
+                "source": "@site/docs/sdk-integration/installation.md",
+                "sourceDirName": "sdk-integration",
+                "slug": "/sdk-integration/installation",
+                "permalink": "/docs/docs/next/sdk-integration/installation",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/sdk-integration/installation.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "SDK Integration Overview",
+                  "permalink": "/docs/docs/next/sdk-integration/overview"
+                },
+                "next": {
+                  "title": "Configuration",
+                  "permalink": "/docs/docs/next/sdk-integration/configuration"
+                }
+              },
+              {
+                "id": "sdk-integration/overview",
+                "title": "SDK Integration Overview",
+                "description": "The SaaS Framework ships with lightweight SDKs that simplify communicating with the platform",
+                "source": "@site/docs/sdk-integration/overview.md",
+                "sourceDirName": "sdk-integration",
+                "slug": "/sdk-integration/overview",
+                "permalink": "/docs/docs/next/sdk-integration/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/sdk-integration/overview.md",
+                "tags": [],
+                "version": "current",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "FAQs",
+                  "permalink": "/docs/docs/next/getting-started/faqs"
+                },
+                "next": {
+                  "title": "Installation",
+                  "permalink": "/docs/docs/next/sdk-integration/installation"
+                }
+              }
+            ],
+            "drafts": [],
+            "sidebars": {
+              "defaultSidebar": [
+                { "type": "doc", "id": "intro" },
+                {
+                  "type": "category",
+                  "label": "Getting Started",
+                  "items": [
+                    { "type": "doc", "id": "getting-started/prerequisites" },
+                    { "type": "doc", "id": "getting-started/quickstart" },
+                    { "type": "doc", "id": "getting-started/faqs" }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "SDK Integration",
+                  "items": [
+                    { "type": "doc", "id": "sdk-integration/overview" },
+                    { "type": "doc", "id": "sdk-integration/installation" },
+                    { "type": "doc", "id": "sdk-integration/configuration" },
+                    {
+                      "type": "category",
+                      "label": "Examples",
+                      "items": [
+                        { "type": "doc", "id": "sdk-integration/examples/node" },
+                        { "type": "doc", "id": "sdk-integration/examples/browser" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "Modules",
+                  "items": [
+                    {
+                      "type": "category",
+                      "label": "Auth",
+                      "items": [
+                        { "type": "doc", "id": "modules/auth/overview" },
+                        { "type": "doc", "id": "modules/auth/server-setup" },
+                        { "type": "doc", "id": "modules/auth/client-sdk" },
+                        { "type": "doc", "id": "modules/auth/troubleshooting" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    },
+                    {
+                      "type": "category",
+                      "label": "RBAC",
+                      "items": [
+                        { "type": "doc", "id": "modules/rbac/overview" },
+                        { "type": "doc", "id": "modules/rbac/policy-model" },
+                        { "type": "doc", "id": "modules/rbac/examples" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    },
+                    {
+                      "type": "category",
+                      "label": "Logging",
+                      "items": [
+                        { "type": "doc", "id": "modules/logging/overview" },
+                        { "type": "doc", "id": "modules/logging/quickstart" },
+                        { "type": "doc", "id": "modules/logging/sinks" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    },
+                    {
+                      "type": "category",
+                      "label": "Email",
+                      "items": [
+                        { "type": "doc", "id": "modules/email/overview" },
+                        { "type": "doc", "id": "modules/email/template-management" },
+                        { "type": "doc", "id": "modules/email/providers" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "Platform Admin",
+                  "items": [
+                    { "type": "doc", "id": "platform-admin/portal-overview" },
+                    { "type": "doc", "id": "platform-admin/sdk-guide" }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "Reference",
+                  "items": [
+                    { "type": "doc", "id": "reference/api/auth" },
+                    { "type": "doc", "id": "reference/api/rbac" },
+                    { "type": "doc", "id": "reference/api/logging" },
+                    { "type": "doc", "id": "reference/api/email" },
+                    { "type": "doc", "id": "reference/cli" },
+                    { "type": "doc", "id": "reference/architecture" }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                }
+              ]
+            }
+          },
+          {
+            "versionName": "1.0",
+            "label": "1.0",
+            "banner": null,
+            "badge": true,
+            "noIndex": false,
+            "className": "docs-version-1.0",
+            "path": "/docs/docs",
+            "tagsPath": "/docs/docs/tags",
+            "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0",
+            "editUrlLocalized": "https://github.com/your-org/saas-framework/tree/main/docs-portal/i18n/en/docusaurus-plugin-content-docs/version-1.0",
+            "isLast": true,
+            "routePriority": -1,
+            "sidebarFilePath": "C:\\Users\\Akki\\Downloads\\Updated Primus\\UpdatedSaaSFramework-1\\docs-portal\\versioned_sidebars\\version-1.0-sidebars.json",
+            "contentPath": "C:\\Users\\Akki\\Downloads\\Updated Primus\\UpdatedSaaSFramework-1\\docs-portal\\versioned_docs\\version-1.0",
+            "contentPathLocalized": "C:\\Users\\Akki\\Downloads\\Updated Primus\\UpdatedSaaSFramework-1\\docs-portal\\i18n\\en\\docusaurus-plugin-content-docs\\version-1.0",
+            "docs": [
+              {
+                "id": "getting-started/faqs",
+                "title": "FAQs",
+                "description": "Where do I get API keys?",
+                "source": "@site/versioned_docs/version-1.0/getting-started/faqs.md",
+                "sourceDirName": "getting-started",
+                "slug": "/getting-started/faqs",
+                "permalink": "/docs/docs/getting-started/faqs",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/getting-started/faqs.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Quickstart",
+                  "permalink": "/docs/docs/getting-started/quickstart"
+                },
+                "next": {
+                  "title": "SDK Integration Overview",
+                  "permalink": "/docs/docs/sdk-integration/overview"
+                }
+              },
+              {
+                "id": "getting-started/prerequisites",
+                "title": "Prerequisites",
+                "description": "Before integrating with the platform make sure you have the following:",
+                "source": "@site/versioned_docs/version-1.0/getting-started/prerequisites.md",
+                "sourceDirName": "getting-started",
+                "slug": "/getting-started/prerequisites",
+                "permalink": "/docs/docs/getting-started/prerequisites",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/getting-started/prerequisites.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "SaaS Platform Documentation",
+                  "permalink": "/docs/docs/intro"
+                },
+                "next": {
+                  "title": "Quickstart",
+                  "permalink": "/docs/docs/getting-started/quickstart"
+                }
+              },
+              {
+                "id": "getting-started/quickstart",
+                "title": "Quickstart",
+                "description": "Follow these steps to get a demo tenant running in minutes:",
+                "source": "@site/versioned_docs/version-1.0/getting-started/quickstart.md",
+                "sourceDirName": "getting-started",
+                "slug": "/getting-started/quickstart",
+                "permalink": "/docs/docs/getting-started/quickstart",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/getting-started/quickstart.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Prerequisites",
+                  "permalink": "/docs/docs/getting-started/prerequisites"
+                },
+                "next": { "title": "FAQs", "permalink": "/docs/docs/getting-started/faqs" }
+              },
+              {
+                "id": "intro",
+                "title": "SaaS Platform Documentation",
+                "description": "Welcome to the official documentation for the SaaS Framework. These pages walk you through",
+                "source": "@site/versioned_docs/version-1.0/intro.md",
+                "sourceDirName": ".",
+                "slug": "/intro",
+                "permalink": "/docs/docs/intro",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/intro.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "next": {
+                  "title": "Prerequisites",
+                  "permalink": "/docs/docs/getting-started/prerequisites"
+                }
+              },
+              {
+                "id": "modules/auth/client-sdk",
+                "title": "Client SDK",
+                "description": "Install the client package and initiate the login flow from your application:",
+                "source": "@site/versioned_docs/version-1.0/modules/auth/client-sdk.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/client-sdk",
+                "permalink": "/docs/docs/modules/auth/client-sdk",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/auth/client-sdk.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Server Setup",
+                  "permalink": "/docs/docs/modules/auth/server-setup"
+                },
+                "next": {
+                  "title": "Troubleshooting",
+                  "permalink": "/docs/docs/modules/auth/troubleshooting"
+                }
+              },
+              {
+                "id": "modules/auth/overview",
+                "title": "Auth Module Overview",
+                "description": "The Auth module provides secure multi‑tenant authentication. It supports Azure AD single sign‑on",
+                "source": "@site/versioned_docs/version-1.0/modules/auth/overview.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/overview",
+                "permalink": "/docs/docs/modules/auth/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/auth/overview.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Browser Example",
+                  "permalink": "/docs/docs/sdk-integration/examples/browser"
+                },
+                "next": {
+                  "title": "Server Setup",
+                  "permalink": "/docs/docs/modules/auth/server-setup"
+                }
+              },
+              {
+                "id": "modules/auth/server-setup",
+                "title": "Server Setup",
+                "description": "1. Install the service and its dependencies:",
+                "source": "@site/versioned_docs/version-1.0/modules/auth/server-setup.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/server-setup",
+                "permalink": "/docs/docs/modules/auth/server-setup",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/auth/server-setup.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Auth Module Overview",
+                  "permalink": "/docs/docs/modules/auth/overview"
+                },
+                "next": { "title": "Client SDK", "permalink": "/docs/docs/modules/auth/client-sdk" }
+              },
+              {
+                "id": "modules/auth/troubleshooting",
+                "title": "Troubleshooting",
+                "description": "Common issues and fixes:",
+                "source": "@site/versioned_docs/version-1.0/modules/auth/troubleshooting.md",
+                "sourceDirName": "modules/auth",
+                "slug": "/modules/auth/troubleshooting",
+                "permalink": "/docs/docs/modules/auth/troubleshooting",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/auth/troubleshooting.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Client SDK",
+                  "permalink": "/docs/docs/modules/auth/client-sdk"
+                },
+                "next": {
+                  "title": "RBAC Module Overview",
+                  "permalink": "/docs/docs/modules/rbac/overview"
+                }
+              },
+              {
+                "id": "modules/email/overview",
+                "title": "Email Module Overview",
+                "description": "Use the Email module to send transactional messages such as password resets and onboarding",
+                "source": "@site/versioned_docs/version-1.0/modules/email/overview.md",
+                "sourceDirName": "modules/email",
+                "slug": "/modules/email/overview",
+                "permalink": "/docs/docs/modules/email/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/email/overview.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Log Sinks",
+                  "permalink": "/docs/docs/modules/logging/sinks"
+                },
+                "next": {
+                  "title": "Template Management",
+                  "permalink": "/docs/docs/modules/email/template-management"
+                }
+              },
+              {
+                "id": "modules/email/providers",
+                "title": "Email Providers",
+                "description": "Supported providers include SMTP, SendGrid, and AWS SES. Configure credentials for each tenant in",
+                "source": "@site/versioned_docs/version-1.0/modules/email/providers.md",
+                "sourceDirName": "modules/email",
+                "slug": "/modules/email/providers",
+                "permalink": "/docs/docs/modules/email/providers",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/email/providers.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Template Management",
+                  "permalink": "/docs/docs/modules/email/template-management"
+                },
+                "next": {
+                  "title": "Platform Admin Portal Overview",
+                  "permalink": "/docs/docs/platform-admin/portal-overview"
+                }
+              },
+              {
+                "id": "modules/email/template-management",
+                "title": "Template Management",
+                "description": "Create and edit templates in the admin portal under Email > Templates. Templates support",
+                "source": "@site/versioned_docs/version-1.0/modules/email/template-management.md",
+                "sourceDirName": "modules/email",
+                "slug": "/modules/email/template-management",
+                "permalink": "/docs/docs/modules/email/template-management",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/email/template-management.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Email Module Overview",
+                  "permalink": "/docs/docs/modules/email/overview"
+                },
+                "next": {
+                  "title": "Email Providers",
+                  "permalink": "/docs/docs/modules/email/providers"
+                }
+              },
+              {
+                "id": "modules/logging/overview",
+                "title": "Logging Module Overview",
+                "description": "The Logging module records structured events and routes them to storage or external sinks. Each",
+                "source": "@site/versioned_docs/version-1.0/modules/logging/overview.md",
+                "sourceDirName": "modules/logging",
+                "slug": "/modules/logging/overview",
+                "permalink": "/docs/docs/modules/logging/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/logging/overview.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "RBAC Examples",
+                  "permalink": "/docs/docs/modules/rbac/examples"
+                },
+                "next": {
+                  "title": "Logging Quickstart",
+                  "permalink": "/docs/docs/modules/logging/quickstart"
+                }
+              },
+              {
+                "id": "modules/logging/quickstart",
+                "title": "Logging Quickstart",
+                "description": "Logs are batched and sent to the platform where they can be viewed in the admin portal or forwarded",
+                "source": "@site/versioned_docs/version-1.0/modules/logging/quickstart.md",
+                "sourceDirName": "modules/logging",
+                "slug": "/modules/logging/quickstart",
+                "permalink": "/docs/docs/modules/logging/quickstart",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/logging/quickstart.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Logging Module Overview",
+                  "permalink": "/docs/docs/modules/logging/overview"
+                },
+                "next": { "title": "Log Sinks", "permalink": "/docs/docs/modules/logging/sinks" }
+              },
+              {
+                "id": "modules/logging/sinks",
+                "title": "Log Sinks",
+                "description": "The logging service supports multiple outputs:",
+                "source": "@site/versioned_docs/version-1.0/modules/logging/sinks.md",
+                "sourceDirName": "modules/logging",
+                "slug": "/modules/logging/sinks",
+                "permalink": "/docs/docs/modules/logging/sinks",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/logging/sinks.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Logging Quickstart",
+                  "permalink": "/docs/docs/modules/logging/quickstart"
+                },
+                "next": {
+                  "title": "Email Module Overview",
+                  "permalink": "/docs/docs/modules/email/overview"
+                }
+              },
+              {
+                "id": "modules/rbac/examples",
+                "title": "RBAC Examples",
+                "description": "",
+                "source": "@site/versioned_docs/version-1.0/modules/rbac/examples.md",
+                "sourceDirName": "modules/rbac",
+                "slug": "/modules/rbac/examples",
+                "permalink": "/docs/docs/modules/rbac/examples",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/rbac/examples.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Policy Model",
+                  "permalink": "/docs/docs/modules/rbac/policy-model"
+                },
+                "next": {
+                  "title": "Logging Module Overview",
+                  "permalink": "/docs/docs/modules/logging/overview"
+                }
+              },
+              {
+                "id": "modules/rbac/overview",
+                "title": "RBAC Module Overview",
+                "description": "The RBAC module enforces fine‑grained permissions per tenant. Roles group permissions and are",
+                "source": "@site/versioned_docs/version-1.0/modules/rbac/overview.md",
+                "sourceDirName": "modules/rbac",
+                "slug": "/modules/rbac/overview",
+                "permalink": "/docs/docs/modules/rbac/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/rbac/overview.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Troubleshooting",
+                  "permalink": "/docs/docs/modules/auth/troubleshooting"
+                },
+                "next": {
+                  "title": "Policy Model",
+                  "permalink": "/docs/docs/modules/rbac/policy-model"
+                }
+              },
+              {
+                "id": "modules/rbac/policy-model",
+                "title": "Policy Model",
+                "description": "Policies are JSON documents that describe roles and their allowed actions. A minimal example:",
+                "source": "@site/versioned_docs/version-1.0/modules/rbac/policy-model.md",
+                "sourceDirName": "modules/rbac",
+                "slug": "/modules/rbac/policy-model",
+                "permalink": "/docs/docs/modules/rbac/policy-model",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/rbac/policy-model.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "RBAC Module Overview",
+                  "permalink": "/docs/docs/modules/rbac/overview"
+                },
+                "next": {
+                  "title": "RBAC Examples",
+                  "permalink": "/docs/docs/modules/rbac/examples"
+                }
+              },
+              {
+                "id": "platform-admin/portal-overview",
+                "title": "Platform Admin Portal Overview",
+                "description": "The web‑based admin portal is where you create tenants, issue API keys, and manage module",
+                "source": "@site/versioned_docs/version-1.0/platform-admin/portal-overview.md",
+                "sourceDirName": "platform-admin",
+                "slug": "/platform-admin/portal-overview",
+                "permalink": "/docs/docs/platform-admin/portal-overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/platform-admin/portal-overview.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Email Providers",
+                  "permalink": "/docs/docs/modules/email/providers"
+                },
+                "next": { "title": "SDK Guide", "permalink": "/docs/docs/platform-admin/sdk-guide" }
+              },
+              {
+                "id": "platform-admin/sdk-guide",
+                "title": "SDK Guide",
+                "description": "From the admin portal's SDK Integration section you can download language‑specific SDK packages",
+                "source": "@site/versioned_docs/version-1.0/platform-admin/sdk-guide.md",
+                "sourceDirName": "platform-admin",
+                "slug": "/platform-admin/sdk-guide",
+                "permalink": "/docs/docs/platform-admin/sdk-guide",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/platform-admin/sdk-guide.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Platform Admin Portal Overview",
+                  "permalink": "/docs/docs/platform-admin/portal-overview"
+                },
+                "next": { "title": "Auth API", "permalink": "/docs/docs/reference/api/auth" }
+              },
+              {
+                "id": "reference/api/auth",
+                "title": "Auth API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/versioned_docs/version-1.0/reference/api/auth.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/auth",
+                "permalink": "/docs/docs/reference/api/auth",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/reference/api/auth.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "SDK Guide",
+                  "permalink": "/docs/docs/platform-admin/sdk-guide"
+                },
+                "next": { "title": "RBAC API", "permalink": "/docs/docs/reference/api/rbac" }
+              },
+              {
+                "id": "reference/api/email",
+                "title": "Email API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/versioned_docs/version-1.0/reference/api/email.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/email",
+                "permalink": "/docs/docs/reference/api/email",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/reference/api/email.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Logging API",
+                  "permalink": "/docs/docs/reference/api/logging"
+                },
+                "next": { "title": "CLI Reference", "permalink": "/docs/docs/reference/cli" }
+              },
+              {
+                "id": "reference/api/logging",
+                "title": "Logging API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/versioned_docs/version-1.0/reference/api/logging.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/logging",
+                "permalink": "/docs/docs/reference/api/logging",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/reference/api/logging.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": { "title": "RBAC API", "permalink": "/docs/docs/reference/api/rbac" },
+                "next": { "title": "Email API", "permalink": "/docs/docs/reference/api/email" }
+              },
+              {
+                "id": "reference/api/rbac",
+                "title": "RBAC API",
+                "description": "| Endpoint | Description |",
+                "source": "@site/versioned_docs/version-1.0/reference/api/rbac.md",
+                "sourceDirName": "reference/api",
+                "slug": "/reference/api/rbac",
+                "permalink": "/docs/docs/reference/api/rbac",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/reference/api/rbac.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": { "title": "Auth API", "permalink": "/docs/docs/reference/api/auth" },
+                "next": { "title": "Logging API", "permalink": "/docs/docs/reference/api/logging" }
+              },
+              {
+                "id": "reference/architecture",
+                "title": "Architecture Overview",
+                "description": "The platform follows a modular microservice architecture. Core services include Auth, RBAC,",
+                "source": "@site/versioned_docs/version-1.0/reference/architecture.md",
+                "sourceDirName": "reference",
+                "slug": "/reference/architecture",
+                "permalink": "/docs/docs/reference/architecture",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/reference/architecture.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": { "title": "CLI Reference", "permalink": "/docs/docs/reference/cli" }
+              },
+              {
+                "id": "reference/cli",
+                "title": "CLI Reference",
+                "description": "Install the CLI globally:",
+                "source": "@site/versioned_docs/version-1.0/reference/cli.md",
+                "sourceDirName": "reference",
+                "slug": "/reference/cli",
+                "permalink": "/docs/docs/reference/cli",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/reference/cli.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": { "title": "Email API", "permalink": "/docs/docs/reference/api/email" },
+                "next": {
+                  "title": "Architecture Overview",
+                  "permalink": "/docs/docs/reference/architecture"
+                }
+              },
+              {
+                "id": "sdk-integration/configuration",
+                "title": "Configuration",
+                "description": "Configuration is identical across modules. Each client accepts an API key and a base URL pointing",
+                "source": "@site/versioned_docs/version-1.0/sdk-integration/configuration.md",
+                "sourceDirName": "sdk-integration",
+                "slug": "/sdk-integration/configuration",
+                "permalink": "/docs/docs/sdk-integration/configuration",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/sdk-integration/configuration.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Installation",
+                  "permalink": "/docs/docs/sdk-integration/installation"
+                },
+                "next": {
+                  "title": "Node Example",
+                  "permalink": "/docs/docs/sdk-integration/examples/node"
+                }
+              },
+              {
+                "id": "sdk-integration/examples/browser",
+                "title": "Browser Example",
+                "description": "After authentication, the SDK stores tokens in localStorage so subsequent API calls include the",
+                "source": "@site/versioned_docs/version-1.0/sdk-integration/examples/browser.md",
+                "sourceDirName": "sdk-integration/examples",
+                "slug": "/sdk-integration/examples/browser",
+                "permalink": "/docs/docs/sdk-integration/examples/browser",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/sdk-integration/examples/browser.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Node Example",
+                  "permalink": "/docs/docs/sdk-integration/examples/node"
+                },
+                "next": {
+                  "title": "Auth Module Overview",
+                  "permalink": "/docs/docs/modules/auth/overview"
+                }
+              },
+              {
+                "id": "sdk-integration/examples/node",
+                "title": "Node Example",
+                "description": "",
+                "source": "@site/versioned_docs/version-1.0/sdk-integration/examples/node.md",
+                "sourceDirName": "sdk-integration/examples",
+                "slug": "/sdk-integration/examples/node",
+                "permalink": "/docs/docs/sdk-integration/examples/node",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/sdk-integration/examples/node.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "Configuration",
+                  "permalink": "/docs/docs/sdk-integration/configuration"
+                },
+                "next": {
+                  "title": "Browser Example",
+                  "permalink": "/docs/docs/sdk-integration/examples/browser"
+                }
+              },
+              {
+                "id": "sdk-integration/installation",
+                "title": "Installation",
+                "description": "Install the SDK packages using your preferred package manager. The example below installs all",
+                "source": "@site/versioned_docs/version-1.0/sdk-integration/installation.md",
+                "sourceDirName": "sdk-integration",
+                "slug": "/sdk-integration/installation",
+                "permalink": "/docs/docs/sdk-integration/installation",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/sdk-integration/installation.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": {
+                  "title": "SDK Integration Overview",
+                  "permalink": "/docs/docs/sdk-integration/overview"
+                },
+                "next": {
+                  "title": "Configuration",
+                  "permalink": "/docs/docs/sdk-integration/configuration"
+                }
+              },
+              {
+                "id": "sdk-integration/overview",
+                "title": "SDK Integration Overview",
+                "description": "The SaaS Framework ships with lightweight SDKs that simplify communicating with the platform",
+                "source": "@site/versioned_docs/version-1.0/sdk-integration/overview.md",
+                "sourceDirName": "sdk-integration",
+                "slug": "/sdk-integration/overview",
+                "permalink": "/docs/docs/sdk-integration/overview",
+                "draft": false,
+                "unlisted": false,
+                "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/sdk-integration/overview.md",
+                "tags": [],
+                "version": "1.0",
+                "lastUpdatedAt": 1539502055000,
+                "frontMatter": {},
+                "sidebar": "defaultSidebar",
+                "previous": { "title": "FAQs", "permalink": "/docs/docs/getting-started/faqs" },
+                "next": {
+                  "title": "Installation",
+                  "permalink": "/docs/docs/sdk-integration/installation"
+                }
+              }
+            ],
+            "drafts": [],
+            "sidebars": {
+              "defaultSidebar": [
+                { "type": "doc", "id": "intro" },
+                {
+                  "type": "category",
+                  "label": "Getting Started",
+                  "items": [
+                    { "type": "doc", "id": "getting-started/prerequisites" },
+                    { "type": "doc", "id": "getting-started/quickstart" },
+                    { "type": "doc", "id": "getting-started/faqs" }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "SDK Integration",
+                  "items": [
+                    { "type": "doc", "id": "sdk-integration/overview" },
+                    { "type": "doc", "id": "sdk-integration/installation" },
+                    { "type": "doc", "id": "sdk-integration/configuration" },
+                    {
+                      "type": "category",
+                      "label": "Examples",
+                      "items": [
+                        { "type": "doc", "id": "sdk-integration/examples/node" },
+                        { "type": "doc", "id": "sdk-integration/examples/browser" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "Modules",
+                  "items": [
+                    {
+                      "type": "category",
+                      "label": "Auth",
+                      "items": [
+                        { "type": "doc", "id": "modules/auth/overview" },
+                        { "type": "doc", "id": "modules/auth/server-setup" },
+                        { "type": "doc", "id": "modules/auth/client-sdk" },
+                        { "type": "doc", "id": "modules/auth/troubleshooting" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    },
+                    {
+                      "type": "category",
+                      "label": "RBAC",
+                      "items": [
+                        { "type": "doc", "id": "modules/rbac/overview" },
+                        { "type": "doc", "id": "modules/rbac/policy-model" },
+                        { "type": "doc", "id": "modules/rbac/examples" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    },
+                    {
+                      "type": "category",
+                      "label": "Logging",
+                      "items": [
+                        { "type": "doc", "id": "modules/logging/overview" },
+                        { "type": "doc", "id": "modules/logging/quickstart" },
+                        { "type": "doc", "id": "modules/logging/sinks" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    },
+                    {
+                      "type": "category",
+                      "label": "Email",
+                      "items": [
+                        { "type": "doc", "id": "modules/email/overview" },
+                        { "type": "doc", "id": "modules/email/template-management" },
+                        { "type": "doc", "id": "modules/email/providers" }
+                      ],
+                      "collapsed": true,
+                      "collapsible": true
+                    }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "Platform Admin",
+                  "items": [
+                    { "type": "doc", "id": "platform-admin/portal-overview" },
+                    { "type": "doc", "id": "platform-admin/sdk-guide" }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                },
+                {
+                  "type": "category",
+                  "label": "Reference",
+                  "items": [
+                    { "type": "doc", "id": "reference/api/auth" },
+                    { "type": "doc", "id": "reference/api/rbac" },
+                    { "type": "doc", "id": "reference/api/logging" },
+                    { "type": "doc", "id": "reference/api/email" },
+                    { "type": "doc", "id": "reference/cli" },
+                    { "type": "doc", "id": "reference/architecture" }
+                  ],
+                  "collapsed": true,
+                  "collapsible": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "docusaurus-plugin-content-blog": {
+      "default": {
+        "blogSidebarTitle": "Recent posts",
+        "blogPosts": [],
+        "blogListPaginated": [],
+        "blogTags": {},
+        "blogTagsListPath": "/docs/blog/tags"
+      }
+    },
+    "docusaurus-plugin-content-pages": { "default": null },
+    "docusaurus-plugin-debug": {},
+    "docusaurus-plugin-svgr": {},
+    "docusaurus-theme-classic": {},
+    "docusaurus-bootstrap-plugin": {},
+    "docusaurus-mdx-fallback-plugin": {}
+  }
+}

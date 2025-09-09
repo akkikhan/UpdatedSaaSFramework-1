@@ -1,0 +1,216 @@
+/* Professional Platform Admin Enhancements for React Components */
+
+/* Enhanced backdrop blur support for all browsers */
+.platform-login-backdrop {
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+/* Professional brand logo styles */
+.professional-brand-logo {
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.professional-brand-logo:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced form input styles */
+.professional-form-input {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  border-width: 2px;
+}
+
+.professional-form-input:focus {
+  border-color: #1e40af;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+  outline: none;
+}
+
+.professional-form-input:hover:not(:focus) {
+  border-color: #cbd5e1;
+}
+
+/* Professional button enhancements */
+.professional-button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.professional-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+.professional-button:active:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.professional-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Microsoft branding colors */
+.microsoft-button {
+  background-color: #1e40af;
+  color: white;
+}
+
+.microsoft-button:hover {
+  background-color: #1d4ed8;
+}
+
+/* Professional alert styles */
+.professional-alert {
+  font-weight: 500;
+  border-width: 1px;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+}
+
+.professional-alert-error {
+  background-color: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.professional-alert-success {
+  background-color: #d1fae5;
+  border-color: #a7f3d0;
+  color: #059669;
+}
+
+/* Professional loading spinner */
+.professional-spinner {
+  animation: spin 1s linear infinite;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Professional background pattern */
+.professional-bg-pattern {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px
+  );
+  background-size: 50px 50px;
+  animation: backgroundMove 60s linear infinite;
+}
+
+@keyframes backgroundMove {
+  0% {
+    transform: translate(-50px, -50px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+/* Professional gradient backgrounds */
+.professional-gradient-primary {
+  background: linear-gradient(135deg, #1e40af 0%, #334155 100%);
+}
+
+.professional-gradient-card {
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+}
+
+/* Typography enhancements */
+.professional-title {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #111827;
+}
+
+.professional-subtitle {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.professional-label {
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  color: #374151;
+}
+
+/* Accessibility improvements */
+.professional-focus-ring:focus {
+  outline: 2px solid #1e40af;
+  outline-offset: 2px;
+}
+
+.professional-focus-ring:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .professional-button {
+    border: 2px solid transparent;
+  }
+
+  .professional-form-input {
+    border-width: 2px;
+  }
+
+  .professional-alert {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .professional-bg-pattern {
+    animation: none;
+  }
+
+  .professional-button,
+  .professional-form-input,
+  .professional-brand-logo {
+    transition-duration: 0.01ms !important;
+  }
+
+  .professional-spinner {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Print support */
+@media print {
+  .professional-gradient-primary,
+  .professional-gradient-card {
+    background: white !important;
+    border: 2px solid #111827 !important;
+  }
+
+  .professional-button {
+    background: #111827 !important;
+    color: white !important;
+  }
+}

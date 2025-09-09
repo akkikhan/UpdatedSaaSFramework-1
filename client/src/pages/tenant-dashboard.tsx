@@ -2397,6 +2397,14 @@ function LoggingViewerCard({
   const [level, setLevel] = useState<string>("all");
   const [category, setCategory] = useState<string>("");
 
+  // Debug logging to help identify the issue
+  console.log("🔧 LoggingViewerCard Debug Info:", {
+    tenantId,
+    orgId,
+    loggingApiKey: loggingApiKey ? "PRESENT" : "MISSING",
+    loggingApiKeyValue: loggingApiKey,
+  });
+
   const fetchLogs = async () => {
     if (!loggingApiKey) {
       toast({
@@ -2416,7 +2424,12 @@ function LoggingViewerCard({
         headers: { "X-API-Key": loggingApiKey },
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to load logs");
+      if (!res.ok) {
+        if (res.status === 403) {
+          throw new Error("Access denied. API key might be invalid or expired.");
+        }
+        throw new Error(data?.message || `Failed to load logs (${res.status})`);
+      }
       // Normalize shape
       const normalized = (Array.isArray(data) ? data : []).map((row: any) => {
         const ts = row.timestamp || row.time || new Date().toISOString();
@@ -2456,7 +2469,19 @@ function LoggingViewerCard({
   return (
     <div className="p-4 border rounded-lg bg-white mt-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium">Recent Logs</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">Recent Logs</p>
+          {!loggingApiKey && (
+            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+              API Key Missing
+            </span>
+          )}
+          {loggingApiKey && (
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+              API Key OK
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -2511,7 +2536,18 @@ function LoggingViewerCard({
             </tr>
           </thead>
           <tbody>
-            {logs.length === 0 ? (
+            {!loggingApiKey ? (
+              <tr>
+                <td colSpan={4} className="p-3 text-red-600 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <span>❌ Logging API key not available</span>
+                    <span className="text-xs text-slate-500">
+                      Contact your administrator to enable logging for this tenant
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-3 text-slate-500 text-center">
                   {loading ? "Loading..." : "No logs found"}

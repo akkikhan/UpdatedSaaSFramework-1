@@ -1,0 +1,25 @@
+{
+  "id": "modules/rbac/policy-model",
+  "title": "Policy Model",
+  "description": "Policies are JSON documents that describe roles and their allowed actions. A minimal example:",
+  "source": "@site/docs/modules/rbac/policy-model.md",
+  "sourceDirName": "modules/rbac",
+  "slug": "/modules/rbac/policy-model",
+  "permalink": "/next/modules/rbac/policy-model",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/rbac/policy-model.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "RBAC Module Overview",
+    "permalink": "/next/modules/rbac/overview"
+  },
+  "next": {
+    "title": "RBAC Examples",
+    "permalink": "/next/modules/rbac/examples"
+  }
+}

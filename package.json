@@ -11,6 +11,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "setup:platform-admin": "tsx server/setup-platform-admin.ts",
+    "test:gmail": "node test-gmail-config.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
