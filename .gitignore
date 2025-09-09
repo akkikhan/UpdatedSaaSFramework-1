@@ -20,4 +20,4 @@ client/vite.config.ts
 *.pdb
 *.cache
 *.deps.json
-*.runtimeconfig.json
+*.runtimeconfig.jsondocs-portal/.docusaurus/
