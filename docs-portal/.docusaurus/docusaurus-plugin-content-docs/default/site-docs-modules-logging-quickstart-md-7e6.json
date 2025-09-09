@@ -1,0 +1,25 @@
+{
+  "id": "modules/logging/quickstart",
+  "title": "Logging Quickstart",
+  "description": "Logs are batched and sent to the platform where they can be viewed in the admin portal or forwarded",
+  "source": "@site/docs/modules/logging/quickstart.md",
+  "sourceDirName": "modules/logging",
+  "slug": "/modules/logging/quickstart",
+  "permalink": "/docs/next/modules/logging/quickstart",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/logging/quickstart.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Logging Module Overview",
+    "permalink": "/docs/next/modules/logging/overview"
+  },
+  "next": {
+    "title": "Log Sinks",
+    "permalink": "/docs/next/modules/logging/sinks"
+  }
+}

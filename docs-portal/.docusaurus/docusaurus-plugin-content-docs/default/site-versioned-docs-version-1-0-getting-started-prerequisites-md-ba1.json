@@ -1,0 +1,25 @@
+{
+  "id": "getting-started/prerequisites",
+  "title": "Prerequisites",
+  "description": "Before integrating with the platform make sure you have the following:",
+  "source": "@site/versioned_docs/version-1.0/getting-started/prerequisites.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/prerequisites",
+  "permalink": "/docs/getting-started/prerequisites",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/getting-started/prerequisites.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "SaaS Platform Documentation",
+    "permalink": "/docs/intro"
+  },
+  "next": {
+    "title": "Quickstart",
+    "permalink": "/docs/getting-started/quickstart"
+  }
+}

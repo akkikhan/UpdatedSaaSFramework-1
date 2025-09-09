@@ -1,0 +1,25 @@
+{
+  "id": "modules/email/overview",
+  "title": "Email Module Overview",
+  "description": "Use the Email module to send transactional messages such as password resets and onboarding",
+  "source": "@site/docs/modules/email/overview.md",
+  "sourceDirName": "modules/email",
+  "slug": "/modules/email/overview",
+  "permalink": "/docs/next/modules/email/overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/docs/modules/email/overview.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Log Sinks",
+    "permalink": "/docs/next/modules/logging/sinks"
+  },
+  "next": {
+    "title": "Template Management",
+    "permalink": "/docs/next/modules/email/template-management"
+  }
+}

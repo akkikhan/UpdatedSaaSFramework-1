@@ -1,0 +1,25 @@
+{
+  "id": "modules/auth/server-setup",
+  "title": "Server Setup",
+  "description": "1. Install the service and its dependencies:",
+  "source": "@site/versioned_docs/version-1.0/modules/auth/server-setup.md",
+  "sourceDirName": "modules/auth",
+  "slug": "/modules/auth/server-setup",
+  "permalink": "/docs/modules/auth/server-setup",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/your-org/saas-framework/tree/main/docs-portal/versioned_docs/version-1.0/modules/auth/server-setup.md",
+  "tags": [],
+  "version": "1.0",
+  "lastUpdatedAt": 1539502055000,
+  "frontMatter": {},
+  "sidebar": "defaultSidebar",
+  "previous": {
+    "title": "Auth Module Overview",
+    "permalink": "/docs/modules/auth/overview"
+  },
+  "next": {
+    "title": "Client SDK",
+    "permalink": "/docs/modules/auth/client-sdk"
+  }
+}
