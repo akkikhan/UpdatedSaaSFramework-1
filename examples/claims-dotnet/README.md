@@ -3,6 +3,7 @@
 - Base URL: http://localhost:5299
 - Uses platform at SAAS_BASE_URL (default http://localhost:5000)
 - Logs via LOGGING_API_KEY (tenant logging key)
+- Sends approval emails via EMAIL_API_KEY
 
 Run:
 
@@ -22,4 +23,5 @@ Env:
 ```
 SAAS_BASE_URL=http://localhost:5000
 LOGGING_API_KEY=logging_...
+EMAIL_API_KEY=email_...
 ```

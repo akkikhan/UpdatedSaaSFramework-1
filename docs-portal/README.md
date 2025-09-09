@@ -2,6 +2,13 @@
 
 This directory contains the Docusaurus site for the SaaS Platform docs.
 
+## Setup
+
+Install dependencies (from the repo root or within this folder):
+
+```bash
+npm install
+```
 ## Commands
 
 - `npm start` – Start local dev server
