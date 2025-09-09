@@ -77,6 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId: azureProvider.config.clientId,
         clientSecret: azureProvider.config.clientSecret,
         redirectUri:
+          azureProvider.config.redirectUri ||
           azureProvider.config.callbackUrl ||
           `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
       });
@@ -166,6 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId: azureProvider.config.clientId,
         clientSecret: azureProvider.config.clientSecret,
         redirectUri:
+          azureProvider.config.redirectUri ||
           azureProvider.config.callbackUrl ||
           `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
       });
@@ -345,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tenants/:id/azure-ad/config", platformAdminMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
-      const { tenantId, clientId, clientSecret, callbackUrl } = req.body;
+      const { tenantId, clientId, clientSecret, redirectUri, callbackUrl } = req.body;
 
       // Validate required fields
       if (!tenantId || !clientId || !clientSecret) {
@@ -384,7 +386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tenantId,
           clientId,
           clientSecret,
-          callbackUrl:
+          redirectUri:
+            redirectUri ||
             callbackUrl ||
             `${process.env.BASE_URL || "http://localhost:3001"}/api/auth/azure/callback`,
         },

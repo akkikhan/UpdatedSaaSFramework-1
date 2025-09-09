@@ -1359,7 +1359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tenants/:id/azure-ad/config", platformAdminMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
-      const { tenantId, clientId, clientSecret, callbackUrl } = req.body;
+      const { tenantId, clientId, clientSecret, redirectUri, callbackUrl } = req.body;
 
       console.log(`Configuring Azure AD for tenant ${id}`);
 
@@ -1407,7 +1407,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tenantId,
           clientId,
           clientSecret: encryptedSecret,
-          callbackUrl:
+          redirectUri:
+            redirectUri ||
             callbackUrl ||
             `${process.env.BASE_URL || "http://localhost:5000"}/api/auth/azure/callback`,
         },
@@ -1566,6 +1567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId: azureProvider.config.clientId,
         clientSecret: azureProvider.config.clientSecret,
         redirectUri:
+          azureProvider.config.redirectUri ||
           azureProvider.config.callbackUrl ||
           `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
       });
@@ -1728,6 +1730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId: azureProvider.config.clientId,
         clientSecret: azureProvider.config.clientSecret,
         redirectUri:
+          azureProvider.config.redirectUri ||
           azureProvider.config.callbackUrl ||
           `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
       });
@@ -2983,8 +2986,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!cfg.clientSecret) errors.push("clientSecret is required");
 
       const expectedRedirect = `${req.protocol}://${req.get("host")}/api/auth/azure/callback`;
-      if (cfg.callbackUrl && cfg.callbackUrl !== expectedRedirect) {
-        errors.push(`callbackUrl should be ${expectedRedirect}`);
+      const cfgRedirect = cfg.redirectUri || cfg.callbackUrl;
+      if (cfgRedirect && cfgRedirect !== expectedRedirect) {
+        errors.push(`redirectUri should be ${expectedRedirect}`);
       }
 
       if (errors.length) return res.status(400).json({ valid: false, message: errors.join("; ") });
@@ -3072,8 +3076,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!clientSecretVal) errors.push("clientSecret is required");
 
       const expectedRedirect = `${req.protocol}://${req.get("host")}/api/auth/azure/callback`;
-      if (mergedCfg.callbackUrl && mergedCfg.callbackUrl !== expectedRedirect) {
-        errors.push(`callbackUrl should be ${expectedRedirect}`);
+      const mergedRedirect = mergedCfg.redirectUri || mergedCfg.callbackUrl;
+      if (mergedRedirect && mergedRedirect !== expectedRedirect) {
+        errors.push(`redirectUri should be ${expectedRedirect}`);
       }
 
       if (errors.length) return res.status(400).json({ valid: false, message: errors.join("; ") });
@@ -3142,11 +3147,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const { AzureADService } = await import("./services/azure-ad.js");
+        const redirectUriVal =
+          mergedCfg.redirectUri ||
+          mergedCfg.callbackUrl ||
+          `${req.protocol}://${req.get("host")}/api/auth/azure/callback`;
         const svc = new AzureADService({
           tenantId: tenantIdVal,
           clientId: clientIdVal,
           clientSecret: clientSecretVal,
-          redirectUri: `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+          redirectUri: redirectUriVal,
         });
         const result = await svc.verifyClientCredentials();
         if (result.ok) return res.json({ valid: true });
@@ -3179,8 +3188,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!cfg.clientId) errors.push("clientId is required");
       if (!cfg.clientSecret) errors.push("clientSecret is required");
       const expectedRedirect = `${req.protocol}://${req.get("host")}/api/auth/auth0/callback`;
-      if (cfg.callbackUrl && cfg.callbackUrl !== expectedRedirect)
-        errors.push(`callbackUrl should be ${expectedRedirect}`);
+      const cfgRedirect = cfg.redirectUri || cfg.callbackUrl;
+      if (cfgRedirect && cfgRedirect !== expectedRedirect)
+        errors.push(`redirectUri should be ${expectedRedirect}`);
       if (errors.length) {
         try {
           await storage.logSystemActivity({
@@ -3231,8 +3241,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!cfg.cert || !/-----BEGIN CERTIFICATE-----/.test(cfg.cert))
         errors.push("cert must be PEM");
       const acsUrl = `${req.protocol}://${req.get("host")}/api/auth/saml/callback`;
-      if (cfg.callbackUrl && cfg.callbackUrl !== acsUrl)
-        errors.push(`callbackUrl should be ${acsUrl}`);
+      const cfgRedirect = cfg.redirectUri || cfg.callbackUrl;
+      if (cfgRedirect && cfgRedirect !== acsUrl)
+        errors.push(`redirectUri should be ${acsUrl}`);
       if (errors.length) {
         try {
           await storage.logSystemActivity({
@@ -3305,12 +3316,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Upsert provider
         const idx = moduleConfigs.auth.providers.findIndex((p: any) => p.type === type);
         const config = { ...(proposed || {}) };
-        // Ensure callbackUrl defaults
-        if (!config.callbackUrl) {
+        if (config.callbackUrl && !config.redirectUri) {
+          config.redirectUri = config.callbackUrl;
+          delete (config as any).callbackUrl;
+        }
+        // Ensure redirectUri defaults
+        if (!config.redirectUri) {
           const host = `${process.env.BASE_URL || ""}`;
-          if (type === "azure-ad") config.callbackUrl = `${host || ""}/api/auth/azure/callback`;
-          if (type === "auth0") config.callbackUrl = `${host || ""}/api/auth/auth0/callback`;
-          if (type === "saml") config.callbackUrl = `${host || ""}/api/auth/saml/callback`;
+          if (type === "azure-ad") config.redirectUri = `${host || ""}/api/auth/azure/callback`;
+          if (type === "auth0") config.redirectUri = `${host || ""}/api/auth/auth0/callback`;
+          if (type === "saml") config.redirectUri = `${host || ""}/api/auth/saml/callback`;
         }
 
         // Encrypt secrets

@@ -59,7 +59,7 @@ export const api = {
 
   async configureTenantAzureAD(
     id: string,
-    payload: { tenantId: string; clientId: string; clientSecret: string; callbackUrl?: string }
+    payload: { tenantId: string; clientId: string; clientSecret: string; redirectUri?: string }
   ): Promise<void> {
     await apiRequest("POST", `/api/tenants/${id}/azure-ad/config`, payload);
   },
