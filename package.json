@@ -58,7 +58,6 @@
     ]
   },
   "dependencies": {
-    "@azure/mcp": "^0.5.10",
     "@azure/msal-node": "^3.7.3",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",

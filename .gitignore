@@ -25,3 +25,19 @@ client/vite.config.ts
 # Docusaurus build artifacts
 docs-portal/.docusaurus/
 docs-portal/build/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+*.log
