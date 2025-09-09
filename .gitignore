@@ -1,11 +1,80 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
+# Core dependencies
+node_modules/
 
-# Build artifacts
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+server/public/
+examples/**/dist/
+
+# TypeScript
+**/*.tsbuildinfo
+
+# Angular/Vite caches
+**/.angular/
+.vite/
+**/.vite/
+node_modules/.vite/
+
+# Test outputs
+coverage/
+**/coverage/
+.nyc_output/
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+blob-report/
+**/blob-report/
+playwright/.cache/
+**/.eslintcache
+
+# Logs
+logs/
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files (keep only examples)
+.env
+.env.*
+!.env.example
+!.env.*.example
+.azure/
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Editor/IDE
+.vscode/
+.idea/
+*.iml
+
+# Archives and packages
+*.tar.gz
+*.tgz
+*.zip
+
+# Misc project-specific
 **/bin/
 **/obj/
-**/.angular/cache/
+tmp/
+temp/
+data/
+
+# .NET example build artifacts
+examples/claims-dotnet/bin/
+examples/claims-dotnet/obj/
+
+# Temporary/backup artifacts
+*.backup.*
+*-backup.*
