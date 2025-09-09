@@ -604,6 +604,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verify Azure AD credentials before saving tenant config
+  app.post("/api/platform/azure-ad/verify", platformAdminMiddleware, async (req, res) => {
+    try {
+      const { tenantId, clientId, clientSecret, redirectUri } = req.body || {};
+
+      const sanitizeGuid = (v: any) =>
+        String(v ?? "")
+          .trim()
+          .replace(/[{}]/g, "");
+      const GUID_CANON =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+      const tenantIdVal = sanitizeGuid(tenantId);
+      const clientIdVal = sanitizeGuid(clientId);
+      const clientSecretVal = String(clientSecret ?? "").trim();
+      const redirectVal =
+        redirectUri || `${req.protocol}://${req.get("host")}/api/auth/azure/callback`;
+
+      const errors: string[] = [];
+      if (!tenantIdVal || !GUID_CANON.test(tenantIdVal))
+        errors.push("tenantId must be a GUID from Azure AD (format: 8-4-4-4-12)");
+      if (!clientIdVal || !GUID_CANON.test(clientIdVal))
+        errors.push("clientId must be a GUID (Application ID) (format: 8-4-4-4-12)");
+      if (!clientSecretVal) errors.push("clientSecret is required");
+      if (!redirectVal || !/^https?:\/\//i.test(redirectVal))
+        errors.push("redirectUri must be a valid URL");
+
+      if (errors.length) return res.status(400).json({ valid: false, message: errors.join("; ") });
+
+      try {
+        const { AzureADService } = await import("./services/azure-ad.js");
+        const svc = new AzureADService({
+          tenantId: tenantIdVal,
+          clientId: clientIdVal,
+          clientSecret: clientSecretVal,
+          redirectUri: redirectVal,
+        });
+        const result = await svc.verifyClientCredentials();
+        if (result.ok) return res.json({ valid: true });
+        return res
+          .status(400)
+          .json({ valid: false, message: result.message || "Verification failed" });
+      } catch (e: any) {
+        return res.status(400).json({ valid: false, message: e?.message || "Verification failed" });
+      }
+    } catch (error) {
+      console.error("Platform Azure verify error:", error);
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
   // =============================================================================
   // STATS AND DASHBOARD ENDPOINTS
   // =============================================================================
