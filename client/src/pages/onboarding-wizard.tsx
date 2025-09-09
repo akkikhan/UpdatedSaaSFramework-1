@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,8 +42,11 @@ import {
   Activity,
   Lock,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { MODULES_INFO, type TenantCreationData } from "../../../shared/types";
+import { MODULES_INFO } from "../../../shared/types";
+import {
+  MODULES as MODULE_CONFIG_DEFINITIONS,
+  AUTH_PROVIDERS,
+} from "../../../shared/modules-config";
 import { useCreateTenant } from "@/hooks/use-tenants";
 import { useToast } from "@/hooks/use-toast";
 
@@ -99,6 +102,11 @@ const STEPS = [
 
 const MODULES = Object.values(MODULES_INFO);
 
+const MODULE_CONFIG_DEFS = MODULE_CONFIG_DEFINITIONS.map(m => ({
+  ...m,
+  id: m.id === "authentication" ? "auth" : m.id,
+}));
+
 const ICONS: Record<string, React.ComponentType<any>> = {
   Lock,
   Shield,
@@ -136,6 +144,9 @@ export default function OnboardingWizard() {
   });
 
   const watchedModules = form.watch("enabledModules") || [];
+  const watchedAuthProvider = form.watch(
+    "moduleConfigs.auth.selectedProvider"
+  );
 
   const handleNext = async () => {
     let fieldsToValidate: (keyof FormData)[] = [];
@@ -512,13 +523,150 @@ export default function OnboardingWizard() {
                                 <p>No modules selected. Go back to select modules to configure.</p>
                               </div>
                             ) : (
-                              <div className="text-center py-8 text-slate-600">
-                                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                                <p>Selected modules can be configured after tenant creation.</p>
-                                <p className="text-sm mt-2">
-                                  Click "Next" to review your configuration.
-                                </p>
-                              </div>
+                              watchedModules.map(moduleId => {
+                                const def = MODULE_CONFIG_DEFS.find(
+                                  m => m.id === moduleId
+                                );
+                                if (!def?.configFields?.length) return null;
+                                return (
+                                  <div
+                                    key={moduleId}
+                                    className="space-y-4 border rounded-lg p-6"
+                                  >
+                                    <h4 className="text-lg font-medium">
+                                      {def.name} Configuration
+                                    </h4>
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                      {def.configFields.map(field => {
+                                        const fieldName = `moduleConfigs.${moduleId}.${field.key}` as const;
+                                        return (
+                                          <FormField
+                                            key={field.key}
+                                            control={form.control}
+                                            name={fieldName as any}
+                                            rules={{
+                                              required: field.required
+                                                ? `${field.label} is required`
+                                                : false,
+                                            }}
+                                            render={({ field: rf }) => (
+                                              <FormItem>
+                                                <FormLabel>
+                                                  {field.label}
+                                                  {field.required && " *"}
+                                                </FormLabel>
+                                                <FormControl>
+                                                  {field.type === "select" ? (
+                                                    <Select
+                                                      onValueChange={rf.onChange}
+                                                      defaultValue={rf.value}
+                                                    >
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder={`Select ${field.label}`} />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        {field.options?.map(opt => (
+                                                          <SelectItem key={opt} value={opt}>
+                                                            {opt}
+                                                          </SelectItem>
+                                                        ))}
+                                                      </SelectContent>
+                                                    </Select>
+                                                  ) : (
+                                                    <Input
+                                                      type={
+                                                        field.type === "password"
+                                                          ? "password"
+                                                          : "text"
+                                                      }
+                                                      placeholder={field.placeholder}
+                                                      {...rf}
+                                                    />
+                                                  )}
+                                                </FormControl>
+                                                {field.description && (
+                                                  <FormDescription>
+                                                    {field.description}
+                                                  </FormDescription>
+                                                )}
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+
+                                    {moduleId === "auth" && watchedAuthProvider && (
+                                      <div className="grid gap-4 md:grid-cols-2 mt-4">
+                                        {AUTH_PROVIDERS.find(
+                                          p => p.id === watchedAuthProvider
+                                        )?.configFields?.map(pf => {
+                                          const providerField = `moduleConfigs.auth.providerSettings.${watchedAuthProvider}.${pf.key}` as const;
+                                          return (
+                                            <FormField
+                                              key={pf.key}
+                                              control={form.control}
+                                              name={providerField as any}
+                                              rules={{
+                                                required: pf.required
+                                                  ? `${pf.label} is required`
+                                                  : false,
+                                              }}
+                                              render={({ field: rf }) => (
+                                                <FormItem>
+                                                  <FormLabel>
+                                                    {pf.label}
+                                                    {pf.required && " *"}
+                                                  </FormLabel>
+                                                  <FormControl>
+                                                    {pf.type === "select" ? (
+                                                      <Select
+                                                        onValueChange={rf.onChange}
+                                                        defaultValue={rf.value}
+                                                      >
+                                                        <SelectTrigger>
+                                                          <SelectValue placeholder={`Select ${pf.label}`} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                          {pf.options?.map(opt => (
+                                                            <SelectItem
+                                                              key={opt}
+                                                              value={opt}
+                                                            >
+                                                              {opt}
+                                                            </SelectItem>
+                                                          ))}
+                                                        </SelectContent>
+                                                      </Select>
+                                                    ) : (
+                                                      <Input
+                                                        type={
+                                                          pf.type === "password"
+                                                            ? "password"
+                                                            : "text"
+                                                        }
+                                                        placeholder={pf.placeholder}
+                                                        {...rf}
+                                                      />
+                                                    )}
+                                                  </FormControl>
+                                                  {pf.description && (
+                                                    <FormDescription>
+                                                      {pf.description}
+                                                    </FormDescription>
+                                                  )}
+                                                  <FormMessage />
+                                                </FormItem>
+                                              )}
+                                            />
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
                             )}
                           </div>
                         )}

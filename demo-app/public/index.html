@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechCorp Demo App - SaaS Auth Integration</title>
+    <title>SaaS Demo App - SaaS Auth Integration</title>
     <style>
         * {
             margin: 0;
@@ -154,17 +154,17 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏢 TechCorp Demo App</h1>
+            <h1>🏢 SaaS Demo App</h1>
             <p>Showcasing SaaS Authentication & RBAC Integration</p>
         </div>
         
         <div class="content">
             <div class="credentials">
                 <h4>🔐 Integration Credentials</h4>
-                <div><strong>Tenant:</strong> techcorp</div>
-                <div><strong>Auth API Key:</strong> auth_ea79f3d186064ee99a7f930e</div>
-                <div><strong>RBAC API Key:</strong> rbac_2d062f6dc55e477aafae4098</div>
-                <div><strong>Base URL:</strong> http://localhost:5000</div>
+                <div><strong>Tenant:</strong> <span id="tenantId"></span></div>
+                <div><strong>Auth API Key:</strong> <span id="authApiKey"></span></div>
+                <div><strong>RBAC API Key:</strong> <span id="rbacApiKey"></span></div>
+                <div><strong>Base URL:</strong> <span id="baseUrl"></span></div>
             </div>
             
             <div class="grid">
@@ -174,7 +174,7 @@
                     
                     <div class="form-group">
                         <label for="email">Email:</label>
-                        <input type="email" id="email" value="john.developer@techcorp.com" placeholder="Enter email">
+                        <input type="email" id="email" value="john.developer@example.com" placeholder="Enter email">
                     </div>
                     
                     <div class="form-group">
@@ -189,16 +189,8 @@
                 
                 <div class="section">
                     <h3>🛡️ RBAC SDK Demo</h3>
-                    <p>Test permission checking using the RBAC module</p>
-                    
-                    <div class="form-group">
-                        <label for="userId">User ID:</label>
-                        <select id="userId">
-                            <option value="user_123">user_123 (John - Developer)</option>
-                            <option value="user_456">user_456 (Lisa - Manager)</option>
-                        </select>
-                    </div>
-                    
+                    <p>Check permissions for the logged in user</p>
+
                     <div class="form-group">
                         <label for="permission">Permission:</label>
                         <select id="permission">
@@ -209,9 +201,9 @@
                             <option value="admin.full_access">admin.full_access</option>
                         </select>
                     </div>
-                    
+
                     <button onclick="testPermission()">🔍 Check Permission</button>
-                    
+
                     <div id="rbacResult"></div>
                 </div>
             </div>
@@ -225,38 +217,66 @@
     </div>
 
     <script>
-        // Load status on page load
-        window.addEventListener('load', checkStatus);
+        let authToken = null;
+        let currentUserId = null;
+
+        // Load status and config on page load
+        window.addEventListener('load', () => {
+            checkStatus();
+            loadConfig();
+        });
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/demo/config');
+                const config = await response.json();
+                document.getElementById('tenantId').textContent = config.tenantId;
+                document.getElementById('authApiKey').textContent = config.authApiKey;
+                document.getElementById('rbacApiKey').textContent = config.rbacApiKey;
+                document.getElementById('baseUrl').textContent = config.baseUrl;
+            } catch (error) {
+                console.error('Failed to load config', error);
+            }
+        }
+        
         
         async function testLogin() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const resultDiv = document.getElementById('loginResult');
-            
+
             if (!email || !password) {
                 showResult(resultDiv, 'Please enter both email and password', 'error');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/demo/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
-                
                 const result = await response.json();
-                
                 if (result.success) {
-                    showResult(resultDiv, `${result.message}
+                    authToken = result.token;
+                    currentUserId = result.user.id;
 
-User Details:
-- ID: ${result.user.id}
-- Name: ${result.user.name}
-- Email: ${result.user.email}
-- Token: ${result.user.token}`, 'success');
+                    let rolesText = '';
+                    try {
+                        const rolesResp = await fetch('/demo/user-roles', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token: authToken, userId: currentUserId })
+                        });
+                        const rolesData = await rolesResp.json();
+                        rolesText = rolesData.roles && rolesData.roles.length
+                            ? `\nRoles:\n${rolesData.roles.map(r => '- ' + r.name).join('\n')}`
+                            : '\nRoles: none';
+                    } catch (e) {
+                        rolesText = '\nRoles: unable to load';
+                    }
+
+                    showResult(resultDiv, `${result.message}\n\nUser Details:\n- ID: ${result.user.id}\n- Email: ${result.user.email}${rolesText}`, 'success');
                 } else {
                     showResult(resultDiv, result.message, 'error');
                 }
@@ -266,27 +286,23 @@ User Details:
         }
         
         async function testPermission() {
-            const userId = document.getElementById('userId').value;
             const permission = document.getElementById('permission').value;
             const resultDiv = document.getElementById('rbacResult');
-            
+
+            if (!authToken || !currentUserId) {
+                showResult(resultDiv, 'Please log in first', 'error');
+                return;
+            }
+
             try {
                 const response = await fetch('/demo/check-permission', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ userId, permission })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: authToken, userId: currentUserId, permission })
                 });
-                
                 const result = await response.json();
-                
                 if (result.success) {
-                    showResult(resultDiv, `${result.message}
-
-User Permissions:
-${result.userPermissions.map(p => '- ' + p).join('\n')}`, 
-                        result.hasPermission ? 'success' : 'error');
+                    showResult(resultDiv, result.message, result.hasPermission ? 'success' : 'error');
                 } else {
                     showResult(resultDiv, result.message, 'error');
                 }
@@ -294,7 +310,6 @@ ${result.userPermissions.map(p => '- ' + p).join('\n')}`,
                 showResult(resultDiv, 'Network error: ' + error.message, 'error');
             }
         }
-        
         async function checkStatus() {
             const resultDiv = document.getElementById('statusResult');
             

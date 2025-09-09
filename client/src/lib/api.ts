@@ -39,7 +39,7 @@ export const api = {
   },
 
   async getTenant(id: string): Promise<Tenant> {
-    const response = await apiRequest('GET', `/api/tenants/${id}`);
+    const response = await apiRequest("GET", `/api/tenants/${id}`);
     return response.json();
   },
 
@@ -54,6 +54,10 @@ export const api = {
 
   async resendOnboardingEmail(id: string): Promise<void> {
     await apiRequest("POST", `/api/tenants/${id}/resend-email`);
+  },
+
+  async deleteTenant(id: string): Promise<void> {
+    await apiRequest("DELETE", `/api/tenants/${id}`);
   },
 
   async updateTenantModules(

@@ -1,0 +1,2492 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tenant Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        background: #f8fafc;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        grid-template-rows: 1fr;
+      }
+
+      /* Left Sidebar */
+      .sidebar {
+        background: linear-gradient(180deg, #4c1d95 0%, #3730a3 50%, #1e1b4b 100%);
+        color: white;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sidebar::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(139, 92, 246, 0.1) 0%,
+          rgba(79, 70, 229, 0.1) 100%
+        );
+        pointer-events: none;
+      }
+
+      .sidebar-header {
+        padding: 24px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        z-index: 1;
+      }
+
+      .logo {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        color: white;
+      }
+
+      .brand-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: white;
+      }
+
+      .nav-menu {
+        flex: 1;
+        padding: 20px 0;
+        position: relative;
+        z-index: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+      }
+
+      .nav-menu::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .nav-menu::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .nav-menu::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+      }
+
+      .nav-menu::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        gap: 12px;
+        position: relative;
+        border-radius: 0 25px 25px 0;
+        margin-right: 12px;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .nav-item.active {
+        background: linear-gradient(
+          135deg,
+          rgba(245, 158, 11, 0.2) 0%,
+          rgba(249, 115, 22, 0.2) 100%
+        );
+        color: white;
+        border-right: 4px solid #f59e0b;
+        box-shadow: 0 2px 12px rgba(245, 158, 11, 0.3);
+      }
+
+      .nav-item.active::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        border-radius: 0 2px 2px 0;
+      }
+
+      .nav-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        opacity: 0.8;
+      }
+
+      .nav-item:hover .nav-icon {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      .nav-item.active .nav-icon {
+        opacity: 1;
+        filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5));
+      }
+
+      .nav-section {
+        margin-top: 32px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+      }
+
+      .nav-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+
+      .nav-section-title {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0 20px 12px;
+        position: relative;
+      }
+
+      .nav-section-title::after {
+        content: "";
+        position: absolute;
+        bottom: 6px;
+        left: 20px;
+        width: 20px;
+        height: 2px;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        border-radius: 1px;
+        opacity: 0.7;
+      }
+
+      .user-section {
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        z-index: 1;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .user-details {
+        flex: 1;
+      }
+
+      .user-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 2px;
+      }
+
+      .user-email {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 4px;
+      }
+
+      .user-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      .status-text {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        font-weight: 500;
+      }
+
+      /* Main Content Area */
+      .main-content {
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .top-header {
+        background: white;
+        padding: 16px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .page-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .search-container {
+        position: relative;
+      }
+
+      .search-input {
+        width: 300px;
+        padding: 8px 16px 8px 40px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #3730a3;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(55, 48, 163, 0.1);
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .date-selector {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .notification-badge {
+        position: relative;
+        cursor: pointer;
+      }
+
+      .notification-dot {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 8px;
+        height: 8px;
+        background: #ef4444;
+        border-radius: 50%;
+        border: 2px solid white;
+      }
+
+      /* Dashboard Content */
+      .dashboard-content {
+        flex: 1;
+        padding: 32px;
+        overflow-y: auto;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+
+      .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+
+      .stat-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+      }
+
+      .stat-card.primary::before {
+        background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+      }
+
+      .stat-card.warning::before {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      }
+
+      .stat-card.success::before {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .stat-card.danger::before {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .stat-card.info::before {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      }
+
+      .stat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .stat-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: white;
+      }
+
+      .stat-icon.primary {
+        background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+      }
+
+      .stat-icon.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      }
+
+      .stat-icon.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .stat-icon.danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .stat-icon.info {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      }
+
+      .stat-title {
+        font-size: 14px;
+        color: #64748b;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 8px;
+      }
+
+      .stat-change {
+        font-size: 12px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .stat-change.positive {
+        color: #10b981;
+      }
+
+      .stat-change.negative {
+        color: #ef4444;
+      }
+
+      .stat-change.neutral {
+        color: #64748b;
+      }
+
+      .stat-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        animation: pulse-badge 3s infinite;
+      }
+
+      .stat-badge.active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+      }
+
+      .stat-badge.trending {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+      }
+
+      .stat-badge.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+      }
+
+      .stat-badge.excellent {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+      }
+
+      .change-icon {
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .change-value {
+        font-weight: 600;
+      }
+
+      .change-period {
+        opacity: 0.8;
+        font-size: 11px;
+      }
+
+      /* Secondary Metrics */
+      .secondary-metrics {
+        margin-bottom: 32px;
+      }
+
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+
+      .mini-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .mini-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .mini-card-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        border: 2px solid #e2e8f0;
+      }
+
+      .mini-card-content {
+        flex: 1;
+      }
+
+      .mini-card-title {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      .mini-card-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .mini-card-status {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 6px;
+        border-radius: 6px;
+        display: inline-block;
+      }
+
+      .mini-card-status.active {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+      }
+
+      .mini-card-status.warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+      }
+
+      .mini-card-status.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+      }
+
+      .mini-card-status.excellent {
+        background: rgba(59, 130, 246, 0.1);
+        color: #1d4ed8;
+      }
+
+      .mini-card-status.neutral {
+        background: rgba(100, 116, 139, 0.1);
+        color: #475569;
+      }
+
+      /* Tab Content Areas */
+      .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Module Management Styles */
+      .module-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 24px;
+      }
+
+      .module-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+      }
+
+      .module-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+
+      .module-card.enabled {
+        border-left: 4px solid #10b981;
+      }
+
+      .module-card.disabled {
+        border-left: 4px solid #ef4444;
+        opacity: 0.7;
+      }
+
+      .module-card.pending {
+        border-left: 4px solid #f59e0b;
+      }
+
+      .module-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+
+      .module-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .module-description {
+        font-size: 14px;
+        color: #64748b;
+        line-height: 1.5;
+      }
+
+      .module-status .status-badge {
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-badge.enabled {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+      }
+
+      .status-badge.disabled {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+      }
+
+      .status-badge.required {
+        background: rgba(59, 130, 246, 0.1);
+        color: #1e40af;
+      }
+
+      .status-badge.pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+      }
+
+      .module-config {
+        margin: 16px 0;
+      }
+
+      .config-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .config-row:last-child {
+        border-bottom: none;
+      }
+
+      .config-key {
+        font-weight: 500;
+        color: #374151;
+      }
+
+      .config-value {
+        color: #6b7280;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 13px;
+      }
+
+      .module-actions {
+        margin-top: 16px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-right: 8px;
+      }
+
+      .btn-primary {
+        background: #3730a3;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #312e81;
+      }
+
+      .btn-danger {
+        background: #ef4444;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #dc2626;
+      }
+
+      .btn-secondary {
+        background: #f1f5f9;
+        color: #64748b;
+      }
+
+      .btn-secondary:hover {
+        background: #e2e8f0;
+      }
+
+      /* API Keys Styles */
+      .api-section {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+      }
+
+      .api-section h3 {
+        margin-bottom: 16px;
+        color: #1e293b;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .api-key-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .api-key-display {
+        flex: 1;
+        font-family: "Monaco", "Menlo", monospace;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px;
+        font-size: 14px;
+        color: #374151;
+      }
+
+      .api-key-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* Logs Styles */
+      .log-container {
+        background: #1e293b;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 13px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .log-entry {
+        color: #e2e8f0;
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+
+      .log-timestamp {
+        color: #94a3b8;
+      }
+
+      .log-level {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: 500;
+        margin-right: 8px;
+      }
+
+      .log-level.info {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+      }
+
+      .log-level.warning {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+      }
+
+      .log-level.error {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+      }
+
+      .log-level.success {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+      }
+
+      /* Authentication Styles */
+      .auth-section {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+      }
+
+      .auth-provider {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 12px;
+      }
+
+      .auth-provider.enabled {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.05);
+      }
+
+      .provider-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .provider-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+
+      .provider-details h4 {
+        margin: 0 0 4px 0;
+        font-size: 16px;
+        font-weight: 500;
+        color: #1e293b;
+      }
+
+      .provider-details p {
+        margin: 0;
+        font-size: 14px;
+        color: #64748b;
+      }
+
+      .toggle-switch {
+        position: relative;
+        width: 48px;
+        height: 24px;
+        background: #cbd5e1;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .toggle-switch.enabled {
+        background: #10b981;
+      }
+
+      .toggle-switch::after {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border-radius: 50%;
+        top: 2px;
+        left: 2px;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .toggle-switch.enabled::after {
+        transform: translateX(24px);
+      }
+
+      /* Alert and Info Messages */
+      .alert-info {
+        margin: 0;
+        padding: 12px;
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 6px;
+        color: #1e40af;
+      }
+
+      .module-disabled-info {
+        color: #6b7280;
+        font-style: italic;
+        padding: 12px;
+      }
+
+      .api-usage-info {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 8px;
+      }
+
+      .security-notice {
+        margin-top: 24px;
+        padding: 16px;
+        background: #fffbeb;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+      }
+
+      .security-notice-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .security-notice-icon {
+        font-size: 18px;
+      }
+
+      .security-notice-title {
+        color: #92400e;
+        font-weight: bold;
+      }
+
+      .security-notice-content {
+        color: #92400e;
+        font-size: 14px;
+      }
+
+      /* Section Card Styles */
+      .section-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        margin-bottom: 24px;
+      }
+
+      .card-header {
+        padding: 24px 32px 0 32px;
+        border-bottom: 1px solid #f1f5f9;
+        margin-bottom: 0;
+      }
+
+      .card-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 8px 0;
+      }
+
+      .card-subtitle {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0 0 24px 0;
+        line-height: 1.5;
+      }
+
+      .card-content {
+        padding: 0 32px 32px 32px;
+      }
+
+      /* Chart and Map Section */
+      .dashboard-row {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+
+      .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+      }
+
+      .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .chart-placeholder {
+        height: 300px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        font-size: 14px;
+        border: 2px dashed #e2e8f0;
+      }
+
+      .device-stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        text-align: center;
+      }
+
+      .device-chart {
+        width: 200px;
+        height: 200px;
+        margin: 20px auto;
+        border-radius: 50%;
+        background: conic-gradient(
+          #8b5cf6 0deg 140deg,
+          #f59e0b 140deg 230deg,
+          #ef4444 230deg 280deg,
+          #a855f7 280deg 360deg
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .device-chart::before {
+        content: "";
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+      }
+
+      .device-total {
+        position: relative;
+        z-index: 1;
+        font-size: 32px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .device-breakdown {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 24px;
+      }
+
+      .device-item {
+        text-align: center;
+      }
+
+      .device-icon {
+        width: 24px;
+        height: 24px;
+        margin: 0 auto 8px;
+        opacity: 0.7;
+      }
+
+      .device-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 4px;
+      }
+
+      .device-percentage {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      /* Regional Stats Table */
+      .regional-stats {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        overflow: hidden;
+      }
+
+      .regional-header {
+        padding: 24px 24px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .regional-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .view-detail-btn {
+        color: #3730a3;
+        font-size: 14px;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .regional-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .regional-table th,
+      .regional-table td {
+        padding: 16px 24px;
+        text-align: left;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .regional-table th {
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: #f8fafc;
+      }
+
+      .regional-table td {
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      .region-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .region-change {
+        font-size: 12px;
+        font-weight: 500;
+        margin-left: 8px;
+      }
+
+      .region-change.positive {
+        color: #10b981;
+      }
+
+      .region-change.negative {
+        color: #ef4444;
+      }
+
+      /* Additional Utility Classes */
+      .course-badge,
+      .nav-badge {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+      }
+
+      .nav-badge {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        animation: pulse-badge 2s infinite;
+      }
+
+      @keyframes pulse-badge {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(0.95);
+        }
+      }
+
+      .settings-icon {
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+      }
+
+      .header-user-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .header-user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        color: white;
+      }
+
+      .header-user-name {
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      .header-dropdown-arrow {
+        color: #64748b;
+      }
+
+      .chart-settings {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      .map-description {
+        margin-top: 8px;
+        display: block;
+      }
+
+      .region-flag-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .transactions-section {
+        margin-top: 32px;
+      }
+
+      .transactions-placeholder {
+        padding: 48px;
+        text-align: center;
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      .transactions-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+      }
+
+      .transactions-subtitle {
+        font-size: 12px;
+        margin-top: 8px;
+        opacity: 0.7;
+      }
+
+      .help-settings-spacing {
+        margin-bottom: 16px;
+      }
+
+      .mobile-menu-btn {
+        display: none;
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #1e293b;
+        padding: 8px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+      }
+
+      .mobile-menu-btn:hover {
+        background: rgba(55, 48, 163, 0.1);
+        color: #3730a3;
+      }
+
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        body {
+          grid-template-columns: 1fr;
+        }
+
+        .mobile-menu-btn {
+          display: block;
+        }
+
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: -250px;
+          height: 100vh;
+          z-index: 1000;
+          transition: left 0.3s ease;
+          box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar.open {
+          left: 0;
+        }
+
+        .nav-item {
+          margin-right: 0;
+          border-radius: 0;
+        }
+
+        .dashboard-row {
+          grid-template-columns: 1fr;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .search-input {
+          width: 200px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .dashboard-content {
+          padding: 16px;
+        }
+
+        .top-header {
+          padding: 16px;
+          flex-direction: column;
+          gap: 16px;
+          align-items: stretch;
+        }
+
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .stat-value {
+          font-size: 24px;
+        }
+
+        .metric-row {
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .mini-card {
+          padding: 16px;
+          gap: 12px;
+        }
+
+        .mini-card-icon {
+          width: 40px;
+          height: 40px;
+          font-size: 18px;
+        }
+
+        .mini-card-value {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Left Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">T</div>
+        <div class="brand-name">tenant</div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-item">
+          <div class="nav-icon">☰</div>
+          Main menu
+        </a>
+
+        <a href="#overview" class="nav-item active">
+          <div class="nav-icon">📊</div>
+          Overview
+        </a>
+
+        <a href="#analytics" class="nav-item">
+          <div class="nav-icon">�</div>
+          Analytics
+          <span class="nav-badge">New</span>
+        </a>
+
+        <a href="#users" class="nav-item">
+          <div class="nav-icon">�</div>
+          Users
+        </a>
+
+        <a href="#billing" class="nav-item">
+          <div class="nav-icon">�</div>
+          Billing
+        </a>
+
+        <a href="#authentication" class="nav-item">
+          <div class="nav-icon">�</div>
+          Authentication
+        </a>
+
+        <a href="#integrations" class="nav-item">
+          <div class="nav-icon">�</div>
+          Integrations
+        </a>
+
+        <a href="#notifications" class="nav-item">
+          <div class="nav-icon">�</div>
+          Notifications
+        </a>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Development</div>
+          <a href="#api-keys" class="nav-item">
+            <div class="nav-icon">🔑</div>
+            API Keys
+          </a>
+
+          <a href="#webhooks" class="nav-item">
+            <div class="nav-icon">🪝</div>
+            Webhooks
+          </a>
+
+          <a href="#modules" class="nav-item">
+            <div class="nav-icon">🧩</div>
+            Modules
+          </a>
+
+          <a href="#logs" class="nav-item">
+            <div class="nav-icon">�</div>
+            Logs
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">System</div>
+          <a href="#security" class="nav-item">
+            <div class="nav-icon">🛡️</div>
+            Security
+          </a>
+
+          <a href="#backups" class="nav-item">
+            <div class="nav-icon">💾</div>
+            Backups
+          </a>
+
+          <a href="#monitoring" class="nav-item">
+            <div class="nav-icon">📟</div>
+            Monitoring
+          </a>
+        </div>
+      </nav>
+
+      <div class="user-section">
+        <a href="#help" class="nav-item">
+          <div class="nav-icon">❓</div>
+          Help center
+        </a>
+
+        <a href="#settings" class="nav-item">
+          <div class="nav-icon">⚙️</div>
+          Settings
+        </a>
+
+        <div class="user-info">
+          <div class="user-avatar">T</div>
+          <div class="user-details">
+            <div class="user-name">Tenant Admin</div>
+            <div class="user-email">admin@tenant.com</div>
+            <div class="user-status">
+              <span class="status-dot"></span>
+              <span class="status-text">Active</span>
+            </div>
+          </div>
+          <div class="settings-icon">▼</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Top Header -->
+      <div class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+          <h1 class="page-title">Overview</h1>
+          <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search users, logs, settings..." />
+            <div class="search-icon">🔍</div>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <div class="date-selector">
+            <span>Monday, 6th March</span>
+            <span>📅</span>
+          </div>
+
+          <div class="notification-badge">
+            <span>🔔</span>
+            <div class="notification-dot"></div>
+          </div>
+
+          <div class="header-user-container">
+            <div class="header-user-avatar">T</div>
+            <span class="header-user-name">Tenant Admin</span>
+            <span class="header-dropdown-arrow">⌄</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div class="dashboard-content">
+        <!-- Overview Tab Content (default active) -->
+        <div id="overview" class="tab-content active">
+          <!-- Statistics Cards -->
+          <div class="stats-grid">
+            <div class="stat-card primary">
+              <div class="stat-header">
+                <div class="stat-icon primary">👥</div>
+                <div class="stat-actions">
+                  <span class="stat-badge active">Live</span>
+                </div>
+              </div>
+              <div class="stat-title">Active Users</div>
+              <div class="stat-value">2,847</div>
+              <div class="stat-change positive">
+                <span class="change-icon">↗</span>
+                <span class="change-value">+12.3%</span>
+                <span class="change-period">vs last month</span>
+              </div>
+            </div>
+
+            <div class="stat-card warning">
+              <div class="stat-header">
+                <div class="stat-icon warning">📊</div>
+                <div class="stat-actions">
+                  <span class="stat-badge trending">Trending</span>
+                </div>
+              </div>
+              <div class="stat-title">API Requests</div>
+              <div class="stat-value">847.2k</div>
+              <div class="stat-change positive">
+                <span class="change-icon">↗</span>
+                <span class="change-value">+28.4%</span>
+                <span class="change-period">vs last month</span>
+              </div>
+            </div>
+
+            <div class="stat-card success">
+              <div class="stat-header">
+                <div class="stat-icon success">💰</div>
+                <div class="stat-actions">
+                  <span class="stat-badge success">Paid</span>
+                </div>
+              </div>
+              <div class="stat-title">Monthly Revenue</div>
+              <div class="stat-value">$24,589</div>
+              <div class="stat-change positive">
+                <span class="change-icon">↗</span>
+                <span class="change-value">+15.7%</span>
+                <span class="change-period">vs last month</span>
+              </div>
+            </div>
+
+            <div class="stat-card info">
+              <div class="stat-header">
+                <div class="stat-icon info">⚡</div>
+                <div class="stat-actions">
+                  <span class="stat-badge excellent">99.9%</span>
+                </div>
+              </div>
+              <div class="stat-title">System Uptime</div>
+              <div class="stat-value">99.97%</div>
+              <div class="stat-change neutral">
+                <span class="change-icon">━</span>
+                <span class="change-value">+0.02%</span>
+                <span class="change-period">vs last month</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary Metrics Row -->
+          <div class="secondary-metrics">
+            <div class="metric-row">
+              <div class="mini-card">
+                <div class="mini-card-icon">🔑</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">API Keys</div>
+                  <div class="mini-card-value">12</div>
+                  <div class="mini-card-status active">Active</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">🔒</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Security Events</div>
+                  <div class="mini-card-value">3</div>
+                  <div class="mini-card-status warning">This Week</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">📱</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Mobile Sessions</div>
+                  <div class="mini-card-value">67%</div>
+                  <div class="mini-card-status success">+5.2%</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">⚡</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Avg Response</div>
+                  <div class="mini-card-value">142ms</div>
+                  <div class="mini-card-status excellent">Excellent</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">💾</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Storage Used</div>
+                  <div class="mini-card-value">2.1GB</div>
+                  <div class="mini-card-status neutral">of 10GB</div>
+                </div>
+              </div>
+
+              <div class="mini-card">
+                <div class="mini-card-icon">🌍</div>
+                <div class="mini-card-content">
+                  <div class="mini-card-title">Global Regions</div>
+                  <div class="mini-card-value">8</div>
+                  <div class="mini-card-status active">Deployed</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts and Maps Row -->
+          <div class="dashboard-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">Visit by device</h3>
+                <div class="chart-settings">
+                  <span>⚙️</span>
+                </div>
+              </div>
+              <div class="chart-placeholder">
+                🗺️ Interactive World Map<br />
+                <small class="map-description"
+                  >Global visitor distribution with location markers</small
+                >
+              </div>
+            </div>
+
+            <div class="device-stats-card">
+              <div class="chart-header">
+                <h3 class="chart-title">Visit by device</h3>
+              </div>
+              <div class="device-chart">
+                <div class="device-total">9 234</div>
+              </div>
+              <div class="device-breakdown">
+                <div class="device-item">
+                  <div class="device-icon">🖥️</div>
+                  <div class="device-label">Desktop</div>
+                  <div class="device-percentage">64.2%</div>
+                </div>
+                <div class="device-item">
+                  <div class="device-icon">📱</div>
+                  <div class="device-label">Mobile</div>
+                  <div class="device-percentage">26.3%</div>
+                </div>
+                <div class="device-item">
+                  <div class="device-icon">💻</div>
+                  <div class="device-label">Tablet</div>
+                  <div class="device-percentage">9.5%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Regional Statistics -->
+          <div class="regional-stats">
+            <div class="regional-header">
+              <h3 class="regional-title">Top region</h3>
+              <a href="#" class="view-detail-btn">View detail</a>
+            </div>
+            <table class="regional-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Date</th>
+                  <th>Order ID</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇺🇸</span>
+                      <strong>USA</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">2 251</span>
+                    <span class="region-change positive">↗ +12.3%</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇯🇵</span>
+                      <strong>Japan</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">2 210</span>
+                    <span class="region-change positive">↗ +1.0%</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇬🇧</span>
+                      <strong>UK</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">1 182</span>
+                    <span class="region-change positive">↗ +8.21%</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="region-flag-container">
+                      <span>🇩🇪</span>
+                      <strong>Germany</strong>
+                    </div>
+                  </td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <span class="region-value">839</span>
+                    <span class="region-change positive">↗ +6.32%</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Recent Transactions Section -->
+          <div class="transactions-section">
+            <div class="regional-stats">
+              <div class="regional-header">
+                <h3 class="regional-title">Recent transactions</h3>
+                <div class="chart-settings">
+                  <span>⚙️</span>
+                </div>
+              </div>
+              <div class="transactions-placeholder">
+                <div class="transactions-icon">📊</div>
+                <div>Recent transaction data will be displayed here</div>
+                <div class="transactions-subtitle">
+                  Connect your payment gateway to view transaction history
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- End Overview Tab -->
+
+        <!-- Authentication Tab Content -->
+        <div id="authentication" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">Authentication Providers</h2>
+              <p class="card-subtitle">Configure your authentication methods and providers</p>
+            </div>
+            <div class="card-content">
+              <div class="auth-section">
+                <h3>OAuth Providers</h3>
+
+                <div class="auth-provider enabled">
+                  <div class="provider-info">
+                    <div class="provider-icon">🏢</div>
+                    <div class="provider-details">
+                      <h4>Azure Active Directory</h4>
+                      <p>Microsoft Azure AD OAuth integration</p>
+                    </div>
+                  </div>
+                  <div class="toggle-switch enabled"></div>
+                </div>
+
+                <div class="auth-provider">
+                  <div class="provider-info">
+                    <div class="provider-icon">🔒</div>
+                    <div class="provider-details">
+                      <h4>Auth0</h4>
+                      <p>Auth0 universal authentication platform</p>
+                    </div>
+                  </div>
+                  <div class="toggle-switch"></div>
+                </div>
+
+                <div class="auth-provider">
+                  <div class="provider-info">
+                    <div class="provider-icon">🌐</div>
+                    <div class="provider-details">
+                      <h4>Google OAuth</h4>
+                      <p>Google account authentication</p>
+                    </div>
+                  </div>
+                  <div class="toggle-switch"></div>
+                </div>
+              </div>
+
+              <div class="auth-section">
+                <h3>SAML Configuration</h3>
+                <div class="config-row">
+                  <span class="config-key">SAML Endpoint</span>
+                  <span class="config-value">https://your-domain.com/saml</span>
+                </div>
+                <div class="config-row">
+                  <span class="config-key">Entity ID</span>
+                  <span class="config-value">urn:your-domain:saml</span>
+                </div>
+                <div class="config-row">
+                  <span class="config-key">Certificate</span>
+                  <span class="config-value">✅ Valid until Dec 2025</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modules Tab Content -->
+        <div id="modules" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">Available Modules</h2>
+              <p class="card-subtitle">Manage your application modules and request changes</p>
+            </div>
+            <div class="card-content">
+              <div class="module-grid">
+                <!-- Core Authentication Module -->
+                <div class="module-card enabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Core Authentication</div>
+                      <div class="module-description">
+                        Basic JWT authentication and user management system
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge required">Required</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">✅ Active</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Users</span>
+                      <span class="config-value">12 registered</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">JWT Expiry</span>
+                      <span class="config-value">24 hours</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <div class="module-disabled-info">
+                      Core authentication module is required and cannot be disabled.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- RBAC Module -->
+                <div class="module-card enabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Role-Based Access Control</div>
+                      <div class="module-description">
+                        Advanced role and permission management system with granular access controls
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge enabled">Enabled</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">✅ Active</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Roles</span>
+                      <span class="config-value">5 configured</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Permissions</span>
+                      <span class="config-value">23 defined</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <button class="btn btn-danger" onclick="requestModuleChange('rbac', 'disable')">
+                      Request Disable
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Logging Module -->
+                <div class="module-card disabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Advanced Logging</div>
+                      <div class="module-description">
+                        Comprehensive logging system with analytics and monitoring capabilities
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge disabled">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">❌ Inactive</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Log Retention</span>
+                      <span class="config-value">Not configured</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Storage</span>
+                      <span class="config-value">Not allocated</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <button
+                      class="btn btn-primary"
+                      onclick="requestModuleChange('logging', 'enable')"
+                    >
+                      Request Enable
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Email Service Module -->
+                <div class="module-card enabled">
+                  <div class="module-header">
+                    <div class="module-info">
+                      <div class="module-name">Email Service</div>
+                      <div class="module-description">
+                        SMTP email integration for notifications and user communications
+                      </div>
+                    </div>
+                    <div class="module-status">
+                      <span class="status-badge enabled">Enabled</span>
+                    </div>
+                  </div>
+                  <div class="module-config">
+                    <div class="config-row">
+                      <span class="config-key">Status</span>
+                      <span class="config-value">✅ Active</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Provider</span>
+                      <span class="config-value">Office365</span>
+                    </div>
+                    <div class="config-row">
+                      <span class="config-key">Monthly Quota</span>
+                      <span class="config-value">1,247 / 10,000</span>
+                    </div>
+                  </div>
+                  <div class="module-actions">
+                    <button class="btn btn-secondary">Configure</button>
+                    <button
+                      class="btn btn-danger"
+                      onclick="requestModuleChange('email', 'disable')"
+                    >
+                      Request Disable
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs Tab Content -->
+        <div id="logs" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">System Logs & Monitoring</h2>
+              <p class="card-subtitle">Monitor system activity and debug issues</p>
+            </div>
+            <div class="card-content">
+              <div class="log-container">
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:23:15</span>
+                  <span class="log-level info">INFO</span>
+                  User authentication successful - user@example.com
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:22:48</span>
+                  <span class="log-level success">SUCCESS</span>
+                  API key validation completed successfully
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:22:31</span>
+                  <span class="log-level warning">WARN</span>
+                  Rate limit approaching for API endpoint /api/users
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:21:16</span>
+                  <span class="log-level info">INFO</span>
+                  Database connection pool initialized - 10 connections
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:20:45</span>
+                  <span class="log-level error">ERROR</span>
+                  Failed to send email notification - SMTP timeout
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:19:32</span>
+                  <span class="log-level info">INFO</span>
+                  Module 'rbac' initialized successfully
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:18:21</span>
+                  <span class="log-level success">SUCCESS</span>
+                  Tenant configuration updated - modules: [auth, rbac, email]
+                </div>
+                <div class="log-entry">
+                  <span class="log-timestamp">2025-01-08 14:17:09</span>
+                  <span class="log-level info">INFO</span>
+                  Server startup completed - listening on port 5000
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Keys Tab Content -->
+        <div id="api-keys" class="tab-content">
+          <div class="section-card">
+            <div class="card-header">
+              <h2 class="card-title">API Keys Management</h2>
+              <p class="card-subtitle">Manage your API keys for different services</p>
+            </div>
+            <div class="card-content">
+              <!-- Authentication API Key -->
+              <div class="api-section">
+                <h3>🔐 Authentication Service API Key</h3>
+                <div class="api-key-container">
+                  <div class="api-key-display" id="authApiKey">
+                    ••••••••••••••••••••••••••••••••
+                  </div>
+                  <div class="api-key-actions">
+                    <button
+                      class="btn btn-secondary"
+                      id="toggleAuthKey"
+                      onclick="toggleApiKey('auth')"
+                    >
+                      👁️ Show Key
+                    </button>
+                    <button class="btn btn-primary" onclick="copyApiKey('auth')">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="api-usage-info">
+                  <strong>Usage:</strong> Use this key to authenticate API requests to the
+                  authentication service.
+                </div>
+              </div>
+
+              <!-- RBAC API Key -->
+              <div class="api-section">
+                <h3>🛡️ RBAC Service API Key</h3>
+                <div class="api-key-container">
+                  <div class="api-key-display" id="rbacApiKey">
+                    ••••••••••••••••••••••••••••••••
+                  </div>
+                  <div class="api-key-actions">
+                    <button
+                      class="btn btn-secondary"
+                      id="toggleRbacKey"
+                      onclick="toggleApiKey('rbac')"
+                    >
+                      👁️ Show Key
+                    </button>
+                    <button class="btn btn-primary" onclick="copyApiKey('rbac')">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="api-usage-info">
+                  <strong>Usage:</strong> Required for role and permission management operations.
+                </div>
+              </div>
+
+              <!-- Logging API Key -->
+              <div class="api-section">
+                <h3>📊 Logging Service API Key</h3>
+                <div class="api-key-container">
+                  <div class="api-key-display" id="loggingApiKey">
+                    ••••••••••••••••••••••••••••••••
+                  </div>
+                  <div class="api-key-actions">
+                    <button
+                      class="btn btn-secondary"
+                      id="toggleLoggingKey"
+                      onclick="toggleApiKey('logging')"
+                    >
+                      👁️ Show Key
+                    </button>
+                    <button class="btn btn-primary" onclick="copyApiKey('logging')">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="api-usage-info">
+                  <strong>Usage:</strong> Access logging data and analytics endpoints.
+                </div>
+              </div>
+
+              <div class="security-notice">
+                <div class="security-notice-header">
+                  <span class="security-notice-icon">⚠️</span>
+                  <strong class="security-notice-title">Security Notice</strong>
+                </div>
+                <div class="security-notice-content">
+                  Keep your API keys secure and never expose them in client-side code. Rotate keys
+                  regularly and monitor usage for any suspicious activity.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // DOM elements
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
+      const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+
+      // API Keys data - would be loaded from API in real implementation
+      const apiKeys = {
+        auth: "auth_1234567890abcdef1234567890abcdef",
+        rbac: "rbac_abcdef1234567890abcdef1234567890",
+        logging: "logging_fedcba0987654321fedcba0987654321",
+      };
+
+      const keyVisibility = {
+        auth: false,
+        rbac: false,
+        logging: false,
+      };
+
+      // Tab functionality
+      function showTab(tabName) {
+        console.log("Showing tab:", tabName);
+
+        // Hide all tab contents
+        const contents = document.querySelectorAll(".tab-content");
+        contents.forEach(content => content.classList.remove("active"));
+
+        // Remove active class from all nav items
+        const navItems = document.querySelectorAll(".nav-item");
+        navItems.forEach(nav => nav.classList.remove("active"));
+
+        // Show selected tab content
+        const selectedTab = document.getElementById(tabName);
+        if (selectedTab) {
+          selectedTab.classList.add("active");
+          console.log("Activated tab content:", tabName);
+        } else {
+          console.warn("Tab content not found:", tabName);
+        }
+
+        // Add active class to corresponding nav item
+        const navItem = document.querySelector(`.nav-item[href="#${tabName}"]`);
+        if (navItem) {
+          navItem.classList.add("active");
+          console.log("Activated nav item:", tabName);
+        } else {
+          console.warn("Nav item not found for:", tabName);
+        }
+
+        // Update page title
+        const pageTitle = document.querySelector(".page-title");
+        if (pageTitle && navItem) {
+          const navText = navItem.textContent.trim();
+          pageTitle.textContent = navText;
+          console.log("Updated page title to:", navText);
+        }
+      }
+
+      function requestModuleChange(moduleId, action) {
+        console.log("Module change requested:", moduleId, action);
+
+        // In real implementation, this would make an API call
+        const actionText = action === "enable" ? "enable" : "disable";
+        const message = `Request to ${actionText} ${moduleId} module has been sent to the Platform Administrator. You'll receive an email notification once it's processed.`;
+
+        if (confirm(`Are you sure you want to request to ${actionText} the ${moduleId} module?`)) {
+          alert(message);
+
+          // Update UI to show request pending
+          const moduleCard = event.target.closest(".module-card");
+          const actionsDiv = moduleCard.querySelector(".module-actions");
+          actionsDiv.innerHTML = `
+            <div class="alert-info">
+              <strong>Request Pending:</strong> Your ${actionText} request is being reviewed by the Platform Administrator.
+            </div>
+          `;
+        }
+      }
+
+      function toggleApiKey(keyType) {
+        console.log("Toggling API key:", keyType);
+
+        const isVisible = keyVisibility[keyType];
+        const keyElement = document.getElementById(`${keyType}ApiKey`);
+        const toggleButton = document.getElementById(
+          `toggle${keyType.charAt(0).toUpperCase() + keyType.slice(1)}Key`
+        );
+
+        if (isVisible) {
+          keyElement.textContent = "••••••••••••••••••••••••••••••••";
+          toggleButton.textContent = "👁️ Show Key";
+          keyVisibility[keyType] = false;
+        } else {
+          keyElement.textContent = apiKeys[keyType];
+          toggleButton.textContent = "🙈 Hide Key";
+          keyVisibility[keyType] = true;
+        }
+      }
+
+      function copyApiKey(keyType) {
+        console.log("Copying API key:", keyType);
+
+        const keyValue = apiKeys[keyType];
+        navigator.clipboard.writeText(keyValue).then(() => {
+          // Visual feedback
+          const button = event.target;
+          const originalText = button.textContent;
+          button.textContent = "✅ Copied!";
+          button.style.background = "#10b981";
+          button.style.color = "white";
+
+          setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = "";
+            button.style.color = "";
+          }, 2000);
+        });
+      }
+
+      // Mobile menu toggle functionality
+      function toggleSidebar() {
+        sidebar.classList.toggle("open");
+        sidebarOverlay.classList.toggle("active");
+        document.body.style.overflow = sidebar.classList.contains("open") ? "hidden" : "";
+      }
+
+      // Mobile menu button click handler
+      if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener("click", toggleSidebar);
+      }
+
+      // Close sidebar when clicking overlay
+      sidebarOverlay.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        sidebarOverlay.classList.remove("active");
+        document.body.style.overflow = "";
+      });
+
+      // Close sidebar on escape key
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && sidebar.classList.contains("open")) {
+          sidebar.classList.remove("open");
+          sidebarOverlay.classList.remove("active");
+          document.body.style.overflow = "";
+        }
+      });
+
+      // Navigation item click handlers
+      document.querySelectorAll('.nav-item[href^="#"]').forEach(link => {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+
+          const href = link.getAttribute("href");
+          const tabName = href.substring(1); // Remove the # symbol
+
+          // Skip system links (help, settings)
+          if (href.includes("help") || href.includes("settings")) {
+            return;
+          }
+
+          // Show the corresponding tab
+          showTab(tabName);
+
+          // Close mobile menu if open
+          if (window.innerWidth <= 1024 && sidebar.classList.contains("open")) {
+            sidebar.classList.remove("open");
+            sidebarOverlay.classList.remove("active");
+            document.body.style.overflow = "";
+          }
+        });
+      });
+
+      // Handle window resize
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 1024) {
+          sidebar.classList.remove("open");
+          sidebarOverlay.classList.remove("active");
+          document.body.style.overflow = "";
+        }
+      });
+
+      // Add loading states for nav items
+      document.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", () => {
+          // Add subtle loading effect
+          item.style.opacity = "0.7";
+          setTimeout(() => {
+            item.style.opacity = "1";
+          }, 150);
+        });
+      });
+
+      // Initialize - set default active state and show overview tab
+      function initializeDashboard() {
+        // Show overview tab by default
+        showTab("overview");
+      }
+
+      // Call initialization when DOM is loaded
+      document.addEventListener("DOMContentLoaded", initializeDashboard);
+
+      // Also call immediately if DOM is already loaded
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initializeDashboard);
+      } else {
+        initializeDashboard();
+      }
+    </script>
+  </body>
+</html>
