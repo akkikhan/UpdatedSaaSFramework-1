@@ -1,6 +1,6 @@
-import { themes as prismThemes } from 'prism-react-renderer';
+const { themes: prismThemes } = require('prism-react-renderer');
 
-export default {
+module.exports = {
   title: 'SaaS Platform Docs',
   tagline: 'Integration guides and API reference',
   url: 'https://example.com',
@@ -55,6 +55,7 @@ export default {
             'https://github.com/your-org/saas-framework/tree/main/docs-portal/',
           showLastUpdateTime: true,
         },
+        blog: false,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },

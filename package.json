@@ -44,7 +44,10 @@
     "packages:verify": "npm run packages:build && echo 'All packages built successfully!'",
     "publish:dry-run": "npm run packages:build && echo 'Dry run completed - packages ready for publishing'",
     "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'",
-    "seed:rbac": "node scripts/seed-rbac-config.mjs"
+    "seed:rbac": "node scripts/seed-rbac-config.mjs",
+    "seed:rbac-enhanced": "node scripts/seed-rbac-config-enhanced.mjs",
+    "seed:rbac-comprehensive": "node scripts/seed-rbac-comprehensive.mjs",
+    "seed:rbac-quick": "node scripts/seed-rbac-quick.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
