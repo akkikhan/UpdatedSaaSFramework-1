@@ -5,8 +5,7 @@
   "private": true,
   "license": "MIT",
   "workspaces": [
-    "packages/*",
-    "docs-portal"
+    "packages/*"
   ],
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx --no-warnings server/index.ts",
@@ -17,12 +16,12 @@
     "db:push": "drizzle-kit push",
     "setup:platform-admin": "tsx server/setup-platform-admin.ts",
     "seed:rbac-config": "tsx scripts/seed-rbac-config.ts",
-    "test": "node scripts/check-demo-env.mjs && jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:server": "jest --selectProjects=\"Server Tests\"",
-    "test:client": "jest --selectProjects=\"Client Tests\"",
+    "test": "node scripts/check-demo-env.mjs && node --test tests",
+    "test:watch": "node --test --watch tests",
+    "test:coverage": "node --test tests",
+    "test:integration": "node --test tests/integration",
+    "test:server": "node --test tests/server",
+    "test:client": "node --test tests/client",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
