@@ -82,6 +82,26 @@
         padding: 20px 0;
         position: relative;
         z-index: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+      }
+
+      .nav-menu::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .nav-menu::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .nav-menu::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+      }
+
+      .nav-menu::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
       }
 
       .nav-item {
@@ -95,17 +115,37 @@
         transition: all 0.3s ease;
         gap: 12px;
         position: relative;
+        border-radius: 0 25px 25px 0;
+        margin-right: 12px;
       }
 
       .nav-item:hover {
         background: rgba(255, 255, 255, 0.1);
         color: white;
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
 
       .nav-item.active {
-        background: rgba(255, 255, 255, 0.15);
+        background: linear-gradient(
+          135deg,
+          rgba(245, 158, 11, 0.2) 0%,
+          rgba(249, 115, 22, 0.2) 100%
+        );
         color: white;
-        border-right: 3px solid #f59e0b;
+        border-right: 4px solid #f59e0b;
+        box-shadow: 0 2px 12px rgba(245, 158, 11, 0.3);
+      }
+
+      .nav-item.active::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        border-radius: 0 2px 2px 0;
       }
 
       .nav-icon {
@@ -114,10 +154,31 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        opacity: 0.8;
+      }
+
+      .nav-item:hover .nav-icon {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      .nav-item.active .nav-icon {
+        opacity: 1;
+        filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5));
       }
 
       .nav-section {
         margin-top: 32px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+      }
+
+      .nav-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
       }
 
       .nav-section-title {
@@ -127,6 +188,19 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
         padding: 0 20px 12px;
+        position: relative;
+      }
+
+      .nav-section-title::after {
+        content: "";
+        position: absolute;
+        bottom: 6px;
+        left: 20px;
+        width: 20px;
+        height: 2px;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        border-radius: 1px;
+        opacity: 0.7;
       }
 
       .user-section {
@@ -168,6 +242,29 @@
       .user-email {
         font-size: 12px;
         color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 4px;
+      }
+
+      .user-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      .status-text {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        font-weight: 500;
       }
 
       /* Main Content Area */
@@ -315,11 +412,21 @@
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       }
 
+      .stat-card.info::before {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      }
+
       .stat-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         margin-bottom: 16px;
+      }
+
+      .stat-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .stat-icon {
@@ -347,6 +454,10 @@
 
       .stat-icon.danger {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .stat-icon.info {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       }
 
       .stat-title {
@@ -377,6 +488,153 @@
 
       .stat-change.negative {
         color: #ef4444;
+      }
+
+      .stat-change.neutral {
+        color: #64748b;
+      }
+
+      .stat-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        animation: pulse-badge 3s infinite;
+      }
+
+      .stat-badge.active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+      }
+
+      .stat-badge.trending {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+      }
+
+      .stat-badge.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+      }
+
+      .stat-badge.excellent {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+      }
+
+      .change-icon {
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .change-value {
+        font-weight: 600;
+      }
+
+      .change-period {
+        opacity: 0.8;
+        font-size: 11px;
+      }
+
+      /* Secondary Metrics */
+      .secondary-metrics {
+        margin-bottom: 32px;
+      }
+
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+
+      .mini-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .mini-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .mini-card-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        border: 2px solid #e2e8f0;
+      }
+
+      .mini-card-content {
+        flex: 1;
+      }
+
+      .mini-card-title {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      .mini-card-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .mini-card-status {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 6px;
+        border-radius: 6px;
+        display: inline-block;
+      }
+
+      .mini-card-status.active {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+      }
+
+      .mini-card-status.warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+      }
+
+      .mini-card-status.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+      }
+
+      .mini-card-status.excellent {
+        background: rgba(59, 130, 246, 0.1);
+        color: #1d4ed8;
+      }
+
+      .mini-card-status.neutral {
+        background: rgba(100, 116, 139, 0.1);
+        color: #475569;
       }
 
       /* Chart and Map Section */
@@ -569,12 +827,34 @@
       }
 
       /* Additional Utility Classes */
-      .course-badge {
+      .course-badge,
+      .nav-badge {
         margin-left: auto;
         background: rgba(255, 255, 255, 0.2);
         padding: 2px 8px;
         border-radius: 10px;
         font-size: 12px;
+      }
+
+      .nav-badge {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        animation: pulse-badge 2s infinite;
+      }
+
+      @keyframes pulse-badge {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(0.95);
+        }
       }
 
       .settings-icon {
@@ -656,10 +936,49 @@
         margin-bottom: 16px;
       }
 
+      .mobile-menu-btn {
+        display: none;
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #1e293b;
+        padding: 8px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+      }
+
+      .mobile-menu-btn:hover {
+        background: rgba(55, 48, 163, 0.1);
+        color: #3730a3;
+      }
+
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+      }
+
       /* Responsive Design */
       @media (max-width: 1024px) {
         body {
           grid-template-columns: 1fr;
+        }
+
+        .mobile-menu-btn {
+          display: block;
         }
 
         .sidebar {
@@ -669,10 +988,16 @@
           height: 100vh;
           z-index: 1000;
           transition: left 0.3s ease;
+          box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
         }
 
         .sidebar.open {
           left: 0;
+        }
+
+        .nav-item {
+          margin-right: 0;
+          border-radius: 0;
         }
 
         .dashboard-row {
@@ -707,89 +1032,145 @@
         .stat-value {
           font-size: 24px;
         }
+
+        .metric-row {
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .mini-card {
+          padding: 16px;
+          gap: 12px;
+        }
+
+        .mini-card-icon {
+          width: 40px;
+          height: 40px;
+          font-size: 18px;
+        }
+
+        .mini-card-value {
+          font-size: 20px;
+        }
       }
     </style>
   </head>
   <body>
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Left Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="logo">A</div>
-        <div class="brand-name">aspire</div>
+        <div class="logo">T</div>
+        <div class="brand-name">tenant</div>
       </div>
 
       <nav class="nav-menu">
         <a href="#" class="nav-item">
-          <div class="nav-icon">📱</div>
+          <div class="nav-icon">☰</div>
           Main menu
         </a>
 
-        <a href="#" class="nav-item active">
+        <a href="#overview" class="nav-item active">
           <div class="nav-icon">📊</div>
-          Dashboard
+          Overview
         </a>
 
-        <a href="#" class="nav-item">
-          <div class="nav-icon">📚</div>
-          Courses
-          <span class="course-badge">12</span>
+        <a href="#analytics" class="nav-item">
+          <div class="nav-icon">�</div>
+          Analytics
+          <span class="nav-badge">New</span>
         </a>
 
-        <a href="#" class="nav-item">
-          <div class="nav-icon">📈</div>
-          Progress
+        <a href="#users" class="nav-item">
+          <div class="nav-icon">�</div>
+          Users
         </a>
 
-        <a href="#" class="nav-item">
-          <div class="nav-icon">📅</div>
-          Schedule
+        <a href="#billing" class="nav-item">
+          <div class="nav-icon">�</div>
+          Billing
         </a>
 
-        <a href="#" class="nav-item">
-          <div class="nav-icon">💬</div>
-          Messages
+        <a href="#authentication" class="nav-item">
+          <div class="nav-icon">�</div>
+          Authentication
         </a>
 
-        <a href="#" class="nav-item">
-          <div class="nav-icon">📋</div>
-          Activity
+        <a href="#integrations" class="nav-item">
+          <div class="nav-icon">�</div>
+          Integrations
         </a>
 
-        <a href="#" class="nav-item">
-          <div class="nav-icon">👥</div>
-          Team
+        <a href="#notifications" class="nav-item">
+          <div class="nav-icon">�</div>
+          Notifications
         </a>
 
         <div class="nav-section">
-          <div class="nav-section-title">Other</div>
-          <a href="#" class="nav-item">
+          <div class="nav-section-title">Development</div>
+          <a href="#api-keys" class="nav-item">
+            <div class="nav-icon">🔑</div>
+            API Keys
+          </a>
+
+          <a href="#webhooks" class="nav-item">
+            <div class="nav-icon">🪝</div>
+            Webhooks
+          </a>
+
+          <a href="#modules" class="nav-item">
             <div class="nav-icon">🧩</div>
             Modules
           </a>
 
-          <a href="#" class="nav-item">
-            <div class="nav-icon">💰</div>
-            Sales
+          <a href="#logs" class="nav-item">
+            <div class="nav-icon">�</div>
+            Logs
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">System</div>
+          <a href="#security" class="nav-item">
+            <div class="nav-icon">🛡️</div>
+            Security
           </a>
 
-          <a href="#" class="nav-item">
-            <div class="nav-icon">🎓</div>
-            Students
+          <a href="#backups" class="nav-item">
+            <div class="nav-icon">💾</div>
+            Backups
+          </a>
+
+          <a href="#monitoring" class="nav-item">
+            <div class="nav-icon">📟</div>
+            Monitoring
           </a>
         </div>
       </nav>
 
       <div class="user-section">
-        <div class="nav-section-title help-settings-spacing">Help center</div>
-        <div class="nav-section-title help-settings-spacing">Settings</div>
+        <a href="#help" class="nav-item">
+          <div class="nav-icon">❓</div>
+          Help center
+        </a>
+
+        <a href="#settings" class="nav-item">
+          <div class="nav-icon">⚙️</div>
+          Settings
+        </a>
 
         <div class="user-info">
-          <div class="user-avatar">C</div>
+          <div class="user-avatar">T</div>
           <div class="user-details">
-            <div class="user-name">Chad</div>
-            <div class="user-email">chad@gmail.com</div>
+            <div class="user-name">Tenant Admin</div>
+            <div class="user-email">admin@tenant.com</div>
+            <div class="user-status">
+              <span class="status-dot"></span>
+              <span class="status-text">Active</span>
+            </div>
           </div>
-          <div class="settings-icon">⚙️</div>
+          <div class="settings-icon">▼</div>
         </div>
       </div>
     </div>
@@ -799,9 +1180,10 @@
       <!-- Top Header -->
       <div class="top-header">
         <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
           <h1 class="page-title">Overview</h1>
           <div class="search-container">
-            <input type="text" class="search-input" placeholder="Search your course" />
+            <input type="text" class="search-input" placeholder="Search users, logs, settings..." />
             <div class="search-icon">🔍</div>
           </div>
         </div>
@@ -818,8 +1200,8 @@
           </div>
 
           <div class="header-user-container">
-            <div class="header-user-avatar">C</div>
-            <span class="header-user-name">Chad</span>
+            <div class="header-user-avatar">T</div>
+            <span class="header-user-name">Tenant Admin</span>
             <span class="header-dropdown-arrow">⌄</span>
           </div>
         </div>
@@ -832,37 +1214,124 @@
           <div class="stat-card primary">
             <div class="stat-header">
               <div class="stat-icon primary">👥</div>
+              <div class="stat-actions">
+                <span class="stat-badge active">Live</span>
+              </div>
             </div>
-            <div class="stat-title">Total students</div>
-            <div class="stat-value">4 289</div>
-            <div class="stat-change positive">↗ +8.65%</div>
+            <div class="stat-title">Active Users</div>
+            <div class="stat-value">2,847</div>
+            <div class="stat-change positive">
+              <span class="change-icon">↗</span>
+              <span class="change-value">+12.3%</span>
+              <span class="change-period">vs last month</span>
+            </div>
           </div>
 
           <div class="stat-card warning">
             <div class="stat-header">
-              <div class="stat-icon warning">👁</div>
+              <div class="stat-icon warning">📊</div>
+              <div class="stat-actions">
+                <span class="stat-badge trending">Trending</span>
+              </div>
             </div>
-            <div class="stat-title">Total visits</div>
-            <div class="stat-value">134k</div>
-            <div class="stat-change positive">↗ +2.36%</div>
-          </div>
-
-          <div class="stat-card danger">
-            <div class="stat-header">
-              <div class="stat-icon danger">⚡</div>
+            <div class="stat-title">API Requests</div>
+            <div class="stat-value">847.2k</div>
+            <div class="stat-change positive">
+              <span class="change-icon">↗</span>
+              <span class="change-value">+28.4%</span>
+              <span class="change-period">vs last month</span>
             </div>
-            <div class="stat-title">Realtime users</div>
-            <div class="stat-value">562</div>
-            <div class="stat-change positive">↗ +2.38%</div>
           </div>
 
           <div class="stat-card success">
             <div class="stat-header">
-              <div class="stat-icon success">⏱</div>
+              <div class="stat-icon success">💰</div>
+              <div class="stat-actions">
+                <span class="stat-badge success">Paid</span>
+              </div>
             </div>
-            <div class="stat-title">Visits duration</div>
-            <div class="stat-value">6h 8m</div>
-            <div class="stat-change positive">↗ +9.39%</div>
+            <div class="stat-title">Monthly Revenue</div>
+            <div class="stat-value">$24,589</div>
+            <div class="stat-change positive">
+              <span class="change-icon">↗</span>
+              <span class="change-value">+15.7%</span>
+              <span class="change-period">vs last month</span>
+            </div>
+          </div>
+
+          <div class="stat-card info">
+            <div class="stat-header">
+              <div class="stat-icon info">⚡</div>
+              <div class="stat-actions">
+                <span class="stat-badge excellent">99.9%</span>
+              </div>
+            </div>
+            <div class="stat-title">System Uptime</div>
+            <div class="stat-value">99.97%</div>
+            <div class="stat-change neutral">
+              <span class="change-icon">━</span>
+              <span class="change-value">+0.02%</span>
+              <span class="change-period">vs last month</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Secondary Metrics Row -->
+        <div class="secondary-metrics">
+          <div class="metric-row">
+            <div class="mini-card">
+              <div class="mini-card-icon">🔑</div>
+              <div class="mini-card-content">
+                <div class="mini-card-title">API Keys</div>
+                <div class="mini-card-value">12</div>
+                <div class="mini-card-status active">Active</div>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <div class="mini-card-icon">🔒</div>
+              <div class="mini-card-content">
+                <div class="mini-card-title">Security Events</div>
+                <div class="mini-card-value">3</div>
+                <div class="mini-card-status warning">This Week</div>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <div class="mini-card-icon">📱</div>
+              <div class="mini-card-content">
+                <div class="mini-card-title">Mobile Sessions</div>
+                <div class="mini-card-value">67%</div>
+                <div class="mini-card-status success">+5.2%</div>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <div class="mini-card-icon">⚡</div>
+              <div class="mini-card-content">
+                <div class="mini-card-title">Avg Response</div>
+                <div class="mini-card-value">142ms</div>
+                <div class="mini-card-status excellent">Excellent</div>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <div class="mini-card-icon">💾</div>
+              <div class="mini-card-content">
+                <div class="mini-card-title">Storage Used</div>
+                <div class="mini-card-value">2.1GB</div>
+                <div class="mini-card-status neutral">of 10GB</div>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <div class="mini-card-icon">🌍</div>
+              <div class="mini-card-content">
+                <div class="mini-card-title">Global Regions</div>
+                <div class="mini-card-value">8</div>
+                <div class="mini-card-status active">Deployed</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1013,49 +1482,98 @@
     </div>
 
     <script>
+      // DOM elements
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
+      const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+
       // Mobile menu toggle functionality
       function toggleSidebar() {
-        const sidebar = document.querySelector(".sidebar");
         sidebar.classList.toggle("open");
+        sidebarOverlay.classList.toggle("active");
+        document.body.style.overflow = sidebar.classList.contains("open") ? "hidden" : "";
       }
 
-      // Add mobile menu button if needed
-      if (window.innerWidth <= 1024) {
-        const header = document.querySelector(".top-header .header-left");
-        const menuButton = document.createElement("button");
-        menuButton.innerHTML = "☰";
-        menuButton.style.cssText =
-          "background: none; border: none; font-size: 20px; cursor: pointer; margin-right: 16px;";
-        menuButton.onclick = toggleSidebar;
-        header.insertBefore(menuButton, header.firstChild);
+      // Mobile menu button click handler
+      if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener("click", toggleSidebar);
       }
 
-      // Close sidebar when clicking outside on mobile
-      document.addEventListener("click", e => {
-        const sidebar = document.querySelector(".sidebar");
-        const isClickInsideSidebar = sidebar.contains(e.target);
-        const isMenuButton = e.target.innerHTML === "☰";
+      // Close sidebar when clicking overlay
+      sidebarOverlay.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        sidebarOverlay.classList.remove("active");
+        document.body.style.overflow = "";
+      });
 
-        if (!isClickInsideSidebar && !isMenuButton && window.innerWidth <= 1024) {
+      // Close sidebar on escape key
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && sidebar.classList.contains("open")) {
           sidebar.classList.remove("open");
+          sidebarOverlay.classList.remove("active");
+          document.body.style.overflow = "";
         }
       });
 
-      // Smooth scrolling for navigation
+      // Navigation item click handlers
       document.querySelectorAll('.nav-item[href^="#"]').forEach(link => {
         link.addEventListener("click", e => {
           e.preventDefault();
-          // Add smooth scrolling logic here if needed
+
+          // Remove active class from all nav items
+          document.querySelectorAll(".nav-item").forEach(nav => nav.classList.remove("active"));
+
+          // Add active class to clicked item (unless it's help or settings)
+          if (
+            !link.getAttribute("href").includes("help") &&
+            !link.getAttribute("href").includes("settings")
+          ) {
+            link.classList.add("active");
+          }
+
+          // Close mobile menu if open
+          if (window.innerWidth <= 1024 && sidebar.classList.contains("open")) {
+            sidebar.classList.remove("open");
+            sidebarOverlay.classList.remove("active");
+            document.body.style.overflow = "";
+          }
+
+          // Update page title based on selected nav item
+          const pageTitle = document.querySelector(".page-title");
+          const navText = link.textContent.trim();
+          if (pageTitle && navText !== "Main menu") {
+            pageTitle.textContent = navText;
+          }
         });
       });
 
-      // Add active state management
+      // Handle window resize
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 1024) {
+          sidebar.classList.remove("open");
+          sidebarOverlay.classList.remove("active");
+          document.body.style.overflow = "";
+        }
+      });
+
+      // Add loading states for nav items
       document.querySelectorAll(".nav-item").forEach(item => {
         item.addEventListener("click", () => {
-          document.querySelectorAll(".nav-item").forEach(nav => nav.classList.remove("active"));
-          item.classList.add("active");
+          // Add subtle loading effect
+          item.style.opacity = "0.7";
+          setTimeout(() => {
+            item.style.opacity = "1";
+          }, 150);
         });
       });
+
+      // Initialize - set default active state if none exists
+      if (!document.querySelector(".nav-item.active")) {
+        const overviewItem = document.querySelector('.nav-item[href="#overview"]');
+        if (overviewItem) {
+          overviewItem.classList.add("active");
+        }
+      }
     </script>
   </body>
 </html>
