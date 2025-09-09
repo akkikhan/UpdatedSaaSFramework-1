@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { emailService } from "./services/email";
@@ -20,6 +20,13 @@ import {
 import { notificationService } from "./services/notification";
 import { complianceService } from "./services/compliance";
 import { z } from "zod";
+
+function getClientUrl(req: Request): string {
+  if (process.env.CLIENT_URL) return process.env.CLIENT_URL;
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  const host = req.get("x-forwarded-host") || req.get("host");
+  return `${proto}://${host}`;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
@@ -112,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         console.error("Azure AD OAuth error:", error);
         return res.redirect(
-          `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/error?error=${encodeURIComponent(error as string)}`
+          `${getClientUrl(req)}/auth-error?error=${encodeURIComponent(error as string)}`
         );
       }
 
@@ -215,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Logged successful Azure AD login");
 
       // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/success?token=${appToken}&tenant=${tenant.orgId}`;
+      const redirectUrl = `${getClientUrl(req)}/auth-success?token=${appToken}&tenant=${tenant.orgId}`;
 
       console.log(`Redirecting to: ${redirectUrl}`);
 
@@ -246,7 +253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/error?error=${encodeURIComponent("Authentication failed")}`;
+      const errorUrl = `${getClientUrl(req)}/auth-error?error=${encodeURIComponent("Authentication failed")}`;
       res.redirect(errorUrl);
     }
   });

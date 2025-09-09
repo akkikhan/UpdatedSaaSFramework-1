@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { emailService } from "./services/email";
@@ -26,6 +26,13 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+function getClientUrl(req: Request): string {
+  if (process.env.CLIENT_URL) return process.env.CLIENT_URL;
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  const host = req.get("x-forwarded-host") || req.get("host");
+  return `${proto}://${host}`;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public routes
@@ -1521,7 +1528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         console.error("Azure AD OAuth error:", error);
         return res.redirect(
-          `${process.env.CLIENT_URL || "http://localhost:5000"}/auth/error?error=${encodeURIComponent(error as string)}`
+          `${getClientUrl(req)}/auth-error?error=${encodeURIComponent(error as string)}`
         );
       }
 
@@ -1592,7 +1599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const details = encodeURIComponent(
           "Stored clientSecret cannot be decrypted. The platform JWT_SECRET may have changed."
         );
-        const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent(
+        const errorUrl = `${getClientUrl(req)}/auth-error?error=${encodeURIComponent(
           "SECRET_DECRYPTION_FAILED"
         )}&code=${encodeURIComponent("SECRET_DECRYPTION_FAILED")}&details=${details}`;
         return res.redirect(errorUrl);
@@ -1666,7 +1673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Logged successful Azure AD login");
 
       // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-success?token=${appToken}&tenant=${tenant.orgId}`;
+      const redirectUrl = `${getClientUrl(req)}/auth-success?token=${appToken}&tenant=${tenant.orgId}`;
 
       console.log(`Redirecting to success page: ${redirectUrl}`);
 
@@ -1712,7 +1719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const corrId = corrMatch ? corrMatch[1] : "";
       const details = encodeURIComponent(rawMsg.slice(0, 800));
       const tenantParam = errorTenantOrgId ? `&tenant=${encodeURIComponent(errorTenantOrgId)}` : "";
-      const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent(
+      const errorUrl = `${getClientUrl(req)}/auth-error?error=${encodeURIComponent(
         "Authentication failed"
       )}&code=${encodeURIComponent(code)}&details=${details}&corr=${encodeURIComponent(corrId)}${tenantParam}`;
       res.redirect(errorUrl);

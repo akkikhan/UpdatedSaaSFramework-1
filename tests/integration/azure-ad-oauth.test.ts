@@ -146,15 +146,17 @@ describe("Azure AD OAuth Integration Tests", () => {
 
       const response = await request(app)
         .get("/api/auth/azure/callback")
+        .set("X-Forwarded-Host", "localhost:5173")
+        .set("X-Forwarded-Proto", "http")
         .query({
           code: "auth-code-123",
           state: validState,
         })
         .expect(302); // Redirect
 
-      expect(response.headers.location).toContain("/auth/success");
-      expect(response.headers.location).toContain("token=");
-      expect(response.headers.location).toContain("tenant=test-org");
+      expect(response.headers.location).toMatch(
+        /^http:\/\/localhost:5173\/auth-success\?token=.*tenant=test-org/
+      );
       expect(mockStorage.logSystemActivity).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "azure_ad_login_success",
@@ -165,14 +167,17 @@ describe("Azure AD OAuth Integration Tests", () => {
     it("should handle OAuth errors", async () => {
       const response = await request(app)
         .get("/api/auth/azure/callback")
+        .set("X-Forwarded-Host", "localhost:5173")
+        .set("X-Forwarded-Proto", "http")
         .query({
           error: "access_denied",
           error_description: "User denied consent",
         })
         .expect(302);
 
-      expect(response.headers.location).toContain("/auth/error");
-      expect(response.headers.location).toContain("error=access_denied");
+      expect(response.headers.location).toBe(
+        "http://localhost:5173/auth-error?error=access_denied"
+      );
     });
 
     it("should handle missing code parameter", async () => {
@@ -243,7 +248,7 @@ describe("Azure AD OAuth Integration Tests", () => {
         })
         .expect(302);
 
-      expect(response.headers.location).toContain("/auth/error");
+      expect(response.headers.location).toContain("/auth-error");
       expect(mockStorage.logSystemActivity).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "azure_ad_login_failed",
