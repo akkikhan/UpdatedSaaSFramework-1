@@ -1,0 +1,15 @@
+{
+  "name": "saas-platform-docs",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "docs:version": "docusaurus docs:version"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.4.0",
+    "@docusaurus/preset-classic": "^3.4.0"
+  }
+}
