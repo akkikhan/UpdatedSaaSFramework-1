@@ -30,7 +30,7 @@ describe("Azure AD OAuth Integration Tests", () => {
               tenantId: "azure-tenant-123",
               clientId: "azure-client-123",
               clientSecret: "azure-secret-123",
-              callbackUrl: "http://localhost:3000/auth/azure/callback",
+              redirectUri: "http://localhost:3000/auth/azure/callback",
             },
           },
         ],

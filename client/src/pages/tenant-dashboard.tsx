@@ -1763,7 +1763,7 @@ export default function TenantDashboard() {
                                           Client ID: {cfg.clientId || "—"}
                                         </p>
                                         <p className="text-xs text-slate-600">
-                                          Callback: {cfg.callbackUrl || "—"}
+                                          Callback: {cfg.redirectUri || cfg.callbackUrl || "—"}
                                         </p>
                                       </>
                                     );
@@ -1785,7 +1785,7 @@ export default function TenantDashboard() {
                                           Audience: {cfg.audience || "—"}
                                         </p>
                                         <p className="text-xs text-slate-600">
-                                          Callback: {cfg.callbackUrl || "—"}
+                                          Callback: {cfg.redirectUri || cfg.callbackUrl || "—"}
                                         </p>
                                       </>
                                     );
@@ -2593,12 +2593,13 @@ function ProviderAzureCard({
   isEnabled: boolean;
 }) {
   const { toast } = useToast();
+  const expectedRedirect = `${window.location.protocol}//${window.location.host}/api/auth/azure/callback`;
   const [form, setForm] = useState({
     tenantId: provider?.config?.tenantId || "",
     clientId: provider?.config?.clientId || "",
     clientSecret: "", // never prefill secrets
+    redirectUri: provider?.config?.redirectUri || provider?.config?.callbackUrl || expectedRedirect,
   });
-  const expectedRedirect = `${window.location.protocol}//${window.location.host}/api/auth/azure/callback`;
 
   const submitRequest = async () => {
     try {
@@ -2613,7 +2614,7 @@ function ProviderAzureCard({
         headers,
         body: JSON.stringify({
           type: "azure-ad",
-          config: { ...form, callbackUrl: expectedRedirect },
+          config: { ...form },
         }),
       });
       const data = await res.json();
@@ -2670,6 +2671,15 @@ function ProviderAzureCard({
             placeholder="••••••••"
           />
         </div>
+        <div className="md:col-span-3">
+          <Label className="text-xs">Redirect URI</Label>
+          <Input
+            disabled={!isEnabled}
+            value={form.redirectUri}
+            onChange={e => setForm({ ...form, redirectUri: e.target.value })}
+            placeholder={expectedRedirect}
+          />
+        </div>
       </div>
       <div className="flex items-center gap-2 mt-2">
         <Button
@@ -2695,6 +2705,7 @@ function ProviderAzureCard({
                   tenantId: form.tenantId,
                   clientId: form.clientId,
                   clientSecret: form.clientSecret,
+                  redirectUri: form.redirectUri,
                 }),
               });
               const data = await res.json();
@@ -2740,6 +2751,7 @@ function ProviderAzureCard({
                   tenantId: form.tenantId,
                   clientId: form.clientId,
                   clientSecret: form.clientSecret,
+                  redirectUri: form.redirectUri,
                 }),
               });
               const data = await res.json();
@@ -2809,7 +2821,7 @@ function ProviderAuth0Card({
       const res = await fetch(`/api/tenant/${tenantId}/auth/providers/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "auth0", config: { ...form, callbackUrl: expectedRedirect } }),
+        body: JSON.stringify({ type: "auth0", config: { ...form, redirectUri: expectedRedirect } }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");
@@ -2954,7 +2966,7 @@ function ProviderSamlCard({
       const res = await fetch(`/api/tenant/${tenantId}/auth/providers/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "saml", config: { ...form, callbackUrl: acsUrl } }),
+        body: JSON.stringify({ type: "saml", config: { ...form, redirectUri: acsUrl } }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");

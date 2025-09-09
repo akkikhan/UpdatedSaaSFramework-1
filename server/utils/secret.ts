@@ -11,6 +11,7 @@ function getKey(): Buffer {
 
 export function encryptSecret(plaintext?: string): string | undefined {
   if (!plaintext) return plaintext;
+  if (plaintext.startsWith("enc:v1:")) return plaintext; // Already encrypted
   const iv = crypto.randomBytes(12);
   const key = getKey();
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);

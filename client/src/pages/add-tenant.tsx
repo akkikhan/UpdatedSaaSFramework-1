@@ -78,7 +78,7 @@ const formSchema = z.object({
           clientId: z.string().optional(),
           clientSecret: z.string().optional(),
           audience: z.string().optional(),
-          callbackUrl: z.string().optional(),
+          redirectUri: z.string().optional(),
           logoutUrl: z.string().optional(),
         })
         .optional(),
@@ -88,7 +88,7 @@ const formSchema = z.object({
           issuer: z.string().optional(),
           cert: z.string().optional(),
           identifierFormat: z.string().optional(),
-          callbackUrl: z.string().optional(),
+          redirectUri: z.string().optional(),
         })
         .optional(),
       logging: z
@@ -703,7 +703,7 @@ export default function AddTenantPage() {
                         </div>
                         <FormField
                           control={form.control}
-                          name="moduleConfigs.saml.callbackUrl"
+                          name="moduleConfigs.saml.redirectUri"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Callback URL</FormLabel>
