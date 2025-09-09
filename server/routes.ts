@@ -641,7 +641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SSO provider catalog
-  app.get("/api/admin/auth/providers", platformAdminMiddleware, async (_req, res) => {
+  // Platform admin login providers are needed before authentication,
+  // so this endpoint should remain publicly accessible.
+  app.get("/api/admin/auth/providers", async (_req, res) => {
     res.json([
       { id: "azure-ad", label: "Azure AD" },
       { id: "auth0", label: "Auth0" },
