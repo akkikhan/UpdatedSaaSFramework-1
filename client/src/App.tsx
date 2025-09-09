@@ -36,6 +36,10 @@ import { useEffect } from "react";
 import usePlatformChangeMonitor from "@/hooks/use-platform-change-monitor";
 
 function Router() {
+  // Monitor platform config changes for new RBAC templates or SSO providers
+  // This needs to be inside the QueryClientProvider context
+  usePlatformChangeMonitor();
+
   return (
     <Switch>
       {/* Authentication Result Pages */}
@@ -88,8 +92,6 @@ function Router() {
 }
 
 function App() {
-  // Monitor platform config changes for new RBAC templates or SSO providers
-  usePlatformChangeMonitor();
   // Handle token from URL when redirected from Azure AD login
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
