@@ -692,6 +692,40 @@ const me = await res.json();
       return false;
     }
   }
+
+  // Minimal password reset email to satisfy routes usage
+  async sendPasswordResetEmail(to: string, token: string): Promise<boolean> {
+    try {
+      const resetUrlBase = process.env.BASE_URL || "http://localhost:5000";
+      const resetUrl = `${resetUrlBase}/reset-password?token=${encodeURIComponent(token)}`;
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Password Reset</title>
+  <style>body{font-family:Arial, sans-serif;}</style>
+  </head>
+  <body>
+    <h2>Password Reset Request</h2>
+    <p>We received a request to reset your password. If you made this request, click the link below:</p>
+    <p><a href="${resetUrl}">Reset your password</a></p>
+    <p>If you did not request a password reset, you can safely ignore this email.</p>
+  </body>
+  </html>`;
+
+      await this.transporter.sendMail({
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+        to,
+        subject: "Reset your password",
+        html,
+      });
+      return true;
+    } catch (error) {
+      console.error("Failed to send password reset email:", error);
+      return false;
+    }
+  }
 }
 
 export const emailService = new EmailService();

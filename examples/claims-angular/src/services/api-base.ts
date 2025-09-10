@@ -58,3 +58,19 @@ export function getApiBase(): string {
 }
 
 export const BASE = getApiBase();
+
+// Optional: allow runtime override via window for debugging
+declare global {
+  interface Window {
+    setClaimsApiBase?: (val: string) => void;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.setClaimsApiBase = (val: string) => {
+    try {
+      localStorage.setItem("claims_base", val);
+      // No reload here; consumers should re-import BASE or call getApiBase()
+    } catch {}
+  };
+}

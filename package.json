@@ -37,7 +37,9 @@
     "packages:publish:rbac": "cd packages/rbac && npm run publish-package",
     "packages:verify": "npm run packages:build && echo 'All packages built successfully!'",
     "publish:dry-run": "npm run packages:build && echo 'Dry run completed - packages ready for publishing'",
-    "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'"
+    "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'",
+    "spec": "uvx --from git+https://github.com/github/spec-kit.git specify",
+    "spec:init": "uvx --from git+https://github.com/github/spec-kit.git specify init"
   },
   "dependencies": {
     "@azure/mcp": "^0.5.10",
@@ -130,6 +132,7 @@
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@types/connect-pg-simple": "^7.0.3",
+    "@types/cors": "^2.8.19",
     "@types/express": "4.17.21",
     "@types/express-session": "^1.18.2",
     "@types/jest": "^30.0.0",

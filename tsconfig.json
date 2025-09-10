@@ -1,6 +1,18 @@
 {
   "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "tests/**/*", "**/*.test.ts", "**/*.spec.ts"],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "tests/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    // Exclude demo/guide routes that are not part of the production build
+    "server/routes-comprehensive.ts",
+    "server/routes-update-guide.ts",
+    // Exclude backup client pages that should not compile
+    "client/src/pages/tenant-dashboard.backup.tsx"
+  ],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
@@ -19,7 +31,8 @@
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"],
-      "@server/*": ["./server/*"]
+      "@server/*": ["./server/*"],
+      "@saas-framework/auth-client": ["./packages/auth-client/dist/index.d.ts"]
     }
   }
 }

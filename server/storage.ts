@@ -146,9 +146,18 @@ export interface IStorage {
   createTenantUser(user: InsertTenantUser): Promise<TenantUser>;
   getTenantUsers(tenantId: string, limit?: number, offset?: number): Promise<TenantUser[]>;
   getTenantUser(id: string): Promise<TenantUser | null>;
+  // Some routes call with (id, tenantId). Support an optional tenantId param for filtering.
+  getTenantUser(id: string, tenantId?: string): Promise<TenantUser | null>;
   getTenantUserByEmail(tenantId: string, email: string): Promise<TenantUser | null>;
+  // Some routes call with (id, tenantId, updates). Support optional tenantId param.
   updateTenantUser(id: string, updates: Partial<InsertTenantUser>): Promise<TenantUser | null>;
+  updateTenantUser(
+    id: string,
+    tenantId: string | undefined,
+    updates: Partial<InsertTenantUser>
+  ): Promise<TenantUser | null>;
   deleteTenantUser(id: string): Promise<void>;
+  deleteTenantUser(id: string, tenantId?: string): Promise<void>;
 
   // Tenant Roles - custom roles within each tenant for RBAC
   createTenantRole(role: InsertTenantRole): Promise<TenantRole>;
@@ -261,6 +270,11 @@ export interface IStorage {
     }
   ): Promise<any[]>;
 
+  // Convenience aliases used by routes
+  getLogStatistics?(tenantId: string, period?: string): Promise<any>;
+  updateSystemLogDetails?(id: string, updates: any): Promise<void>;
+  purgeOldLogs?(tenantId: string, retentionDays: number): Promise<void>;
+
   // Alert Rules
   createAlertRule(rule: {
     tenantId: string;
@@ -330,9 +344,15 @@ export interface IStorage {
     opened: number;
     clicked: number;
   }>;
+  // Alias used by routes for period-based stats
+  getEmailStatistics?(tenantId: string, period?: string): Promise<any>;
 
   // RBAC Permission Checking
   checkUserPermission(userId: string, permission: string, tenantId: string): Promise<boolean>;
+
+  // Session management convenience used by routes
+  getActiveSessions?(tenantId: string): Promise<any[]>;
+  revokeSession?(sessionId: string, tenantId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -853,8 +873,12 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
   }
 
-  async getTenantUser(id: string): Promise<TenantUser | null> {
-    const [user] = await db.select().from(tenantUsers).where(eq(tenantUsers.id, id));
+  async getTenantUser(id: string, tenantId?: string): Promise<TenantUser | null> {
+    let query = ensureDb().select().from(tenantUsers).where(eq(tenantUsers.id, id));
+    if (tenantId) {
+      query = query.where(eq(tenantUsers.tenantId, tenantId));
+    }
+    const [user] = await query;
     return user || null;
   }
 
@@ -866,15 +890,18 @@ export class DatabaseStorage implements IStorage {
     return user || null;
   }
 
-  async updateTenantUser(
-    id: string,
-    updates: Partial<InsertTenantUser>
-  ): Promise<TenantUser | null> {
-    const [updatedUser] = await db
+  async updateTenantUser(id: string, arg2: any, arg3?: any): Promise<TenantUser | null> {
+    const hasTenant = typeof arg2 === "string";
+    const updates: Partial<InsertTenantUser> = hasTenant ? (arg3 as any) : (arg2 as any);
+    const tenantId = hasTenant ? (arg2 as string) : undefined;
+    let q = ensureDb()
       .update(tenantUsers)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(tenantUsers.id, id))
-      .returning();
+      .where(eq(tenantUsers.id, id));
+    if (tenantId) {
+      q = q.where(eq(tenantUsers.tenantId, tenantId));
+    }
+    const [updatedUser] = await q.returning();
     return updatedUser || null;
   }
 
@@ -888,8 +915,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tenantUsers.id, userId));
   }
 
-  async deleteTenantUser(id: string): Promise<void> {
-    await db.delete(tenantUsers).where(eq(tenantUsers.id, id));
+  async deleteTenantUser(id: string, tenantId?: string): Promise<void> {
+    let del = ensureDb().delete(tenantUsers).where(eq(tenantUsers.id, id));
+    if (tenantId) {
+      del = del.where(eq(tenantUsers.tenantId, tenantId));
+    }
+    await del;
   }
 
   // Tenant Roles Implementation
@@ -1443,6 +1474,17 @@ export class DatabaseStorage implements IStorage {
     return stats;
   }
 
+  // Session helpers expected by routes.ts
+  async getActiveSessions(tenantId: string): Promise<any[]> {
+    return await ensureDb().select().from(sessions).where(eq(sessions.tenantId, tenantId));
+  }
+
+  async revokeSession(sessionId: string, tenantId: string): Promise<void> {
+    await ensureDb()
+      .delete(sessions)
+      .where(and(eq(sessions.id, sessionId), eq(sessions.tenantId, tenantId)));
+  }
+
   async getLogEvents(
     tenantIdOrOptions: any,
     options: {
@@ -1788,6 +1830,15 @@ export class DatabaseStorage implements IStorage {
       opened: logs.filter(log => log.status === "opened").length,
       clicked: logs.filter(log => log.status === "clicked").length,
     };
+  }
+
+  // Alias to support period-based stats request used by routes.ts
+  async getEmailStatistics(tenantId: string, period: string = "24h"): Promise<any> {
+    const now = new Date();
+    let startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (period === "7d") startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (period === "30d") startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return this.getEmailStats(tenantId, startDate, now);
   }
 }
 

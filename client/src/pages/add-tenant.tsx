@@ -137,7 +137,9 @@ export default function AddTenantPage() {
     try {
       // Ensure dependencies: Logging requires Auth
       if (data.enabledModules.includes("logging") && !data.enabledModules.includes("auth")) {
-        data.enabledModules = Array.from(new Set([...(data.enabledModules || []), "auth"]));
+        const next = Array.from(new Set([...(data.enabledModules || []), "auth" as const]));
+        data.enabledModules =
+          next as (typeof next)[number][] as unknown as typeof data.enabledModules;
       }
       await createTenant.mutateAsync(data);
       setLocation("/tenants");

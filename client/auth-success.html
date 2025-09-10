@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth Success</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        padding: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Signing you in…</h1>
+    <p>Please wait while we complete your sign-in.</p>
+    <script>
+      try {
+        const qs = new URLSearchParams(window.location.search);
+        const token = qs.get("token");
+        const tenant = qs.get("tenant") || "";
+        if (token) {
+          localStorage.setItem("tenant_token", token);
+        }
+        // best-effort redirect to tenant dashboard on same origin
+        const target = tenant ? `/tenant/${tenant}/dashboard` : "/";
+        window.location.replace(target);
+      } catch (e) {
+        console.error("Auth success redirect failed", e);
+      }
+    </script>
+  </body>
+</html>

@@ -82,7 +82,20 @@ const WIZARD_FORM_SCHEMA = z.object({
     .optional(),
 });
 
-type FormData = TenantCreationData;
+// Local form-data type used by the wizard UI; transformed to shared schema on submit
+type FormData = {
+  name: string;
+  orgId: string;
+  adminEmail: string;
+  adminName: string;
+  sendEmail?: boolean;
+  enabledModules?: string[];
+  moduleConfigs?: Record<string, any>;
+  metadata?: {
+    adminName?: string;
+    companyWebsite?: string;
+  };
+};
 
 const STEPS = [
   {
@@ -141,9 +154,7 @@ export default function OnboardingWizard() {
   const GUID_REGEX =
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
   const defaultAzureRedirect =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/api/auth/azure/callback`
-      : "";
+    typeof window !== "undefined" ? `${window.location.origin}/api/auth/azure/callback` : "";
   // Dynamic RBAC options from Platform Admin config APIs (hooks must be top-level)
   const { data: permissionTemplates = [] } = useQuery({
     queryKey: ["/api/rbac-config/permission-templates"],
@@ -202,7 +213,8 @@ export default function OnboardingWizard() {
 
   const watchedModules = form.watch("enabledModules") || [];
   // Align with shared schema key: "auth" (not "authentication")
-  const watchedAuthProviders = form.watch("moduleConfigs.auth.providers");
+  const watchedAuthProviders =
+    (form.watch("moduleConfigs.auth.providers") as unknown as string[]) || [];
   const watchedRBAC = watchedModules.includes("rbac");
 
   const handleNext = async () => {
@@ -393,7 +405,7 @@ export default function OnboardingWizard() {
         moduleConfigs: transformedModuleConfigs,
         metadata: {
           adminName: data.adminName,
-          companyWebsite: data.companyWebsite,
+          companyWebsite: data.metadata?.companyWebsite,
         },
       };
 
@@ -575,7 +587,7 @@ export default function OnboardingWizard() {
 
                       <FormField
                         control={form.control}
-                        name="companyWebsite"
+                        name="metadata.companyWebsite"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Company Website (Optional)</FormLabel>
@@ -796,7 +808,9 @@ export default function OnboardingWizard() {
 
                                         const handleToggle = () => {
                                           const newValue = isSelected
-                                            ? currentProviders.filter(v => v !== provider)
+                                            ? (currentProviders as string[]).filter(
+                                                (v: string) => v !== provider
+                                              )
                                             : [...currentProviders, provider];
                                           field.onChange(newValue);
                                         };
@@ -1002,13 +1016,19 @@ export default function OnboardingWizard() {
                                           <FormControl>
                                             <Input {...field} placeholder={defaultAzureRedirect} />
                                           </FormControl>
-                                          <FormDescription>Callback URL configured in Azure AD</FormDescription>
+                                          <FormDescription>
+                                            Callback URL configured in Azure AD
+                                          </FormDescription>
                                           <FormMessage />
                                         </FormItem>
                                       )}
                                     />
                                     <div className="col-span-2 flex justify-end">
-                                      <Button type="button" variant="secondary" onClick={verifyAzureAd}>
+                                      <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={verifyAzureAd}
+                                      >
                                         Verify
                                       </Button>
                                     </div>
@@ -1281,7 +1301,9 @@ export default function OnboardingWizard() {
 
                                         const handleToggle = () => {
                                           const newValue = isSelected
-                                            ? currentLevels.filter(v => v !== level)
+                                            ? (currentLevels as string[]).filter(
+                                                (v: string) => v !== level
+                                              )
                                             : [...currentLevels, level];
                                           field.onChange(newValue);
                                         };
@@ -1340,7 +1362,9 @@ export default function OnboardingWizard() {
 
                                         const handleToggle = () => {
                                           const newValue = isSelected
-                                            ? currentChannels.filter(v => v !== channel)
+                                            ? (currentChannels as string[]).filter(
+                                                (v: string) => v !== channel
+                                              )
                                             : [...currentChannels, channel];
                                           field.onChange(newValue);
                                         };
@@ -1376,7 +1400,7 @@ export default function OnboardingWizard() {
                           )}
 
                           {/* AI Copilot Configuration */}
-                          {watchedModules.includes("aiCopilot") && (
+                          {watchedModules.includes("ai-copilot") && (
                             <div className="space-y-4">
                               <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <Bot className="w-5 h-5" />

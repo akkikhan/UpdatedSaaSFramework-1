@@ -1,0 +1,310 @@
+/* =============================================================================
+ * QERZA MOBILE & RESPONSIVE FIXES
+ * Additional CSS for proper mobile experience
+ * ============================================================================= */
+
+/* Mobile navigation toggle */
+@media (max-width: 1024px) {
+  .qerza-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 50;
+  }
+
+  .qerza-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .qerza-main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Mobile header with hamburger menu */
+  .qerza-mobile-header {
+    display: block;
+    padding: 1rem;
+    background: white;
+    border-bottom: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .qerza-mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: #F1F5F9;
+    color: #64748B;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .qerza-mobile-menu-btn:hover {
+    background: #E2E8F0;
+    color: #334155;
+  }
+
+  /* Mobile overlay */
+  .qerza-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .qerza-mobile-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@media (min-width: 1025px) {
+  .qerza-mobile-header {
+    display: none;
+  }
+
+  .qerza-mobile-overlay {
+    display: none;
+  }
+}
+
+/* Fix for statistics grid on mobile */
+@media (max-width: 768px) {
+  .qerza-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .qerza-stat-card {
+    padding: 1rem;
+  }
+
+  .qerza-stat-number {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+
+  /* Fix profile card circular progress */
+  .qerza-profile-card .grid.grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .qerza-profile-card .grid.grid-cols-3 > div {
+    text-align: center;
+  }
+
+  /* Fix quick actions grid */
+  .qerza-quick-actions {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Mobile table scrolling */
+  .qerza-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .qerza-table {
+    min-width: 600px;
+  }
+}
+
+/* Fix for very small screens */
+@media (max-width: 480px) {
+  .qerza-card-header {
+    padding: 1rem;
+  }
+
+  .qerza-card-content {
+    padding: 1rem;
+  }
+
+  .qerza-stat-card {
+    padding: 0.75rem;
+  }
+
+  .qerza-profile-card {
+    padding: 1rem;
+  }
+
+  .qerza-module-card {
+    padding: 1rem;
+  }
+
+  .qerza-api-key-card {
+    padding: 1rem;
+  }
+
+  /* Stack action buttons vertically on very small screens */
+  .qerza-card-header .flex.items-center.space-x-3 {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .qerza-card-header .flex.items-center.space-x-3 > .flex {
+    width: 100%;
+  }
+}
+
+/* Print optimizations */
+@media print {
+  .qerza-sidebar,
+  .qerza-mobile-header,
+  .qerza-btn-primary,
+  .qerza-btn-secondary,
+  .qerza-btn-ghost,
+  button {
+    display: none !important;
+  }
+
+  .qerza-main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .qerza-card {
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
+    break-inside: avoid;
+  }
+
+  .qerza-stat-card {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+
+  /* Ensure proper page breaks */
+  .qerza-stats-grid {
+    break-inside: avoid;
+  }
+
+  .qerza-profile-card,
+  .qerza-module-card,
+  .qerza-api-key-card {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .qerza-card {
+    border-width: 2px;
+  }
+
+  .qerza-nav-item:hover,
+  .qerza-nav-item.active {
+    outline: 2px solid currentColor;
+  }
+
+  .qerza-btn-primary,
+  .qerza-btn-secondary {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .qerza-sidebar {
+    transition: none;
+  }
+
+  .qerza-mobile-overlay {
+    transition: none;
+  }
+
+  .qerza-card,
+  .qerza-stat-card,
+  .qerza-nav-item,
+  .qerza-quick-action,
+  .qerza-module-card,
+  .qerza-api-key-card {
+    transition: none;
+  }
+
+  .qerza-status-online {
+    animation: none;
+  }
+}
+
+/* Focus visible improvements for keyboard navigation */
+.qerza-nav-item:focus-visible,
+.qerza-btn-primary:focus-visible,
+.qerza-btn-secondary:focus-visible,
+.qerza-btn-ghost:focus-visible {
+  outline: 2px solid var(--qerza-purple);
+  outline-offset: 2px;
+}
+
+.qerza-input:focus-visible,
+.qerza-select:focus-visible,
+.qerza-textarea:focus-visible {
+  outline: 2px solid var(--qerza-purple);
+  outline-offset: 2px;
+}
+
+/* Color scheme preference support */
+@media (prefers-color-scheme: dark) {
+  /* We'll keep the light theme for consistency with QERZA design */
+  /* But ensure good contrast in forced dark modes */
+  
+  .qerza-card {
+    background: var(--qerza-bg-card);
+    color: var(--qerza-text-primary);
+  }
+  
+  .qerza-sidebar {
+    background: var(--qerza-bg-sidebar);
+  }
+}
+
+/* Animation performance optimizations */
+.qerza-sidebar,
+.qerza-mobile-overlay,
+.qerza-card,
+.qerza-stat-card,
+.qerza-nav-item {
+  will-change: auto;
+}
+
+/* Ensure proper stacking contexts */
+.qerza-sidebar {
+  z-index: 30;
+}
+
+.qerza-mobile-overlay {
+  z-index: 25;
+}
+
+.qerza-modal {
+  z-index: 50;
+}
+
+/* Fix for Safari iOS specific issues */
+@supports (-webkit-touch-callout: none) {
+  .qerza-sidebar {
+    -webkit-transform: translateX(-100%);
+  }
+
+  .qerza-sidebar.mobile-open {
+    -webkit-transform: translateX(0);
+  }
+  
+  /* Fix sticky positioning on iOS */
+  .qerza-mobile-header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+  }
+}

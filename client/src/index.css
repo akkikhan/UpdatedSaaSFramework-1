@@ -1,61 +1,106 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import './qerza-mobile-fixes.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   --background: hsl(0 0% 100%);
-  --foreground: hsl(222.2 84% 4.9%);
+  --foreground: hsl(224 71.4% 4.1%);
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(222.2 84% 4.9%);
+  --card-foreground: hsl(224 71.4% 4.1%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(222.2 84% 4.9%);
-  --primary: hsl(221.2 83.2% 53.3%);
-  --primary-foreground: hsl(210 40% 98%);
-  --secondary: hsl(210 40% 96%);
-  --secondary-foreground: hsl(222.2 84% 4.9%);
-  --muted: hsl(210 40% 96%);
-  --muted-foreground: hsl(215.4 16.3% 46.9%);
-  --accent: hsl(210 40% 96%);
-  --accent-foreground: hsl(222.2 84% 4.9%);
+  --popover-foreground: hsl(224 71.4% 4.1%);
+  
+  /* QERZA Purple Theme - Primary Colors */
+  --primary: hsl(262.1 83.3% 57.8%);
+  --primary-foreground: hsl(210 20% 98%);
+  --primary-light: hsl(262 83% 65%);
+  --primary-dark: hsl(262 83% 45%);
+  
+  /* QERZA Color Palette */
+  --qerza-purple: #8B5CF6;
+  --qerza-purple-light: #A78BFA;
+  --qerza-purple-dark: #7C3AED;
+  --qerza-green: #10B981;
+  --qerza-green-light: #34D399;
+  --qerza-blue: #3B82F6;
+  --qerza-blue-light: #60A5FA;
+  --qerza-orange: #F59E0B;
+  --qerza-orange-light: #FBBF24;
+  --qerza-red: #EF4444;
+  --qerza-red-light: #F87171;
+  
+  /* Background Colors */
+  --qerza-bg-primary: #FAFAFA;
+  --qerza-bg-secondary: #F8FAFC;
+  --qerza-bg-card: #FFFFFF;
+  --qerza-bg-sidebar: #FFFFFF;
+  
+  /* Text Colors */
+  --qerza-text-primary: #1E293B;
+  --qerza-text-secondary: #64748B;
+  --qerza-text-muted: #94A3B8;
+  
+  /* Secondary Colors */
+  --secondary: hsl(220 14.3% 95.9%);
+  --secondary-foreground: hsl(220.9 39.3% 11%);
+  --muted: hsl(220 14.3% 95.9%);
+  --muted-foreground: hsl(220 8.9% 46.1%);
+  --accent: hsl(220 14.3% 95.9%);
+  --accent-foreground: hsl(220.9 39.3% 11%);
+  
+  /* Status Colors */
+  --success: hsl(142.1 76.2% 36.3%);
+  --success-foreground: hsl(355.7 100% 97.3%);
+  --warning: hsl(32.1 94.6% 43.7%);
+  --warning-foreground: hsl(355.7 100% 97.3%);
   --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(210 40% 98%);
-  --border: hsl(214.3 31.8% 91.4%);
-  --input: hsl(214.3 31.8% 91.4%);
-  --ring: hsl(221.2 83.2% 53.3%);
-  --chart-1: hsl(12 76% 61%);
-  --chart-2: hsl(173 58% 39%);
-  --chart-3: hsl(197 37% 24%);
-  --chart-4: hsl(43 74% 66%);
-  --chart-5: hsl(27 87% 67%);
-  --radius: 0.5rem;
+  --destructive-foreground: hsl(210 20% 98%);
+  
+  /* Border and Input */
+  --border: hsl(220 13% 91%);
+  --input: hsl(220 13% 91%);
+  --ring: hsl(262.1 83.3% 57.8%);
+  
+  /* Chart Colors */
+  --chart-1: hsl(142.1 76.2% 36.3%);
+  --chart-2: hsl(346.8 77.2% 49.8%);
+  --chart-3: hsl(32.1 94.6% 43.7%);
+  --chart-4: hsl(221.2 83.2% 53.3%);
+  --chart-5: hsl(262.1 83.3% 57.8%);
+  
+  --radius: 0.75rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  
+  /* QERZA Shadows */
+  --qerza-shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --qerza-shadow-hover: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
+  --qerza-shadow-focus: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
 .dark {
-  --background: hsl(222.2 84% 4.9%);
-  --foreground: hsl(210 40% 98%);
-  --card: hsl(222.2 84% 4.9%);
-  --card-foreground: hsl(210 40% 98%);
-  --popover: hsl(222.2 84% 4.9%);
-  --popover-foreground: hsl(210 40% 98%);
-  --primary: hsl(217.2 91.2% 59.8%);
-  --primary-foreground: hsl(222.2 84% 4.9%);
-  --secondary: hsl(217.2 32.6% 17.5%);
-  --secondary-foreground: hsl(210 40% 98%);
-  --muted: hsl(217.2 32.6% 17.5%);
-  --muted-foreground: hsl(215 20.2% 65.1%);
-  --accent: hsl(217.2 32.6% 17.5%);
-  --accent-foreground: hsl(210 40% 98%);
-  --border: hsl(217.2 32.6% 17.5%);
-  --input: hsl(217.2 32.6% 17.5%);
-  --ring: hsl(224.3 76.3% 94.1%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
+  --background: hsl(224 71.4% 4.1%);
+  --foreground: hsl(210 20% 98%);
+  --card: hsl(224 71.4% 4.1%);
+  --card-foreground: hsl(210 20% 98%);
+  --popover: hsl(224 71.4% 4.1%);
+  --popover-foreground: hsl(210 20% 98%);
+  --primary: hsl(262.1 83.3% 57.8%);
+  --primary-foreground: hsl(210 20% 98%);
+  --secondary: hsl(215 27.9% 16.9%);
+  --secondary-foreground: hsl(210 20% 98%);
+  --muted: hsl(215 27.9% 16.9%);
+  --muted-foreground: hsl(217.9 10.6% 64.9%);
+  --accent: hsl(215 27.9% 16.9%);
+  --accent-foreground: hsl(210 20% 98%);
+  --border: hsl(215 27.9% 16.9%);
+  --input: hsl(215 27.9% 16.9%);
+  --ring: hsl(262.1 83.3% 57.8%);
 }
-
 @layer base {
   * {
     @apply border-border;
@@ -63,28 +108,864 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    background-color: var(--qerza-bg-primary);
+    color: var(--qerza-text-primary);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: var(--qerza-text-primary);
   }
 }
 
-/* Custom styles matching the design */
-.stat-card {
-  @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6;
+@layer components {
+  /* =============================================================================
+   * QERZA TENANT PORTAL - COMPLETE REDESIGN
+   * Inspired by QERZA design with sidebar navigation and modern cards
+   * ============================================================================= */
+
+  /* Main Dashboard Layout - QERZA Style */
+  .dashboard-container {
+    @apply min-h-screen;
+    background: linear-gradient(135deg, #FAFAFA 0%, #F8FAFC 100%);
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* QERZA Header - Clean and minimal */
+  .dashboard-header {
+    background: var(--qerza-bg-card);
+    border-bottom: 1px solid #E2E8F0;
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  /* QERZA Sidebar Navigation - Like reference image */
+  .qerza-sidebar {
+    @apply fixed left-0 top-0 h-full w-64 z-30;
+    background: var(--qerza-bg-sidebar);
+    border-right: 1px solid #E2E8F0;
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .qerza-sidebar-header {
+    @apply p-6 border-b border-gray-100;
+  }
+
+  .qerza-sidebar-logo {
+    @apply flex items-center space-x-3;
+  }
+
+  .qerza-sidebar-nav {
+    @apply p-4;
+  }
+
+  .qerza-nav-item {
+    @apply flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 mb-1;
+    color: var(--qerza-text-secondary);
+  }
+
+  .qerza-nav-item:hover {
+    background-color: #F1F5F9;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-nav-item.active {
+    background: var(--qerza-purple);
+    color: white;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  }
+
+  .qerza-nav-item.active:hover {
+    background: var(--qerza-purple-dark);
+  }
+
+  /* Main content with sidebar */
+  .qerza-main-content {
+    @apply ml-64 min-h-screen;
+  }
+
+  /* QERZA Statistics Cards - Like reference image */
+  .qerza-stats-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8;
+  }
+
+  .qerza-stat-card {
+    background: var(--qerza-bg-card);
+    @apply rounded-2xl p-6 border-0 transition-all duration-300 hover:shadow-lg;
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .qerza-stat-card:hover {
+    box-shadow: var(--qerza-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  .qerza-stat-card-header {
+    @apply flex items-center justify-between mb-4;
+  }
+
+  .qerza-stat-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+  }
+
+  .qerza-stat-icon-green {
+    background: linear-gradient(135deg, var(--qerza-green), var(--qerza-green-light));
+    color: white;
+  }
+
+  .qerza-stat-icon-blue {
+    background: linear-gradient(135deg, var(--qerza-blue), var(--qerza-blue-light));
+    color: white;
+  }
+
+  .qerza-stat-icon-purple {
+    background: linear-gradient(135deg, var(--qerza-purple), var(--qerza-purple-light));
+    color: white;
+  }
+
+  .qerza-stat-icon-orange {
+    background: linear-gradient(135deg, var(--qerza-orange), var(--qerza-orange-light));
+    color: white;
+  }
+
+  .qerza-stat-number {
+    @apply text-3xl font-bold mb-2;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-stat-label {
+    @apply text-sm font-medium;
+    color: var(--qerza-text-secondary);
+  }
+
+  .qerza-stat-trend {
+    @apply flex items-center text-xs font-medium mt-2;
+    color: var(--qerza-green);
+  }
+
+  /* QERZA Cards - Clean modern design */
+  .qerza-card {
+    background: var(--qerza-bg-card);
+    @apply rounded-2xl border-0 transition-all duration-300;
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .qerza-card:hover {
+    box-shadow: var(--qerza-shadow-hover);
+  }
+
+  .qerza-card-header {
+    @apply p-6 border-b border-gray-100;
+  }
+
+  .qerza-card-title {
+    @apply text-xl font-bold flex items-center;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-card-description {
+    @apply text-sm font-medium mt-1;
+    color: var(--qerza-text-secondary);
+  }
+
+  .qerza-card-content {
+    @apply p-6;
+  }
+
+  /* QERZA Buttons */
+  .qerza-btn-primary {
+    background: var(--qerza-purple);
+    @apply text-white font-medium px-6 py-2 rounded-xl transition-all duration-200 border-0 hover:shadow-lg;
+  }
+
+  .qerza-btn-primary:hover {
+    background: var(--qerza-purple-dark);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+  }
+
+  .qerza-btn-secondary {
+    @apply bg-gray-100 text-gray-700 font-medium px-6 py-2 rounded-xl transition-all duration-200 border-0 hover:bg-gray-200;
+  }
+
+  .qerza-btn-ghost {
+    @apply bg-transparent text-gray-600 font-medium px-4 py-2 rounded-lg transition-all duration-200 hover:bg-gray-100;
+  }
+
+  /* QERZA Tables */
+  .qerza-table {
+    @apply w-full;
+  }
+
+  .qerza-table-header {
+    @apply bg-gray-50 rounded-t-xl;
+  }
+
+  .qerza-table-header th {
+    @apply px-6 py-4 text-left text-sm font-semibold;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-table-row {
+    @apply border-b border-gray-100 transition-colors duration-150 hover:bg-gray-50;
+  }
+
+  .qerza-table-cell {
+    @apply px-6 py-4 text-sm;
+    color: var(--qerza-text-secondary);
+  }
+
+  /* QERZA Forms */
+  .qerza-input {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm transition-all duration-200;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-input:focus {
+    @apply outline-none border-purple-300;
+    box-shadow: var(--qerza-shadow-focus);
+  }
+
+  .qerza-select {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm transition-all duration-200;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-select:focus {
+    @apply outline-none border-purple-300;
+    box-shadow: var(--qerza-shadow-focus);
+  }
+
+  .qerza-textarea {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm transition-all duration-200 resize-none;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-textarea:focus {
+    @apply outline-none border-purple-300;
+    box-shadow: var(--qerza-shadow-focus);
+  }
+
+  /* QERZA Labels */
+  .qerza-label {
+    @apply text-sm font-semibold mb-2 block;
+    color: var(--qerza-text-primary);
+  }
+
+  /* QERZA Badges */
+  .qerza-badge {
+    @apply px-3 py-1 text-xs font-semibold rounded-full;
+  }
+
+  .qerza-badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .qerza-badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .qerza-badge-error {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .qerza-badge-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .qerza-badge-purple {
+    @apply bg-purple-100 text-purple-800;
+  }
+
+  /* QERZA Profile Section - Like reference image */
+  .qerza-profile-card {
+    background: var(--qerza-bg-card);
+    @apply rounded-2xl p-6 border-0;
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .qerza-profile-header {
+    @apply flex items-center space-x-4 mb-6;
+  }
+
+  .qerza-profile-avatar {
+    @apply w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold;
+    background: var(--qerza-purple);
+    color: white;
+  }
+
+  .qerza-profile-info h3 {
+    @apply text-lg font-bold;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-profile-info p {
+    @apply text-sm font-medium;
+    color: var(--qerza-text-secondary);
+  }
+
+  .qerza-skills {
+    @apply flex flex-wrap gap-2 mb-6;
+  }
+
+  .qerza-skill-badge {
+    @apply px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800;
+  }
+
+  /* QERZA Activity Section - Like reference image */
+  .qerza-activity-item {
+    @apply flex items-center space-x-4 p-4 rounded-xl transition-all duration-200 hover:bg-gray-50 mb-2;
+  }
+
+  .qerza-activity-icon {
+    @apply w-10 h-10 rounded-xl flex items-center justify-center;
+  }
+
+  .qerza-activity-icon-purple {
+    @apply bg-purple-100 text-purple-700;
+  }
+
+  .qerza-activity-icon-green {
+    @apply bg-green-100 text-green-700;
+  }
+
+  .qerza-activity-text {
+    @apply flex-1;
+  }
+
+  .qerza-activity-text h4 {
+    @apply text-sm font-semibold;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-activity-text p {
+    @apply text-xs;
+    color: var(--qerza-text-muted);
+  }
+
+  /* QERZA Modals */
+  .qerza-modal {
+    @apply bg-white rounded-2xl border-0;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .qerza-modal-header {
+    @apply p-6 border-b border-gray-100;
+  }
+
+  .qerza-modal-title {
+    @apply text-xl font-bold flex items-center;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-modal-description {
+    @apply text-sm font-medium mt-1;
+    color: var(--qerza-text-secondary);
+  }
+
+  .qerza-modal-content {
+    @apply p-6;
+  }
+
+  .qerza-modal-footer {
+    @apply p-6 border-t border-gray-100 flex justify-end space-x-3;
+  }
+
+  /* QERZA Status Indicators */
+  .qerza-status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .qerza-status-online {
+    @apply bg-green-500 animate-pulse;
+  }
+
+  .qerza-status-offline {
+    @apply bg-gray-400;
+  }
+
+  .qerza-status-warning {
+    @apply bg-yellow-500 animate-pulse;
+  }
+
+  /* QERZA Module Cards */
+  .qerza-module-card {
+    background: var(--qerza-bg-card);
+    @apply rounded-2xl p-6 border-0 transition-all duration-300;
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .qerza-module-card:hover {
+    box-shadow: var(--qerza-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  .qerza-module-card.enabled {
+    @apply border-l-4 border-green-500;
+  }
+
+  .qerza-module-card.disabled {
+    @apply opacity-60;
+  }
+
+  .qerza-module-header {
+    @apply flex items-center justify-between mb-4;
+  }
+
+  .qerza-module-icon {
+    @apply w-12 h-12 rounded-2xl flex items-center justify-center;
+  }
+
+  .qerza-module-icon.enabled {
+    background: var(--qerza-green);
+    color: white;
+  }
+
+  .qerza-module-icon.disabled {
+    @apply bg-gray-100 text-gray-400;
+  }
+
+  .qerza-module-status {
+    @apply w-4 h-4 rounded-full;
+  }
+
+  .qerza-module-status.enabled {
+    @apply bg-green-500;
+  }
+
+  .qerza-module-status.disabled {
+    @apply bg-gray-400;
+  }
+
+  /* QERZA API Key Cards */
+  .qerza-api-key-card {
+    background: var(--qerza-bg-card);
+    @apply rounded-2xl p-6 border-0 transition-all duration-300 mb-4;
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .qerza-api-key-card:hover {
+    box-shadow: var(--qerza-shadow-hover);
+  }
+
+  .qerza-api-key-header {
+    @apply flex items-center space-x-4 mb-4;
+  }
+
+  .qerza-api-key-icon {
+    @apply w-12 h-12 rounded-2xl flex items-center justify-center;
+  }
+
+  .qerza-api-key-icon-blue {
+    background: var(--qerza-blue);
+    color: white;
+  }
+
+  .qerza-api-key-icon-purple {
+    background: var(--qerza-purple);
+    color: white;
+  }
+
+  .qerza-api-key-icon-orange {
+    background: var(--qerza-orange);
+    color: white;
+  }
+
+  .qerza-api-key-display {
+    @apply flex items-center space-x-3;
+  }
+
+  .qerza-api-key-value {
+    @apply flex-1 bg-gray-50 px-4 py-3 rounded-xl text-sm font-mono border border-gray-200;
+  }
+
+  /* QERZA Quick Actions Grid */
+  .qerza-quick-actions {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-6;
+  }
+
+  .qerza-quick-action {
+    @apply text-center p-6 rounded-2xl transition-all duration-300 cursor-pointer;
+    background: var(--qerza-bg-card);
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .qerza-quick-action:hover {
+    box-shadow: var(--qerza-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  .qerza-quick-action-icon {
+    @apply w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4;
+  }
+
+  .qerza-quick-action-icon-purple {
+    background: var(--qerza-purple);
+    color: white;
+  }
+
+  .qerza-quick-action-icon-blue {
+    background: var(--qerza-blue);
+    color: white;
+  }
+
+  .qerza-quick-action-icon-green {
+    background: var(--qerza-green);
+    color: white;
+  }
+
+  .qerza-quick-action h3 {
+    @apply font-semibold mb-2;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-quick-action p {
+    @apply text-sm;
+    color: var(--qerza-text-secondary);
+  }
+
+  /* QERZA Tabs - Convert to Sidebar Navigation */
+  .qerza-tabs {
+    @apply flex;
+  }
+
+  .qerza-tabs-sidebar {
+    @apply w-64 flex-shrink-0 bg-white rounded-2xl p-4 mr-6;
+    box-shadow: var(--qerza-shadow-card);
+    height: fit-content;
+  }
+
+  .qerza-tabs-content {
+    @apply flex-1;
+  }
+
+  .qerza-tab-trigger {
+    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 mb-1 text-left;
+    color: var(--qerza-text-secondary);
+  }
+
+  .qerza-tab-trigger:hover {
+    @apply bg-gray-50;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-tab-trigger[data-state="active"] {
+    background: var(--qerza-purple);
+    color: white;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  }
+
+  .qerza-tab-trigger[data-state="active"]:hover {
+    background: var(--qerza-purple-dark);
+  }
+
+  /* QERZA Loading States */
+  .qerza-loading {
+    @apply flex items-center justify-center py-12;
+  }
+
+  .qerza-loading-spinner {
+    @apply w-8 h-8 border-4 border-gray-200 border-t-purple-600 rounded-full animate-spin;
+  }
+
+  .qerza-loading-text {
+    @apply text-sm font-medium ml-3;
+    color: var(--qerza-text-secondary);
+  }
+
+  /* QERZA Empty States */
+  .qerza-empty-state {
+    @apply text-center py-16;
+  }
+
+  .qerza-empty-icon {
+    @apply w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 bg-gray-100 text-gray-400;
+  }
+
+  .qerza-empty-title {
+    @apply text-2xl font-bold mb-3;
+    color: var(--qerza-text-primary);
+  }
+
+  .qerza-empty-description {
+    @apply text-lg max-w-md mx-auto;
+    color: var(--qerza-text-secondary);
+  }
+
+  /* QERZA Responsive Design */
+  @media (max-width: 1024px) {
+    .qerza-sidebar {
+      @apply transform -translate-x-full transition-transform duration-300;
+    }
+
+    .qerza-sidebar.open {
+      @apply translate-x-0;
+    }
+
+    .qerza-main-content {
+      @apply ml-0;
+    }
+
+    .qerza-stats-grid {
+      @apply grid-cols-1 md:grid-cols-2;
+    }
+
+    .qerza-quick-actions {
+      @apply grid-cols-1;
+    }
+
+    .qerza-tabs {
+      @apply flex-col;
+    }
+
+    .qerza-tabs-sidebar {
+      @apply w-full mb-6;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .qerza-stats-grid {
+      @apply grid-cols-1;
+    }
+
+    .qerza-card-header {
+      @apply p-4;
+    }
+
+    .qerza-card-content {
+      @apply p-4;
+    }
+
+    .qerza-stat-card {
+      @apply p-4;
+    }
+
+    .qerza-profile-card {
+      @apply p-4;
+    }
+
+    .qerza-module-card {
+      @apply p-4;
+    }
+
+    .qerza-api-key-card {
+      @apply p-4;
+    }
+  }
 }
 
-/* Fix scrolling and layout issues */
+/* =============================================================================
+ * LEGACY COMPATIBILITY - Keep existing classes working
+ * ============================================================================= */
+
+@layer components {
+  /* Map old classes to new QERZA classes for compatibility */
+  .dashboard-container {
+    @apply qerza-main-content;
+    background: linear-gradient(135deg, #FAFAFA 0%, #F8FAFC 100%);
+  }
+
+  .dashboard-header {
+    @apply qerza-card border-b border-gray-200;
+    background: var(--qerza-bg-card);
+  }
+
+  .modern-card {
+    @apply qerza-card;
+  }
+
+  .stat-card {
+    @apply qerza-stat-card;
+  }
+
+  .stat-card-green {
+    @apply qerza-stat-card;
+  }
+
+  .stat-card-green .qerza-stat-icon {
+    @apply qerza-stat-icon-green;
+  }
+
+  .stat-card-blue {
+    @apply qerza-stat-card;
+  }
+
+  .stat-card-blue .qerza-stat-icon {
+    @apply qerza-stat-icon-blue;
+  }
+
+  .stat-card-purple {
+    @apply qerza-stat-card;
+  }
+
+  .stat-card-purple .qerza-stat-icon {
+    @apply qerza-stat-icon-purple;
+  }
+
+  .stat-card-orange {
+    @apply qerza-stat-card;
+  }
+
+  .stat-card-orange .qerza-stat-icon {
+    @apply qerza-stat-icon-orange;
+  }
+
+  .btn-primary {
+    @apply qerza-btn-primary;
+  }
+
+  .btn-secondary {
+    @apply qerza-btn-secondary;
+  }
+
+  .modern-input {
+    @apply qerza-input;
+  }
+
+  .modern-select {
+    @apply qerza-select;
+  }
+
+  .modern-table {
+    @apply qerza-card;
+  }
+
+  .table-header {
+    @apply qerza-table-header;
+  }
+
+  .table-row {
+    @apply qerza-table-row;
+  }
+
+  .modern-modal {
+    @apply qerza-modal;
+  }
+
+  .profile-card {
+    @apply qerza-profile-card;
+  }
+
+  .activity-item {
+    @apply qerza-activity-item;
+  }
+
+  .quick-action-card {
+    @apply qerza-quick-action;
+  }
+
+  .icon-container {
+    @apply qerza-stat-icon;
+  }
+
+  .icon-container-green {
+    @apply qerza-stat-icon-green;
+  }
+
+  .icon-container-blue {
+    @apply qerza-stat-icon-blue;
+  }
+
+  .icon-container-purple {
+    @apply qerza-stat-icon-purple;
+  }
+
+  .icon-container-orange {
+    @apply qerza-stat-icon-orange;
+  }
+
+  .system-status-operational {
+    @apply qerza-status-dot qerza-status-online;
+  }
+}
+
+@layer utilities {
+  /* QERZA Utilities */
+  .text-qerza-primary {
+    color: var(--qerza-text-primary);
+  }
+
+  .text-qerza-secondary {
+    color: var(--qerza-text-secondary);
+  }
+
+  .text-qerza-muted {
+    color: var(--qerza-text-muted);
+  }
+
+  .bg-qerza-primary {
+    background-color: var(--qerza-bg-primary);
+  }
+
+  .bg-qerza-card {
+    background-color: var(--qerza-bg-card);
+  }
+
+  .bg-qerza-sidebar {
+    background-color: var(--qerza-bg-sidebar);
+  }
+
+  .shadow-qerza-card {
+    box-shadow: var(--qerza-shadow-card);
+  }
+
+  .shadow-qerza-hover {
+    box-shadow: var(--qerza-shadow-hover);
+  }
+
+  .shadow-qerza-focus {
+    box-shadow: var(--qerza-shadow-focus);
+  }
+
+  /* Glassmorphism utilities */
+  .glass {
+    @apply bg-white/20 backdrop-blur-lg border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-black/20 backdrop-blur-lg border border-white/10;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-semibold;
+  }
+
+  /* Custom shadows */
+  .shadow-purple {
+    box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.25);
+  }
+
+  .shadow-green {
+    box-shadow: 0 10px 25px -5px rgba(34, 197, 94, 0.25);
+  }
+
+  .shadow-blue {
+    box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.25);
+  }
+
+  .shadow-orange {
+    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.25);
+  }
+}
+
+/* =============================================================================
+ * LAYOUT FIXES AND SCROLLING
+ * ============================================================================= */
+
 html, body {
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 #root {
   height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .admin-layout {
   height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .admin-content {
@@ -93,102 +974,38 @@ html, body {
   overflow-x: hidden;
 }
 
-/* removed legacy .tenant-portal container (admin-embedded portal) */
-
 .page-container {
   height: 100%;
   overflow-y: auto;
   padding-bottom: 2rem;
 }
 
-/* Ensure forms and content are properly contained */
 .form-container {
   max-width: 100%;
   overflow-x: hidden;
 }
 
-.stat-icon {
-  @apply w-12 h-12 rounded-lg flex items-center justify-center;
-}
+/* Print styles */
+@media print {
+  .qerza-sidebar,
+  .dashboard-header,
+  .qerza-btn-primary,
+  .qerza-btn-secondary,
+  button {
+    display: none;
+  }
 
-.nav-item {
-  @apply flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors duration-200;
-}
+  .qerza-main-content {
+    margin-left: 0;
+  }
 
-.nav-item.active {
-  @apply bg-blue-50 text-blue-700;
-}
+  .qerza-card {
+    box-shadow: none;
+    border: 1px solid #d1d5db;
+  }
 
-.nav-item:not(.active) {
-  @apply text-slate-600 hover:bg-slate-100;
-}
-
-.table-row {
-  @apply hover:bg-slate-50 transition-colors duration-150;
-}
-
-.status-badge {
-  @apply px-2 py-1 text-xs font-medium rounded-full;
-}
-
-.status-active {
-  @apply bg-green-100 text-green-800;
-}
-
-.status-pending {
-  @apply bg-amber-100 text-amber-800;
-}
-
-.status-suspended {
-  @apply bg-red-100 text-red-800;
-}
-
-.btn-primary {
-  @apply bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors duration-200;
-}
-
-.btn-secondary {
-  @apply border border-slate-300 text-slate-600 hover:bg-slate-50 font-medium transition-colors duration-200;
-}
-
-.system-status-operational {
-  @apply w-3 h-3 bg-green-500 rounded-full;
-}
-
-.system-status-warning {
-  @apply w-3 h-3 bg-amber-500 rounded-full;
-}
-
-.system-status-error {
-  @apply w-3 h-3 bg-red-500 rounded-full;
-}
-
-/* Module configuration styles */
-.module-config-section {
-  @apply border rounded-lg p-4 mb-4;
-}
-
-.module-config-azure {
-  @apply bg-blue-50 border-blue-200;
-}
-
-.module-config-auth0 {
-  @apply bg-orange-50 border-orange-200;
-}
-
-.module-config-saml {
-  @apply bg-purple-50 border-purple-200;
-}
-
-.module-config-rbac {
-  @apply bg-green-50 border-green-200;
-}
-
-/* Disabled module styles */
-.module-disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
-
-.module-disabled * {
-  @apply pointer-events-none;
+  .qerza-stat-card {
+    background-color: white;
+    color: #1f2937;
+  }
 }

@@ -160,6 +160,15 @@ export default function ModuleManagementPage() {
     },
   });
 
+  const handleTenantSelect = (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    form.reset({
+      enabledModules: tenant.enabledModules || ["auth", "rbac"],
+      moduleConfigs: tenant.moduleConfigs || {},
+    });
+    setEditingModules(false);
+  };
+
   // Preselect tenant from query param (?tenantId=...)
   const searchParams = new URLSearchParams(window.location.search);
   const preselectId = searchParams.get("tenantId");
@@ -207,15 +216,6 @@ export default function ModuleManagementPage() {
         tenant.orgId.toLowerCase().includes(searchTenant.toLowerCase()) ||
         tenant.adminEmail.toLowerCase().includes(searchTenant.toLowerCase())
     ) || [];
-
-  const handleTenantSelect = (tenant: Tenant) => {
-    setSelectedTenant(tenant);
-    form.reset({
-      enabledModules: tenant.enabledModules || ["auth", "rbac"],
-      moduleConfigs: tenant.moduleConfigs || {},
-    });
-    setEditingModules(false);
-  };
 
   const onSubmit = (data: ModuleUpdateFormData) => {
     if (!selectedTenant) return;

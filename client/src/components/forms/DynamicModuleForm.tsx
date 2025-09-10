@@ -1,10 +1,6 @@
 import React from "react";
 import { UseFormReturn } from "react-hook-form";
-import {
-  TenantOnboardingConfig,
-  getRequiredConfigFields,
-  getDefaultModuleConfig,
-} from "../../../shared/tenant-config-interface";
+import { TenantOnboardingConfig } from "@shared/tenant-config-interface";
 import {
   FormField,
   FormItem,
@@ -144,7 +140,7 @@ export const DynamicModuleForm: React.FC<DynamicModuleFormProps> = ({
                     {!isRequired && (
                       <Checkbox
                         checked={isSelected}
-                        onChange={() => onModuleToggle(module.id, !isSelected)}
+                        onCheckedChange={() => onModuleToggle(module.id, !isSelected)}
                         className="mt-1"
                       />
                     )}
@@ -196,13 +192,19 @@ const AuthModuleConfig: React.FC<{ form: UseFormReturn<TenantOnboardingConfig> }
               <FormLabel>Authentication Providers *</FormLabel>
               <FormDescription>Select at least one authentication method</FormDescription>
               <div className="grid grid-cols-2 gap-4">
-                {[
-                  { id: "local", name: "Username/Password", desc: "Traditional email/password" },
-                  { id: "azure-ad", name: "Azure AD", desc: "Microsoft Azure Active Directory" },
-                  { id: "auth0", name: "Auth0", desc: "Auth0 identity platform" },
-                  { id: "saml", name: "SAML", desc: "SAML 2.0 Single Sign-On" },
-                ].map(provider => {
-                  const isSelected = field.value?.includes(provider.id) || false;
+                {(
+                  [
+                    { id: "local", name: "Username/Password", desc: "Traditional email/password" },
+                    { id: "azure-ad", name: "Azure AD", desc: "Microsoft Azure Active Directory" },
+                    { id: "auth0", name: "Auth0", desc: "Auth0 identity platform" },
+                    { id: "saml", name: "SAML", desc: "SAML 2.0 Single Sign-On" },
+                  ] as Array<{
+                    id: "local" | "auth0" | "azure-ad" | "saml";
+                    name: string;
+                    desc: string;
+                  }>
+                ).map(provider => {
+                  const isSelected = field.value?.includes(provider.id as any) || false;
                   return (
                     <div
                       key={provider.id}
@@ -212,13 +214,13 @@ const AuthModuleConfig: React.FC<{ form: UseFormReturn<TenantOnboardingConfig> }
                       onClick={() => {
                         const current = field.value || [];
                         const updated = isSelected
-                          ? current.filter(p => p !== provider.id)
+                          ? (current as string[]).filter((p: any) => p !== provider.id)
                           : [...current, provider.id];
                         field.onChange(updated);
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        <Checkbox checked={isSelected} readOnly />
+                        <Checkbox checked={isSelected} onCheckedChange={() => {}} />
                         <div>
                           <div className="font-medium text-sm">{provider.name}</div>
                           <div className="text-xs text-gray-600">{provider.desc}</div>
