@@ -87,12 +87,34 @@ export class AzureADService {
    */
   async getAuthorizationUrl(
     scopes: string[] = ["User.Read", "User.ReadBasic.All"],
-    tenantId?: string
+    tenantId?: string,
+    extraState?: Record<string, any>
   ): Promise<string> {
     try {
       // Generate PKCE parameters
       const { challenge, verifier } = await this.cryptoProvider.generatePkceCodes();
 
+      const baseState = tenantId
+        ? { tenantId, codeVerifier: verifier }
+        : { codeVerifier: verifier };
+      const mergedState = { ...baseState, ...(extraState || {}) };
+      try {
+        console.log("[AzureADService.getAuthorizationUrl] baseState keys:", Object.keys(baseState));
+        console.log(
+          "[AzureADService.getAuthorizationUrl] extraState keys:",
+          extraState ? Object.keys(extraState) : []
+        );
+        console.log(
+          "[AzureADService.getAuthorizationUrl] mergedState keys:",
+          Object.keys(mergedState)
+        );
+        if ((mergedState as any).returnUrl) {
+          console.log(
+            "[AzureADService.getAuthorizationUrl] mergedState.returnUrl:",
+            (mergedState as any).returnUrl
+          );
+        }
+      } catch {}
       const authCodeUrlParameters: any = {
         scopes,
         redirectUri:
@@ -101,9 +123,7 @@ export class AzureADService {
           "http://localhost:3000/auth/azure/callback",
         codeChallenge: challenge,
         codeChallengeMethod: "S256",
-        state: tenantId
-          ? JSON.stringify({ tenantId, codeVerifier: verifier })
-          : JSON.stringify({ codeVerifier: verifier }),
+        state: JSON.stringify(mergedState),
       };
 
       // Default to select_account for better UX; allow forcing consent via env

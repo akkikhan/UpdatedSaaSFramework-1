@@ -28,6 +28,39 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Helper: validate externally supplied returnUrl against allowlist to avoid open redirects
+  function validateReturnUrl(raw?: string): string | undefined {
+    if (!raw) return undefined;
+    try {
+      const decoded = decodeURIComponent(raw);
+      if (decoded.length > 500) return undefined; // guard
+      const urlObj = new URL(decoded);
+      if (!/^https?:$/.test(urlObj.protocol)) return undefined; // only allow http/https
+      const prefixes = (process.env.ALLOWED_RETURN_URL_PREFIXES || "")
+        .split(/[,\s]+/)
+        .map(p => p.trim())
+        .filter(Boolean);
+      if (prefixes.length === 0) {
+        // In dev, allow localhost origins implicitly
+        if (urlObj.hostname === "localhost" || urlObj.hostname === "127.0.0.1") {
+          console.log(`[returnUrl] Allowed by implicit localhost dev rule: ${decoded}`);
+          return decoded;
+        }
+        console.warn(`[returnUrl] Rejected (no allowlist & non-localhost): ${decoded}`);
+        return undefined;
+      }
+      const match = prefixes.some(p => decoded.startsWith(p));
+      if (match) {
+        console.log(`[returnUrl] Allowed by allowlist prefix match: ${decoded}`);
+        return decoded;
+      }
+      console.warn(`[returnUrl] Rejected (no prefix match). Provided: ${decoded}`);
+      return undefined;
+    } catch {
+      console.warn(`[returnUrl] Rejected (parse error): ${raw}`);
+      return undefined;
+    }
+  }
   // Public routes
 
   // NOTE: Static HTML routes removed in favor of SPA routes
@@ -198,22 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/admin/login?error=invalid_state");
       }
 
-      // Prevent double-processing the same authorization code (browser retries/back button)
-      const handledCodes = (global as any).__platformHandledCodes || new Map<string, number>();
-      (global as any).__platformHandledCodes = handledCodes;
-
-      if (typeof code === "string") {
-        // Clear expired entries
-        const now = Date.now();
-        for (const [k, t] of handledCodes.entries()) {
-          if (now - t > 5 * 60 * 1000) handledCodes.delete(k);
-        }
-        if (handledCodes.has(code)) {
-          console.warn("Authorization code already processed recently; restarting login.");
-          return res.redirect("/api/platform/auth/azure/login");
-        }
-        handledCodes.set(code, Date.now());
-      }
+      // (duplicate authorization code guard removed for simplicity)
 
       // Exchange code for tokens and get user info (platform admin - no tenant provisioning)
       let authResult;
@@ -583,8 +601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate new token with the same payload
-      const jwt = await import("jsonwebtoken");
-      const newToken = jwt.sign(
+      const { signJwt } = await import("./utils/jwt.js");
+      const newToken = await signJwt(
         {
           adminId: decoded.adminId,
           email: decoded.email,
@@ -1486,6 +1504,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Decoded state:", decodedState);
         stateData = JSON.parse(decodedState);
         console.log("Parsed state data:", stateData);
+        try {
+          console.log("🧪 Callback state keys:", Object.keys(stateData || {}));
+          if (stateData && stateData.returnUrl) {
+            console.log("🧪 Callback received returnUrl:", stateData.returnUrl);
+          } else {
+            console.log("🧪 Callback state missing returnUrl");
+          }
+        } catch {}
       } catch (stateError) {
         console.error("State parsing error:", stateError);
         return res.status(400).json({ message: "Invalid state parameter" });
@@ -1592,21 +1618,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "tenant_user",
       };
 
-      const jwt = require("jsonwebtoken");
-      const appToken = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: "8h" });
+      const { signJwt } = await import("./utils/jwt.js");
+      const appToken = await signJwt(tokenPayload, process.env.JWT_SECRET!, { expiresIn: "8h" });
 
       console.log("Generated JWT token for user");
 
       // Log successful login
       await storage.logSystemActivity({
         tenantId: tenant.id,
-        adminUserId: authResult.user.id,
+        // Do not set adminUserId here (tenant end-user login)
         action: "azure_ad_login_success",
         entityType: "tenant_user",
         entityId: authResult.user.id,
         details: {
           email: authResult.user.email,
           provider: "azure-ad",
+          source: "oauth_callback",
         },
         ipAddress: req.ip,
         userAgent: req.get("User-Agent"),
@@ -1614,11 +1641,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Logged successful Azure AD login");
 
-      // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-success?token=${appToken}&tenant=${tenant.orgId}`;
-
-      console.log(`Redirecting to success page: ${redirectUrl}`);
-
+      // Determine post-login redirect (claims-aware)
+      // Default (fallback) dashboard location for Claims Angular app.
+      // Using root /dashboard instead of /claims/dashboard to avoid asset path issues
+      // when deep-linking before <base href="/"> was present.
+      const claimsDashboardDefault = "http://localhost:5173/dashboard";
+      let targetReturn: string | undefined;
+      if (stateData.returnUrl) {
+        const validated = validateReturnUrl(stateData.returnUrl);
+        if (validated) {
+          targetReturn = validated;
+          console.log(`[returnUrl] Using validated state.returnUrl: ${targetReturn}`);
+        } else {
+          console.log(
+            `[returnUrl] state.returnUrl failed validation (${stateData.returnUrl}); falling back to claims dashboard.`
+          );
+        }
+      }
+      if (!targetReturn) {
+        targetReturn = claimsDashboardDefault;
+        console.log(`[returnUrl] Using fallback claims dashboard: ${targetReturn}`);
+      }
+      // Place token & tenant in fragment to avoid sending JWT to server logs/CDNs via query
+      const fragment = `#token=${encodeURIComponent(appToken)}&tenant=${encodeURIComponent(tenant.orgId)}`;
+      const redirectUrl = `${targetReturn}${fragment}`;
+      console.log(`Redirecting to final returnUrl (fragment token): ${redirectUrl}`);
       res.redirect(redirectUrl);
     } catch (error) {
       console.error("=== AZURE AD CALLBACK ERROR ===");
@@ -1694,8 +1741,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/azure/:orgId", async (req, res) => {
     try {
       const { orgId } = req.params;
+      const { returnUrl, redirectBase, redirectTo } = req.query;
 
       console.log(`Starting Azure AD OAuth for orgId: ${orgId}`);
+      console.log("🔍 AZURE START - Query parameters:", {
+        returnUrl,
+        redirectBase,
+        redirectTo,
+        allParams: req.query,
+      });
 
       // Get tenant by orgId
       const tenant = await storage.getTenantByOrgId(orgId);
@@ -1735,13 +1789,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
       });
 
+      // Derive returnUrl (prefer explicit, else legacy, else fallback to claims dashboard)
+      const legacyCandidate =
+        typeof redirectBase === "string" && typeof redirectTo === "string"
+          ? `${redirectBase}${redirectTo}`
+          : undefined;
+      const rawReturnCandidate =
+        (typeof returnUrl === "string" ? decodeURIComponent(returnUrl) : undefined) ||
+        legacyCandidate;
+      // Default (fallback) dashboard location for Claims Angular app.
+      const claimsDashboardDefault = "http://localhost:5173/dashboard";
+      const validatedReturn = validateReturnUrl(rawReturnCandidate);
+      const chosenReturnUrl = validatedReturn || claimsDashboardDefault;
+      if (validatedReturn) {
+        console.log(`🎯 Using validated returnUrl: ${validatedReturn}`);
+      } else if (rawReturnCandidate) {
+        console.log(
+          `❌ Provided returnUrl failed validation, defaulting to claims dashboard. candidate=${rawReturnCandidate}`
+        );
+      } else {
+        console.log(
+          `ℹ️ No returnUrl provided; defaulting to claims dashboard: ${claimsDashboardDefault}`
+        );
+      }
+      const extraState: Record<string, any> = { returnUrl: chosenReturnUrl };
+      console.log(`✅ Added (final) returnUrl to state: ${chosenReturnUrl}`);
+
       // Generate authorization URL
       const authUrl = await azureADService.getAuthorizationUrl(
         ["User.Read", "User.ReadBasic.All"],
-        tenant.id
+        tenant.id,
+        extraState
       );
 
       console.log(`Generated Azure AD auth URL for tenant ${tenant.name}`);
+      try {
+        const parsedAuth = new URL(authUrl);
+        const rawState = parsedAuth.searchParams.get("state");
+        if (rawState) {
+          let parsedState: any = undefined;
+          try {
+            parsedState = JSON.parse(decodeURIComponent(rawState));
+          } catch (e) {
+            console.log("🧪 Could not parse outgoing state JSON, raw value:", rawState);
+          }
+          if (parsedState) {
+            console.log("🧪 Outgoing state object keys:", Object.keys(parsedState));
+            if (parsedState.returnUrl) {
+              console.log("🧪 Outgoing state includes returnUrl:", parsedState.returnUrl);
+            } else {
+              console.log("🧪 Outgoing state HAS NO returnUrl. extraState passed:", extraState);
+            }
+          }
+        } else {
+          console.log("🧪 No state param found in generated authUrl (unexpected)");
+        }
+      } catch (e) {
+        console.log("🧪 Failed to introspect authUrl state:", e);
+      }
 
       res.json({ authUrl });
     } catch (error) {
@@ -3314,6 +3419,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Upsert provider
         const idx = moduleConfigs.auth.providers.findIndex((p: any) => p.type === type);
+        const existingProvider = idx >= 0 ? moduleConfigs.auth.providers[idx] : null;
+        const existingEncryptedSecret = existingProvider?.config?.clientSecret;
         const config = { ...(proposed || {}) };
         if (config.callbackUrl && !config.redirectUri) {
           config.redirectUri = config.callbackUrl;
@@ -3327,12 +3434,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (type === "saml") config.redirectUri = `${host || ""}/api/auth/saml/callback`;
         }
 
-        // Encrypt secrets
+        // Preserve existing secret if none supplied in update (prevents accidental wipe)
+        if (!config.clientSecret && existingEncryptedSecret) {
+          config.clientSecret = existingEncryptedSecret;
+        }
+
+        // Encrypt secrets (only if plaintext provided)
         try {
           const { encryptSecret } = await import("./utils/secret.js");
-          if (type === "azure-ad" && config.clientSecret)
+          if (
+            type === "azure-ad" &&
+            config.clientSecret &&
+            !config.clientSecret.startsWith("enc:v1:")
+          )
             config.clientSecret = encryptSecret(config.clientSecret);
-          if (type === "auth0" && config.clientSecret)
+          if (type === "auth0" && config.clientSecret && !config.clientSecret.startsWith("enc:v1:"))
             config.clientSecret = encryptSecret(config.clientSecret);
         } catch {}
 

@@ -2609,12 +2609,15 @@ function ProviderAzureCard({
         localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
       if (token) headers.Authorization = `Bearer ${token}`;
       if (tenantId) headers["x-tenant-id"] = tenantId;
+      const config: any = { ...form };
+      // Don't send blank secret (prevents clearing existing secret on approval)
+      if (!config.clientSecret) delete config.clientSecret;
       const res = await fetch(`${base}/api/tenant/${tenantId}/auth/providers/request`, {
         method: "POST",
         headers,
         body: JSON.stringify({
           type: "azure-ad",
-          config: { ...form },
+          config,
         }),
       });
       const data = await res.json();
@@ -2818,10 +2821,12 @@ function ProviderAuth0Card({
 
   const submitRequest = async () => {
     try {
+      const cfg: any = { ...form, redirectUri: expectedRedirect };
+      if (!cfg.clientSecret) delete cfg.clientSecret;
       const res = await fetch(`/api/tenant/${tenantId}/auth/providers/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "auth0", config: { ...form, redirectUri: expectedRedirect } }),
+        body: JSON.stringify({ type: "auth0", config: cfg }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");

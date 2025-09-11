@@ -1,4 +1,8 @@
-import { __async, __spreadProps, __spreadValues } from "./chunk-WDMUDEB6.js";
+import {
+  __async,
+  __spreadProps,
+  __spreadValues
+} from "./chunk-WDMUDEB6.js";
 
 // ../../packages/auth-client/dist/index.js
 var tokenKey = "tenant_token";
@@ -14,20 +18,32 @@ function getToken() {
 }
 function setToken(value) {
   try {
-    if (typeof localStorage !== "undefined") localStorage.setItem(tokenKey, value);
-  } catch {}
+    if (typeof localStorage !== "undefined")
+      localStorage.setItem(tokenKey, value);
+  } catch {
+  }
 }
 function clearToken() {
   try {
-    if (typeof localStorage !== "undefined") localStorage.removeItem(tokenKey);
-  } catch {}
+    if (typeof localStorage !== "undefined")
+      localStorage.removeItem(tokenKey);
+  } catch {
+  }
 }
 function startAzure(orgId, options) {
   return __async(this, null, function* () {
     const base = (options === null || options === void 0 ? void 0 : options.baseUrl) || "";
-    const url = `${base}/api/auth/azure/${encodeURIComponent(orgId)}`;
+    const params = [];
+    if (options === null || options === void 0 ? void 0 : options.returnUrl) {
+      params.push(`returnUrl=${encodeURIComponent(options.returnUrl)}`);
+    } else if ((options === null || options === void 0 ? void 0 : options.redirectBase) && (options === null || options === void 0 ? void 0 : options.redirectTo)) {
+      const fullReturnUrl = `${options.redirectBase}${options.redirectTo}`;
+      params.push(`returnUrl=${encodeURIComponent(fullReturnUrl)}`);
+    }
+    const url = `${base}/api/auth/azure/${encodeURIComponent(orgId)}${params.length ? `?${params.join("&")}` : ""}`;
     const res = yield fetch(url);
-    if (!res.ok) throw new Error(`Failed to start Azure SSO: ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Failed to start Azure SSO: ${res.status}`);
     const data = yield res.json();
     if (!(data === null || data === void 0 ? void 0 : data.authUrl))
       throw new Error("No authUrl received");
@@ -55,12 +71,14 @@ function loginWithPassword(params) {
         orgId: params.orgId,
         tenantId: params.tenantId,
         email: params.email,
-        password: params.password,
-      }),
+        password: params.password
+      })
     });
-    if (!res.ok) throw new Error(`Login failed: ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Login failed: ${res.status}`);
     const data = yield res.json();
-    if (data === null || data === void 0 ? void 0 : data.token) setToken(data.token);
+    if (data === null || data === void 0 ? void 0 : data.token)
+      setToken(data.token);
     return data;
   });
 }
@@ -68,7 +86,8 @@ function fetchWithAuth(_0) {
   return __async(this, arguments, function* (input, init = {}) {
     const t = getToken();
     const headers = new Headers(init.headers || {});
-    if (t) headers.set("Authorization", `Bearer ${t}`);
+    if (t)
+      headers.set("Authorization", `Bearer ${t}`);
     return fetch(input, __spreadProps(__spreadValues({}, init), { headers }));
   });
 }
@@ -79,14 +98,17 @@ function refreshToken(baseUrl) {
   return __async(this, null, function* () {
     const base = baseUrl || "";
     const t = getToken();
-    if (!t) return null;
+    if (!t)
+      return null;
     const res = yield fetch(`${base}/api/v2/auth/refresh`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${t}` },
+      headers: { Authorization: `Bearer ${t}` }
     });
-    if (!res.ok) return null;
+    if (!res.ok)
+      return null;
     const data = yield res.json();
-    if (data === null || data === void 0 ? void 0 : data.token) setToken(data.token);
+    if (data === null || data === void 0 ? void 0 : data.token)
+      setToken(data.token);
     return (data === null || data === void 0 ? void 0 : data.token) || null;
   });
 }
@@ -94,14 +116,16 @@ function getRbacProfile(baseUrl) {
   return __async(this, null, function* () {
     const base = baseUrl || "";
     const res = yield fetchWithAuth(`${base}/rbac/me`);
-    if (!res.ok) return null;
+    if (!res.ok)
+      return null;
     return res.json();
   });
 }
 function hasPermission(permission, profile, baseUrl) {
   return __async(this, null, function* () {
     const p = profile || (yield getRbacProfile(baseUrl));
-    if (!p) return false;
+    if (!p)
+      return false;
     return Array.isArray(p.permissions) && p.permissions.includes(permission);
   });
 }
@@ -117,6 +141,6 @@ export {
   refreshToken,
   setToken,
   setTokenStorageKey,
-  startAzure,
+  startAzure
 };
 //# sourceMappingURL=@saas-framework_auth-client.js.map

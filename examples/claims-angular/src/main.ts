@@ -1,4 +1,23 @@
 import "zone.js";
+// Fragment token bootstrap: if redirected with #token=...&tenant=..., extract token early
+import { setToken } from "@saas-framework/auth-client";
+(() => {
+  try {
+    if (typeof window !== "undefined" && window.location.hash.startsWith("#")) {
+      const hash = new URLSearchParams(window.location.hash.substring(1));
+      const fragToken = hash.get("token");
+      if (fragToken) {
+        setToken(fragToken);
+        // Clean the hash to avoid exposing JWT in later navigations / referrers
+        const cleanUrl = window.location.pathname + window.location.search;
+        window.history.replaceState({}, document.title, cleanUrl);
+        console.log("[claims-angular] Token captured from fragment and stored.");
+      }
+    }
+  } catch (e) {
+    console.warn("[claims-angular] Failed to process fragment token", e);
+  }
+})();
 import { bootstrapApplication } from "@angular/platform-browser";
 import { provideAnimations } from "@angular/platform-browser/animations";
 import { importProvidersFrom } from "@angular/core";

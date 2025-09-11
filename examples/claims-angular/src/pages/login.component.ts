@@ -13,8 +13,7 @@ import {
   loginWithPassword,
   getToken,
 } from "@saas-framework/auth-client";
-
-const BASE = localStorage.getItem("claims_base") || "http://localhost:5000";
+import { BASE } from "../services/api-base";
 
 @Component({
   standalone: true,
@@ -477,7 +476,10 @@ export class LoginComponent {
   async signinMicrosoft() {
     if (!this.orgId) return;
     localStorage.setItem("claims_orgId", this.orgId);
-    await startAzure(this.orgId, { baseUrl: BASE });
+    await startAzure(this.orgId, {
+      baseUrl: BASE,
+      returnUrl: `${window.location.origin}/dashboard`,
+    });
   }
   async signinLocal() {
     if (!this.orgId) return;

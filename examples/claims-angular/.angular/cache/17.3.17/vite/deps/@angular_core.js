@@ -450,8 +450,9 @@ import {
   ɵɵtwoWayProperty,
   ɵɵvalidateIframeAttribute,
   ɵɵviewQuery,
-  ɵɵviewQuerySignal,
-} from "./chunk-JXWBXESQ.js";
+  ɵɵviewQuerySignal
+} from "./chunk-PB77ZWPV.js";
+import "./chunk-DT2VDE4B.js";
 import "./chunk-WDMUDEB6.js";
 export {
   ANIMATION_MODULE_TYPE,
@@ -907,6 +908,6 @@ export {
   ɵɵtwoWayProperty,
   ɵɵvalidateIframeAttribute,
   ɵɵviewQuery,
-  ɵɵviewQuerySignal,
+  ɵɵviewQuerySignal
 };
 //# sourceMappingURL=@angular_core.js.map

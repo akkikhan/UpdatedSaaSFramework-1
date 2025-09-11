@@ -46,7 +46,7 @@ import {
   type InsertPlatformAdmin,
 } from "../shared/schema.ts";
 import { db } from "./db.ts";
-import { eq, desc, count, asc, and, like, gte, lte, lt, sql } from "drizzle-orm";
+import { eq, desc, count, asc, and, like, gte, lte, lt, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // Helper function to ensure db is available
@@ -967,10 +967,7 @@ export class DatabaseStorage implements IStorage {
     if (!assignments || assignments.length === 0) return [];
     const roleIds = assignments.map(a => a.roleId);
     // Fetch roles
-    const rolesResult = await db
-      .select()
-      .from(tenantRoles)
-      .where(sql`${tenantRoles.id} = ANY(${sql.array(roleIds, "uuid")})`);
+    const rolesResult = await db.select().from(tenantRoles).where(inArray(tenantRoles.id, roleIds));
     const permissions = new Set<string>();
     for (const r of rolesResult) {
       (r.permissions || []).forEach(p => permissions.add(p));
