@@ -2441,7 +2441,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     console.log("✅ RBAC check result:", { userId, permission, hasPermission });
     res.json({ hasPermission });
-  }); // =============================================================================
+  });
+
+  // =============================================================================
+  // Platform Admin RBAC Management
+  // =============================================================================
+  app.get(
+    "/api/admin/rbac/roles",
+    platformAdminMiddleware,
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const roles = await storage.getTenantRoles(req.tenantId!);
+        res.json(roles);
+      } catch (error) {
+        console.error("Admin get roles error:", error);
+        res.status(500).json({ message: "Failed to get roles" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/admin/rbac/roles",
+    platformAdminMiddleware,
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const { name, description, permissions } = req.body;
+        if (!name) return res.status(400).json({ message: "Role name is required" });
+        const role = await storage.createTenantRole({
+          tenantId: req.tenantId!,
+          name,
+          description: description || "",
+          permissions: permissions || [],
+        });
+        res.status(201).json(role);
+      } catch (error) {
+        console.error("Admin create role error:", error);
+        res.status(500).json({ message: "Failed to create role" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/admin/rbac/permissions",
+    platformAdminMiddleware,
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const roles = await storage.getTenantRoles(req.tenantId!);
+        const set = new Set<string>();
+        for (const r of roles || []) {
+          (r.permissions || []).forEach((p: string) => set.add(p));
+        }
+        res.json(Array.from(set));
+      } catch (error) {
+        console.error("Admin get permissions error:", error);
+        res.status(500).json({ message: "Failed to get permissions" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/admin/rbac/users/:userId/roles",
+    platformAdminMiddleware,
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const roles = await storage.getTenantUserRoles(req.tenantId!, userId);
+        res.json(roles);
+      } catch (error) {
+        console.error("Admin get user roles error:", error);
+        res.status(500).json({ message: "Failed to get user roles" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/admin/rbac/users/:userId/roles",
+    platformAdminMiddleware,
+    tenantMiddleware,
+    async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const { roleId } = req.body;
+        if (!roleId) return res.status(400).json({ message: "roleId is required" });
+        await storage.assignTenantUserRole({
+          tenantId: req.tenantId!,
+          userId,
+          roleId,
+          assignedBy: req.platformAdmin?.adminId || null,
+        });
+        res.status(204).end();
+      } catch (error) {
+        console.error("Admin assign role error:", error);
+        res.status(500).json({ message: "Failed to assign role" });
+      }
+    }
+  );
+
+  // =============================================================================
   // API v2 RBAC routes (SDK-compatible)
   // -----------------------------------------------------------------------------
   // Roles Management

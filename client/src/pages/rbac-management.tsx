@@ -209,7 +209,13 @@ const DEFAULT_ROLES = {
 
 export default function RBACManagementPage() {
   const { tenantId } = useParams();
-  const tenantToken = typeof window !== "undefined" ? localStorage.getItem("tenantToken") : null;
+  const tenantToken =
+    typeof window !== "undefined" ? localStorage.getItem("tenantToken") : null;
+  const platformAdminToken =
+    typeof window !== "undefined" ? localStorage.getItem("platformAdminToken") : null;
+  const authToken = tenantToken || platformAdminToken;
+  const isPlatformAdmin = !!platformAdminToken && !tenantToken;
+  const rbacBase = isPlatformAdmin ? "/api/admin/rbac" : "/api/v2/rbac";
   const [activeSection, setActiveSection] = useState("configuration");
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
@@ -226,11 +232,11 @@ export default function RBACManagementPage() {
 
   const { data: roles = [], refetch: refetchRoles } = useQuery({
     queryKey: ["roles", tenantId],
-    enabled: !!tenantId && !!tenantToken,
+    enabled: !!tenantId && !!authToken,
     queryFn: async () => {
-      const res = await fetch(`/api/v2/rbac/roles`, {
+      const res = await fetch(`${rbacBase}/roles`, {
         headers: {
-          Authorization: `Bearer ${tenantToken}`,
+          Authorization: `Bearer ${authToken}`,
           "x-tenant-id": tenantId as string,
         },
       });
@@ -241,11 +247,11 @@ export default function RBACManagementPage() {
 
   const { data: permissions = [] } = useQuery({
     queryKey: ["permissions", tenantId],
-    enabled: !!tenantId && !!tenantToken,
+    enabled: !!tenantId && !!authToken,
     queryFn: async () => {
-      const res = await fetch(`/api/v2/rbac/permissions`, {
+      const res = await fetch(`${rbacBase}/permissions`, {
         headers: {
-          Authorization: `Bearer ${tenantToken}`,
+          Authorization: `Bearer ${authToken}`,
           "x-tenant-id": tenantId as string,
         },
       });
@@ -256,11 +262,11 @@ export default function RBACManagementPage() {
 
   const { data: users = [] } = useQuery({
     queryKey: ["users", tenantId],
-    enabled: !!tenantId && !!tenantToken,
+    enabled: !!tenantId && !!authToken,
     queryFn: async () => {
       const res = await fetch(`/auth/users`, {
         headers: {
-          Authorization: `Bearer ${tenantToken}`,
+          Authorization: `Bearer ${authToken}`,
           "x-tenant-id": tenantId as string,
         },
       });
@@ -270,13 +276,13 @@ export default function RBACManagementPage() {
   });
 
   useEffect(() => {
-    if (!tenantId || !tenantToken || !users.length) return;
+    if (!tenantId || !authToken || !users.length) return;
     (async () => {
       const map: Record<string, string> = {};
       for (const u of users) {
-        const res = await fetch(`/api/v2/rbac/users/${u.id}/roles`, {
+        const res = await fetch(`${rbacBase}/users/${u.id}/roles`, {
           headers: {
-            Authorization: `Bearer ${tenantToken}`,
+            Authorization: `Bearer ${authToken}`,
             "x-tenant-id": tenantId as string,
           },
         });
@@ -287,7 +293,7 @@ export default function RBACManagementPage() {
       }
       setUserRoles(map);
     })();
-  }, [tenantId, tenantToken, users]);
+  }, [tenantId, authToken, users]);
 
   // Forms
   const roleForm = useForm<RoleForm>({
@@ -311,11 +317,11 @@ export default function RBACManagementPage() {
   // Mutations
   const createRoleMutation = useMutation({
     mutationFn: async (data: RoleForm) => {
-      const response = await fetch(`/api/v2/rbac/roles`, {
+      const response = await fetch(`${rbacBase}/roles`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${tenantToken}`,
+          Authorization: `Bearer ${authToken}`,
           "x-tenant-id": tenantId as string,
         },
         body: JSON.stringify(data),
@@ -638,12 +644,12 @@ export default function RBACManagementPage() {
   );
 
   const assignRole = async (userId: string, roleId: string) => {
-    if (!tenantToken) return;
-    const res = await fetch(`/api/v2/rbac/users/${userId}/roles`, {
+    if (!authToken) return;
+    const res = await fetch(`${rbacBase}/users/${userId}/roles`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${tenantToken}`,
+        Authorization: `Bearer ${authToken}`,
         "x-tenant-id": tenantId as string,
       },
       body: JSON.stringify({ roleId }),

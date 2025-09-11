@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Copy,
   ExternalLink,
+  Shield,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -750,6 +751,18 @@ export default function TenantsPage() {
                               </Button>
                             );
                           })()}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-slate-400 hover:text-slate-600"
+                            title="Manage Roles"
+                            onClick={() =>
+                              setLocation(`/tenants/${tenant.id}/rbac`)
+                            }
+                            data-testid={`button-rbac-${tenant.orgId}`}
+                          >
+                            <Shield size={16} />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
