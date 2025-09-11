@@ -38,6 +38,10 @@ Optional: Create roles and permissions (example)
   - `reports.export`, `users.read`, `settings.read`
 
 Assign users to roles in the tenant portal.
+For example, give a user the **Manager** role with the `claims.approve`
+permission. Role changes take effect in the demo claims app automatically—the
+Approve button becomes enabled for users who receive this permission within
+about 15 seconds.
 
 ## 3) Angular App (claims-angular)
 

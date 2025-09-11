@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -209,12 +209,13 @@ const DEFAULT_ROLES = {
 
 export default function RBACManagementPage() {
   const { tenantId } = useParams();
+  const tenantToken = typeof window !== "undefined" ? localStorage.getItem("tenantToken") : null;
   const [activeSection, setActiveSection] = useState("configuration");
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
   const [editingPermission, setEditingPermission] = useState<any>(null);
-  const queryClient = useQueryClient();
+  const [userRoles, setUserRoles] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   // Fetch tenant data
@@ -223,15 +224,70 @@ export default function RBACManagementPage() {
     enabled: !!tenantId,
   });
 
-  const { data: roles = [] } = useQuery({
-    queryKey: ["/api/tenants", tenantId, "roles"],
-    enabled: !!tenantId,
+  const { data: roles = [], refetch: refetchRoles } = useQuery({
+    queryKey: ["roles", tenantId],
+    enabled: !!tenantId && !!tenantToken,
+    queryFn: async () => {
+      const res = await fetch(`/api/v2/rbac/roles`, {
+        headers: {
+          Authorization: `Bearer ${tenantToken}`,
+          "x-tenant-id": tenantId as string,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to load roles");
+      return res.json();
+    },
   });
 
   const { data: permissions = [] } = useQuery({
-    queryKey: ["/api/tenants", tenantId, "permissions"],
-    enabled: !!tenantId,
+    queryKey: ["permissions", tenantId],
+    enabled: !!tenantId && !!tenantToken,
+    queryFn: async () => {
+      const res = await fetch(`/api/v2/rbac/permissions`, {
+        headers: {
+          Authorization: `Bearer ${tenantToken}`,
+          "x-tenant-id": tenantId as string,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to load permissions");
+      return res.json();
+    },
   });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ["users", tenantId],
+    enabled: !!tenantId && !!tenantToken,
+    queryFn: async () => {
+      const res = await fetch(`/auth/users`, {
+        headers: {
+          Authorization: `Bearer ${tenantToken}`,
+          "x-tenant-id": tenantId as string,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to load users");
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    if (!tenantId || !tenantToken || !users.length) return;
+    (async () => {
+      const map: Record<string, string> = {};
+      for (const u of users) {
+        const res = await fetch(`/api/v2/rbac/users/${u.id}/roles`, {
+          headers: {
+            Authorization: `Bearer ${tenantToken}`,
+            "x-tenant-id": tenantId as string,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data[0]) map[u.id] = data[0].id;
+        }
+      }
+      setUserRoles(map);
+    })();
+  }, [tenantId, tenantToken, users]);
 
   // Forms
   const roleForm = useForm<RoleForm>({
@@ -255,16 +311,20 @@ export default function RBACManagementPage() {
   // Mutations
   const createRoleMutation = useMutation({
     mutationFn: async (data: RoleForm) => {
-      const response = await fetch(`/api/tenants/${tenantId}/roles`, {
+      const response = await fetch(`/api/v2/rbac/roles`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${tenantToken}`,
+          "x-tenant-id": tenantId as string,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) throw new Error("Failed to create role");
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tenants", tenantId, "roles"] });
+      refetchRoles();
       toast({ title: "Role created successfully" });
       setIsRoleDialogOpen(false);
       roleForm.reset();
@@ -577,6 +637,25 @@ export default function RBACManagementPage() {
     </div>
   );
 
+  const assignRole = async (userId: string, roleId: string) => {
+    if (!tenantToken) return;
+    const res = await fetch(`/api/v2/rbac/users/${userId}/roles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tenantToken}`,
+        "x-tenant-id": tenantId as string,
+      },
+      body: JSON.stringify({ roleId }),
+    });
+    if (res.ok) {
+      setUserRoles(prev => ({ ...prev, [userId]: roleId }));
+      toast({ title: "Role assigned" });
+    } else {
+      toast({ title: "Failed to assign role", variant: "destructive" });
+    }
+  };
+
   const renderAssignments = () => (
     <Card>
       <CardHeader>
@@ -586,13 +665,33 @@ export default function RBACManagementPage() {
         </CardTitle>
         <CardDescription>Assign roles to users and manage their permissions</CardDescription>
       </CardHeader>
-      <CardContent className="p-8 text-center">
-        <Users className="h-12 w-12 mx-auto mb-4 text-slate-400" />
-        <h3 className="font-semibold mb-2">No users assigned</h3>
-        <p className="text-sm text-slate-600 mb-4">
-          User assignment functionality will be available once you have users in your tenant
-        </p>
-        <Button variant="outline">Import Users</Button>
+      <CardContent className="space-y-4">
+        {users.length === 0 ? (
+          <p className="text-center text-sm text-slate-600">No users found</p>
+        ) : (
+          users.map((u: any) => (
+            <div key={u.id} className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{u.email}</p>
+              </div>
+              <Select
+                value={userRoles[u.id] || ""}
+                onValueChange={roleId => assignRole(u.id, roleId)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Assign role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   );
