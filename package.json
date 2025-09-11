@@ -18,8 +18,8 @@
     "test:integration": "jest --testPathPattern=integration",
     "test:server": "jest --selectProjects=\"Server Tests\"",
     "test:client": "jest --selectProjects=\"Client Tests\"",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx --config .eslintrc.cjs",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix --config .eslintrc.cjs",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up",
@@ -40,9 +40,6 @@
     "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'"
   },
   "dependencies": {
-    "@azure/mcp": "^0.5.10",
-    "@azure/mcp-win32-x64": "^0.5.10",
-    "@azure/msal-node": "^3.7.2",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",

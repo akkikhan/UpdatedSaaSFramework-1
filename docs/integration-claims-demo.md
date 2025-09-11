@@ -37,7 +37,17 @@ Optional: Create roles and permissions (example)
   - `claims.read`, `claims.update`, `claims.approve`
   - `reports.export`, `users.read`, `settings.read`
 
-Assign users to roles in the tenant portal.
+To try RBAC end-to-end:
+
+1. In either the tenant portal or the platform admin portal's **Manage Roles**
+   page, create or edit the **Manager** role and include the `claims.approve`
+   permission.
+2. Assign the Manager role to a user.
+3. Sign in to the claims portal as that user. The Approve button is disabled
+   until the role assignment is detected (the claims portal re-checks RBAC
+   about every 15 seconds).
+4. Remove the role or switch to a different user to see the Approve button
+   disable again.
 
 ## 3) Angular App (claims-angular)
 
