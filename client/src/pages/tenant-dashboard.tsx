@@ -562,6 +562,8 @@ export default function TenantDashboard() {
               Users {!isAuthEnabled && <span className="ml-1 text-xs opacity-60">(Disabled)</span>}
             </TabsTrigger>
             {isRbacEnabled && <TabsTrigger value="roles">Roles</TabsTrigger>}
+            <TabsTrigger value="authentication">Authentication</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           </TabsList>

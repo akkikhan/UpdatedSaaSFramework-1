@@ -43,10 +43,10 @@ export class AuthService {
     user: any;
     expiresAt: Date;
   } | null> {
-    // Get tenant user by email and tenant (not platform user)
-    const user = await storage.getTenantUserByEmail(tenantId, email);
+    // Get user by email (not getTenantUserByEmail)
+    const user = await storage.getUserByEmail(email);
 
-    if (!user || user.status !== "active") {
+    if (!user || !user.isActive) {
       console.log(`❌ Auth failed - user not found or inactive: ${email}`);
       return null;
     }
@@ -86,8 +86,8 @@ export class AuthService {
     // Note: Skipping session storage for tenant users as JWT tokens are stateless
     // TODO: Implement tenant-specific session table if needed
 
-    // Update last login for tenant user
-    await storage.updateTenantUserLastLogin(user.id);
+    // Update last login for user
+    await storage.updateUserLastLogin(user.id);
 
     const { passwordHash, ...userWithoutPassword } = user;
 

@@ -10,6 +10,20 @@ vite.config.ts.*
 .env.local
 .env.production
 
+# Development and test scripts
+*.mjs
+test-*.html
+demo-*.html
+*_GUIDE.md
+*_COMPLETE.md
+*_SUMMARY.md
+*.ps1
+*.bat
+*.sh
+cspell.json
+diagnostic-server.js
+server-fixed.js
+
 # Build artifacts and caches
 **/bin/
 **/obj/
