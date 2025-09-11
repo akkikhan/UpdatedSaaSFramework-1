@@ -378,8 +378,8 @@ export class ClaimsComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.refresh();
-    const profile = await this.rbac.profile();
-    this.canApprove = await this.rbac.can("claims.approve", profile || undefined);
+    await this.rbac.profile();
+    this.canApprove = await this.rbac.can("claims.approve");
 
     this.search.valueChanges
       ?.pipe(debounceTime(200), distinctUntilChanged())
