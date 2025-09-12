@@ -10,6 +10,12 @@ vite.config.ts.*
 .env.local
 .env.production
 
+# Local development files
+.local/
+logs/
+*.pid
+*.log
+
 # Development and test scripts
 *.mjs
 test-*.html
