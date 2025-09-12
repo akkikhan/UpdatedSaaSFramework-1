@@ -75,6 +75,11 @@ export const api = {
     return response.json();
   },
 
+  async getTenantAuthSettings(id: string): Promise<{ allowFallback: boolean; defaultProvider: string | null; hasAzure: boolean; fallbackActive: boolean; }> {
+    const res = await apiRequest("GET", `/api/tenant/${id}/auth/settings`);
+    return res.json();
+  },
+
   // Health check
   async getHealthStatus(): Promise<{
     status: string;

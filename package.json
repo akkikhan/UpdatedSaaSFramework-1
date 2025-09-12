@@ -40,6 +40,7 @@
     "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'"
   },
   "dependencies": {
+    "@azure/msal-node": "^3.7.3",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",

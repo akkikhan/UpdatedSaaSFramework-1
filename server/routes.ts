@@ -758,12 +758,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch {}
 
+      // Default auth config: allowFallback true unless explicitly disabled
+      try {
+        const mc: any = tenantData.moduleConfigs || (tenantData.moduleConfigs = {} as any);
+        mc.auth = mc.auth || {};
+        if (typeof mc.auth.allowFallback === "undefined") mc.auth.allowFallback = true;
+      } catch {}
+
       // Encrypt any provider secrets before persisting
       try {
         if (tenantData.moduleConfigs?.auth?.providers?.length) {
           const { encryptSecret } = await import("./utils/secret.js");
-          tenantData.moduleConfigs.auth.providers = tenantData.moduleConfigs.auth.providers.map(
-            (p: any) => {
+          tenantData.moduleConfigs.auth.providers = tenantData.moduleConfigs.auth.providers
+            .map((p: any) => {
               if (p?.type === "azure-ad" && p.config?.clientSecret) {
                 return {
                   ...p,
@@ -783,8 +790,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 };
               }
               return p;
-            }
-          );
+            })
+            // Remove incomplete or placeholder providers to avoid storing junk config
+            .filter((p: any) => {
+              try {
+                if (p?.type === "azure-ad") {
+                  const cfg = p?.config || {};
+                  const hasRequired = Boolean(cfg.tenantId && cfg.clientId && cfg.clientSecret);
+                  // Basic GUID shape check for clientId/tenantId
+                  const guid = /^[0-9a-fA-F-]{36}$/;
+                  const looksValid = guid.test(String(cfg.clientId || "")) && guid.test(String(cfg.tenantId || ""));
+                  if (!hasRequired || !looksValid) {
+                    console.warn("[TenantCreate] Dropping incomplete Azure AD provider from payload.");
+                    return false;
+                  }
+                }
+              } catch {}
+              return true;
+            });
         }
       } catch (e) {
         console.warn("Provider secret encryption skipped:", e instanceof Error ? e.message : e);
@@ -824,6 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const adminEmail = tenant.adminEmail;
         if (process.env.AZURE_CLIENT_ID && process.env.AZURE_CLIENT_SECRET && process.env.TENANT_ADMIN_GROUP_ID) {
+          const { tenantAzureService } = await import("./services/tenant-azure.js");
           const result = await tenantAzureService.onboardTenantAdmin(adminEmail);
           console.log(
             `[TenantAzure] Onboard group add for ${adminEmail}: ${result.success ? "OK" : "FAILED"} - ${result.message}`
@@ -854,8 +878,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public Tenant Registration (no auth required) - simplified: always temp password, no adminPassword
-  app.post("/api/register", async (req, res) => {
+      // Public Tenant Registration (no auth required) - simplified: always temp password, no adminPassword
+      app.post("/api/register", async (req, res) => {
     try {
       const { name, orgId, adminEmail, adminName, enabledModules } = req.body;
 
@@ -910,6 +934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Best-effort: add admin to Azure AD group
       try {
         if (process.env.AZURE_CLIENT_ID && process.env.AZURE_CLIENT_SECRET && process.env.TENANT_ADMIN_GROUP_ID) {
+          const { tenantAzureService } = await import("./services/tenant-azure.js");
           const result = await tenantAzureService.onboardTenantAdmin(tenant.adminEmail);
           console.log(
             `[TenantAzure] Onboard group add (public register) for ${tenant.adminEmail}: ${
@@ -1476,6 +1501,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enabled: true,
       });
 
+      // Disable fallback once tenant-specific Azure AD is configured
+      try {
+        moduleConfigs.auth.allowFallback = false;
+      } catch {}
+
       // Update tenant
       const enabledModules = (tenant.enabledModules as string[]) || [];
       if (!enabledModules.includes("auth")) {
@@ -1579,36 +1609,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const moduleConfigs = (tenant.moduleConfigs as any) || {};
       const authConfig = moduleConfigs.auth;
       let azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
+      const envFallback = (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
+      const tenantAllowsFallback = authConfig?.allowFallback !== false;
+      const fallbackToPlatform = (!azureProvider || !azureProvider.enabled) && envFallback && tenantAllowsFallback;
 
-      if (!azureProvider) {
-        console.error("Azure AD provider not found in tenant configuration");
-        return res.status(400).json({ message: "Azure AD not configured for this tenant" });
+      if (!fallbackToPlatform) {
+        console.log("Azure AD provider found, creating service instance...");
+      } else {
+        console.log("Azure AD provider missing/disabled. Falling back to platform Azure app for SSO callback.");
       }
-
-      console.log("Azure AD provider found, creating service instance...");
 
       // Decrypt clientSecret if encrypted; surface clear error if undecryptable
       let decryptErrorMessage = "";
-      try {
-        const { decryptSecret } = await import("./utils/secret.js");
-        if (azureProvider.config?.clientSecret) {
-          azureProvider = {
-            ...azureProvider,
-            config: {
-              ...azureProvider.config,
-              clientSecret: decryptSecret(azureProvider.config.clientSecret),
-            },
-          };
+      if (!fallbackToPlatform) {
+        try {
+          const { decryptSecret } = await import("./utils/secret.js");
+          if (azureProvider.config?.clientSecret) {
+            azureProvider = {
+              ...azureProvider,
+              config: {
+                ...azureProvider.config,
+                clientSecret: decryptSecret(azureProvider.config.clientSecret),
+              },
+            };
+          }
+        } catch (decErr: any) {
+          decryptErrorMessage = decErr?.message || String(decErr || "");
+          const details = encodeURIComponent(
+            "Stored clientSecret cannot be decrypted. The platform JWT_SECRET may have changed."
+          );
+          const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent(
+            "SECRET_DECRYPTION_FAILED"
+          )}&code=${encodeURIComponent("SECRET_DECRYPTION_FAILED")}&details=${details}`;
+          return res.redirect(errorUrl);
         }
-      } catch (decErr: any) {
-        decryptErrorMessage = decErr?.message || String(decErr || "");
-        const details = encodeURIComponent(
-          "Stored clientSecret cannot be decrypted. The platform JWT_SECRET may have changed."
-        );
-        const errorUrl = `${process.env.CLIENT_URL || "http://localhost:5000"}/auth-error?error=${encodeURIComponent(
-          "SECRET_DECRYPTION_FAILED"
-        )}&code=${encodeURIComponent("SECRET_DECRYPTION_FAILED")}&details=${details}`;
-        return res.redirect(errorUrl);
       }
 
       // Guard: ensure required fields for SSO
@@ -1626,15 +1660,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create Azure AD service instance
-      const azureADService = new AzureADService({
-        tenantId: azureProvider.config.tenantId,
-        clientId: azureProvider.config.clientId,
-        clientSecret: azureProvider.config.clientSecret,
-        redirectUri:
-          azureProvider.config.redirectUri ||
-          azureProvider.config.callbackUrl ||
-          `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
-      });
+      const azureADService = fallbackToPlatform
+        ? new AzureADService({
+            tenantId: process.env.AZURE_TENANT_ID || "common",
+            clientId: process.env.AZURE_CLIENT_ID || "",
+            clientSecret: process.env.AZURE_CLIENT_SECRET || "",
+            redirectUri: `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+          })
+        : new AzureADService({
+            tenantId: azureProvider.config.tenantId,
+            clientId: azureProvider.config.clientId,
+            clientSecret: azureProvider.config.clientSecret,
+            redirectUri:
+              azureProvider.config.redirectUri ||
+              azureProvider.config.callbackUrl ||
+              `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+          });
 
       console.log("Handling Azure AD callback with MSAL...");
 
@@ -1770,6 +1811,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant self-service: read Auth settings and fallback status
+  app.get("/api/tenant/:id/auth/settings", tenantMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (req.tenantId !== id) return res.status(403).json({ message: "Forbidden" });
+
+      const tenant = await storage.getTenant(id);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      const mc = (tenant.moduleConfigs as any) || {};
+      const auth = mc.auth || {};
+      const azure = Array.isArray(auth.providers)
+        ? auth.providers.find((p: any) => p?.type === "azure-ad" && p?.enabled)
+        : undefined;
+      const envFallback = (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
+      const tenantAllowsFallback = auth?.allowFallback !== false;
+      const fallbackActive = !azure && envFallback && tenantAllowsFallback;
+      res.json({ allowFallback: !!tenantAllowsFallback, defaultProvider: auth.defaultProvider || null, hasAzure: !!azure, fallbackActive });
+    } catch (error) {
+      console.error("Error fetching auth settings:", error);
+      res.status(500).json({ message: "Failed to fetch auth settings" });
+    }
+  });
+
   // Compatibility redirect for Azure registered tenant URI -> unified tenant callback
   // Azure app currently has http://localhost:5000/tenant/{tenant}/auth/callback registered
   app.get("/tenant/:orgId/auth/callback", (req, res) => {
@@ -1828,30 +1892,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const moduleConfigs = (tenant.moduleConfigs as any) || {};
       const authConfig = moduleConfigs.auth;
 
-      if (!authConfig?.providers) {
-        return res.status(400).json({ message: "Authentication not configured for this tenant" });
-      }
-
-      // Find Azure AD provider
-      const azureProvider = authConfig.providers.find((p: any) => p.type === "azure-ad");
-      if (!azureProvider || !azureProvider.enabled) {
-        return res
-          .status(400)
-          .json({ message: "Azure AD authentication not enabled for this tenant" });
-      }
+      // Find Azure AD provider; optionally fall back to platform Azure app if enabled
+      let azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
+      const envFallback = (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
+      const tenantAllowsFallback = authConfig?.allowFallback !== false;
+      const fallbackToPlatform = (!azureProvider || !azureProvider.enabled) && envFallback && tenantAllowsFallback;
 
       console.log(`Azure AD provider found for tenant ${tenant.name}`);
 
-      // Create Azure AD service instance
-      const azureADService = new AzureADService({
-        tenantId: azureProvider.config.tenantId,
-        clientId: azureProvider.config.clientId,
-        clientSecret: azureProvider.config.clientSecret,
-        redirectUri:
-          azureProvider.config.redirectUri ||
-          azureProvider.config.callbackUrl ||
-          `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
-      });
+      // Create Azure AD service instance (tenant-specific if configured, else platform-level)
+      const azureADService = fallbackToPlatform
+        ? new AzureADService({
+            tenantId: process.env.AZURE_TENANT_ID || "common",
+            clientId: process.env.AZURE_CLIENT_ID || "",
+            clientSecret: process.env.AZURE_CLIENT_SECRET || "",
+            redirectUri: `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+          })
+        : new AzureADService({
+            tenantId: azureProvider.config.tenantId,
+            clientId: azureProvider.config.clientId,
+            clientSecret: azureProvider.config.clientSecret,
+            redirectUri:
+              azureProvider.config.redirectUri ||
+              azureProvider.config.callbackUrl ||
+              `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
+          });
 
       // Derive returnUrl (prefer explicit, else legacy, else fallback to claims dashboard)
       const legacyCandidate =

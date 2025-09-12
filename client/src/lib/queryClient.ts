@@ -20,8 +20,17 @@ async function throwIfResNotOk(res: Response) {
       return; // Stop execution to prevent error display
     }
 
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // Try to extract meaningful message from JSON error payload
+    try {
+      const clone = res.clone();
+      const maybeJson = await clone.json();
+      const msg = typeof maybeJson?.message === 'string' ? maybeJson.message : JSON.stringify(maybeJson);
+      throw new Error(msg || res.statusText || `HTTP ${res.status}`);
+    } catch {
+      const text = (await res.text()) || res.statusText;
+      // Fallback to raw text
+      throw new Error(text || `HTTP ${res.status}`);
+    }
   }
 }
 

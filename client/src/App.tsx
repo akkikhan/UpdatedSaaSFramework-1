@@ -16,6 +16,7 @@ import EmailTemplatesPage from "@/pages/email-templates";
 import SystemHealthPage from "@/pages/system-health";
 import TenantLogin from "@/pages/tenant-login";
 import TenantDashboard from "@/pages/tenant-dashboard";
+import TenantLayout from "@/components/layout/TenantLayout";
 import PasswordResetRequest from "@/pages/password-reset-request";
 import PasswordResetConfirm from "@/pages/password-reset-confirm";
 import PasswordChange from "@/pages/password-change";
@@ -36,8 +37,16 @@ function Router() {
   return (
     <Switch>
       {/* Authentication Result Pages */}
-      <Route path="/auth-success" component={AuthSuccessPage} />
-      <Route path="/auth-error" component={AuthErrorPage} />
+      <Route path="/auth-success" component={() => (
+        <TenantLayout title="Authentication Success" showSidebar={false} minimal>
+          <AuthSuccessPage />
+        </TenantLayout>
+      )} />
+      <Route path="/auth-error" component={() => (
+        <TenantLayout title="Authentication Error" showSidebar={false} minimal>
+          <AuthErrorPage />
+        </TenantLayout>
+      )} />
       {/* Backward-compatible aliases used by server redirects */}
       <Route path="/auth/success" component={AuthSuccessPage} />
       <Route path="/auth/error" component={AuthErrorPage} />
@@ -46,11 +55,32 @@ function Router() {
       <Route path="/admin/login" component={PlatformAdminLogin} />
 
       {/* Tenant Portal Routes */}
-      <Route path="/tenant/:orgId/login" component={TenantLogin} />
-      <Route path="/tenant/:orgId/password/forgot" component={PasswordResetRequest} />
-      <Route path="/tenant/:orgId/password/reset" component={PasswordResetConfirm} />
-      <Route path="/tenant/:orgId/password/change" component={PasswordChange} />
+      <Route path="/tenant/:orgId/login" component={() => (
+        <TenantLayout title="Tenant Login" showSidebar={false} minimal>
+          <TenantLogin />
+        </TenantLayout>
+      )} />
+      <Route path="/tenant/:orgId/password/forgot" component={() => (
+        <TenantLayout title="Password Reset" showSidebar={false} minimal>
+          <PasswordResetRequest />
+        </TenantLayout>
+      )} />
+      <Route path="/tenant/:orgId/password/reset" component={() => (
+        <TenantLayout title="Password Reset" showSidebar={false} minimal>
+          <PasswordResetConfirm />
+        </TenantLayout>
+      )} />
+      <Route path="/tenant/:orgId/password/change" component={() => (
+        <TenantLayout title="Change Password" showSidebar={false} minimal>
+          <PasswordChange />
+        </TenantLayout>
+      )} />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
+      <Route path="/tenant/:orgId/success" component={() => (
+        <TenantLayout title="Success" showSidebar={false} minimal>
+          <TenantSuccessPage />
+        </TenantLayout>
+      )} />
       <Route path="/tenant/:orgId/*" component={TenantDashboard} />
 
       {/* Protected Admin Portal Routes */}

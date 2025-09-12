@@ -19,20 +19,14 @@ export default function TenantSuccessPage() {
   const [tenantData, setTenantData] = useState<TenantData | null>(null);
 
   useEffect(() => {
-    // Get tenant data from sessionStorage (passed from onboarding wizard)
-    console.log("TenantSuccessPage: Looking for tenant data in sessionStorage");
-    const savedTenantData = sessionStorage.getItem('newTenantData');
-    console.log("TenantSuccessPage: Found data:", savedTenantData);
-    
-    if (savedTenantData) {
-      const parsedData = JSON.parse(savedTenantData);
-      console.log("TenantSuccessPage: Parsed data:", parsedData);
-      setTenantData(parsedData);
-      // Clear the data after reading
-      sessionStorage.removeItem('newTenantData');
-    } else {
-      console.log("TenantSuccessPage: No tenant data found in sessionStorage");
-    }
+    // Load branding data once and show success body instead of auto-redirect
+    try {
+      const savedTenantData = sessionStorage.getItem('newTenantData');
+      if (savedTenantData) {
+        setTenantData(JSON.parse(savedTenantData));
+        sessionStorage.removeItem('newTenantData');
+      }
+    } catch {}
   }, []);
 
   const copyToClipboard = (text: string, label: string) => {
@@ -44,22 +38,18 @@ export default function TenantSuccessPage() {
   const tenantPortalUrl = tenantData ? `${baseUrl}/tenant/${tenantData.orgId}/` : '';
   const tempPassword = 'temp123!';
 
-  if (!tenantData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6 flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-gray-600">Loading tenant information...</p>
-            <div className="flex justify-center mt-4">
-              <Button onClick={() => setLocation('/tenants')} data-testid="button-back-to-tenants">
-                Back to Tenants
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+  if (!tenantData) return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 p-6 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="h-8 w-8 text-green-600" />
+        </div>
+        <h2 className="text-2xl font-semibold text-green-800">Success</h2>
+        <p className="text-green-700 mt-2">Your tenant was created. You can close this tab.</p>
+        <Button className="mt-4" onClick={() => setLocation('/tenants')}>Go to Tenants</Button>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 p-6">
@@ -73,6 +63,12 @@ export default function TenantSuccessPage() {
           <p className="text-lg text-green-700">
             Your tenant "{tenantData.name}" is ready to use
           </p>
+          <div className="mt-2 text-sm text-green-700 flex items-center justify-center gap-2">
+            <div className="w-8 h-8 bg-green-600 text-white rounded-md flex items-center justify-center font-semibold">
+              {tenantData.name.substring(0,2).toUpperCase()}
+            </div>
+            <span className="opacity-80">Org ID: {tenantData.orgId}</span>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

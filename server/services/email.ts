@@ -372,6 +372,7 @@ export class EmailService {
     moduleConfigs?: any;
   }): string {
     const portalBase = process.env.PORTAL_BASE_URL || process.env.BASE_URL || "http://localhost:5000";
+    const baseUrl = process.env.BASE_URL || "http://localhost:5000";
     const portalUrl = `${portalBase}/tenant/${tenant.orgId}/login`;
     const docsUrl = `${baseUrl}/docs`;
 
