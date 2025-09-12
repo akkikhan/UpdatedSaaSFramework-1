@@ -467,6 +467,80 @@ export default function TenantDashboard() {
   const isAuthEnabled = isModuleEnabled("auth");
   const isRbacEnabled = isModuleEnabled("rbac");
   const isLoggingEnabled = isModuleEnabled("logging");
+
+  // Tabs: compute visible and active tab with URL sync
+  const tabOrder = [
+    "overview",
+    "users",
+    "roles",
+    "authentication",
+    "logs",
+    "modules",
+    "api-keys",
+  ] as const;
+  type TabKey = typeof tabOrder[number];
+
+  const isTabVisible = (t: TabKey) => {
+    if (t === "roles") return isRbacEnabled;
+    if (t === "authentication") return isAuthEnabled;
+    if (t === "logs") return isLoggingEnabled;
+    if (t === "api-keys") {
+      const hasKeys = !!(tenantInfo.authApiKey || tenantInfo.rbacApiKey || (tenant as any)?.loggingApiKey);
+      const moduleAllows = isAuthEnabled || isRbacEnabled || isLoggingEnabled;
+      return hasKeys || moduleAllows;
+    }
+    // users remains visible but may be disabled; others always visible
+    return true;
+  };
+
+  const tabStorageKey = `tenant_tab_${orgId}_${(user?.email || "").toLowerCase()}`;
+
+  const computeDefaultTab = (): TabKey => {
+    // Prefer stored selection for this tenant
+    try {
+      const stored = localStorage.getItem(tabStorageKey) || localStorage.getItem(`tenant_tab_${orgId}`);
+      if (stored && tabOrder.includes(stored as TabKey) && isTabVisible(stored as TabKey)) {
+        return stored as TabKey;
+      }
+    } catch {}
+    // Then URL param
+    try {
+      const url = new URL(window.location.href);
+      const p = (url.searchParams.get("tab") || "").toLowerCase();
+      if (tabOrder.includes(p as TabKey) && isTabVisible(p as TabKey)) return p as TabKey;
+    } catch {}
+    // Fallback priority
+    if (isAuthEnabled) return "users";
+    if (isRbacEnabled) return "roles";
+    return "modules";
+  };
+
+  const [activeTab, setActiveTab] = useState<TabKey>(computeDefaultTab());
+
+  const handleTabChange = (val: string) => {
+    const next = (val as TabKey);
+    setActiveTab(next);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", next);
+      window.history.replaceState({}, "", url.toString());
+      localStorage.setItem(tabStorageKey, (next));
+      // keep legacy key in sync
+      localStorage.setItem(`tenant_tab_${orgId}`,(next));
+    } catch {}
+  };
+
+  // Ensure active tab remains visible if modules change live
+  useEffect(() => {
+    if (!isTabVisible(activeTab)) {
+      const next = computeDefaultTab();
+      setActiveTab(next);
+      toast({
+        title: "Tab unavailable",
+        description: `Switched to ${next.replace("-"," ")}`,
+      });
+    }
+  }, [isAuthEnabled, isRbacEnabled, isLoggingEnabled]);
   const providers = ((tenantInfo.moduleConfigs as any)?.auth?.providers || []) as Array<any>;
   const providerTypes = new Set((providers || []).map((p: any) => p?.type));
   // Module activation (source of truth for enabling)
@@ -498,6 +572,30 @@ export default function TenantDashboard() {
     ])
   );
   availablePermissions.sort();
+
+  // Authentication settings (staged save like Logging)
+  const [authDefaultProvider, setAuthDefaultProvider] = useState<string>(
+    ((tenantInfo.moduleConfigs as any)?.auth?.defaultProvider as string) || "local"
+  );
+  const [origAuthDefaultProvider, setOrigAuthDefaultProvider] = useState<string>(
+    ((tenantInfo.moduleConfigs as any)?.auth?.defaultProvider as string) || "local"
+  );
+  const [authAllowFallback, setAuthAllowFallback] = useState<boolean>(
+    (tenantInfo.moduleConfigs as any)?.auth?.allowFallback !== false
+  );
+  const [origAuthAllowFallback, setOrigAuthAllowFallback] = useState<boolean>(
+    (tenantInfo.moduleConfigs as any)?.auth?.allowFallback !== false
+  );
+
+  useEffect(() => {
+    // Sync from server data when it changes
+    const dp = ((tenantInfo.moduleConfigs as any)?.auth?.defaultProvider as string) || "local";
+    const af = (tenantInfo.moduleConfigs as any)?.auth?.allowFallback !== false;
+    setAuthDefaultProvider(dp);
+    setOrigAuthDefaultProvider(dp);
+    setAuthAllowFallback(af);
+    setOrigAuthAllowFallback(af);
+  }, [tenantInfo.moduleConfigs]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -555,17 +653,21 @@ export default function TenantDashboard() {
             </button>
           </div>
         )}
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users" disabled={!isAuthEnabled}>
-              Users {!isAuthEnabled && <span className="ml-1 text-xs opacity-60">(Disabled)</span>}
-            </TabsTrigger>
+            {isAuthEnabled && (
+              <TabsTrigger value="users">Users</TabsTrigger>
+            )}
             {isRbacEnabled && <TabsTrigger value="roles">Roles</TabsTrigger>}
-            <TabsTrigger value="authentication">Authentication</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
+            {isAuthEnabled && (
+              <TabsTrigger value="authentication">Authentication</TabsTrigger>
+            )}
+            {isLoggingEnabled && <TabsTrigger value="logs">Logs</TabsTrigger>}
             <TabsTrigger value="modules">Modules</TabsTrigger>
-            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+            {isTabVisible("api-keys") && (
+              <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -1366,15 +1468,12 @@ export default function TenantDashboard() {
             </Dialog>
           </TabsContent>
 
-          <TabsContent value="modules" className="space-y-6">
-            <Card className="max-h-[70vh] overflow-auto">
+          <TabsContent value="authentication" className="space-y-6">
+            <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Modules</CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-slate-500">Live status monitoring</span>
-                  </div>
+                <div>
+                  <CardTitle>Authentication</CardTitle>
+                  <p className="text-xs text-slate-500 mt-1">Settings & Providers</p>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1387,34 +1486,23 @@ export default function TenantDashboard() {
                 )}
                 {isAuthEnabled && (
                   <div className="p-4 border rounded-lg bg-white">
-                    <p className="text-sm font-medium mb-3">Auth Settings</p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-medium">Auth Settings</p>
+                      <span className="text-xs text-slate-500">Staged — Save/Reset supported</span>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                       <div>
                         <Label className="text-xs">Default Provider</Label>
                         <Select
-                          onValueChange={async val => {
-                            const headers = getAuthHeaders();
-                            await fetch(`/api/tenant/${tenant?.id}/auth/settings`, {
-                              method: "PATCH",
-                              headers,
-                              body: JSON.stringify({ defaultProvider: val }),
-                            });
-                            toast({ title: "Saved", description: "Default provider updated" });
-                          }}
-                          defaultValue={
-                            (tenantInfo.moduleConfigs as any)?.auth?.defaultProvider || "local"
-                          }
+                          onValueChange={val => setAuthDefaultProvider(val)}
+                          value={authDefaultProvider}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Choose provider" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="azure-ad" disabled={!isAzureAdModuleActive}>
-                              Azure AD
-                            </SelectItem>
-                            <SelectItem value="auth0" disabled={!isAuth0ModuleActive}>
-                              Auth0
-                            </SelectItem>
+                            <SelectItem value="azure-ad" disabled={!isAzureAdModuleActive}>Azure AD</SelectItem>
+                            <SelectItem value="auth0" disabled={!isAuth0ModuleActive}>Auth0</SelectItem>
                             <SelectItem value="local">Local (JWT)</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1423,26 +1511,8 @@ export default function TenantDashboard() {
                         <Label className="text-xs">Enforce SSO Only</Label>
                         <div className="mt-2">
                           <Select
-                            onValueChange={async val => {
-                              const enforce = val === "true";
-                              const headers = getAuthHeaders();
-                              await fetch(`/api/tenant/${tenant?.id}/auth/settings`, {
-                                method: "PATCH",
-                                headers,
-                                body: JSON.stringify({ allowFallback: !enforce }),
-                              });
-                              toast({
-                                title: "Saved",
-                                description: enforce
-                                  ? "SSO only enforced"
-                                  : "Fallback login allowed",
-                              });
-                            }}
-                            defaultValue={
-                              (tenantInfo.moduleConfigs as any)?.auth?.allowFallback === false
-                                ? "true"
-                                : "false"
-                            }
+                            onValueChange={val => setAuthAllowFallback(val !== "true")}
+                            value={authAllowFallback === false ? "true" : "false"}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -1463,11 +1533,7 @@ export default function TenantDashboard() {
                               const data = await res.json();
                               if (data?.authUrl) window.open(data.authUrl, "_blank");
                             } else {
-                              toast({
-                                title: "Azure SSO not ready",
-                                description: "Check provider configuration",
-                                variant: "destructive",
-                              });
+                              toast({ title: "Azure SSO not ready", description: "Check provider configuration", variant: "destructive" });
                             }
                           }}
                           disabled={!isAzureAdModuleActive}
@@ -1479,41 +1545,20 @@ export default function TenantDashboard() {
                           variant="outline"
                           onClick={async () => {
                             try {
-                              const headers: any = {
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                              };
-                              const token =
-                                localStorage.getItem(`tenant_token_${orgId}`) ||
-                                localStorage.getItem("tenant_token") ||
-                                "";
+                              const headers: any = { "Content-Type": "application/json", Accept: "application/json" };
+                              const token = localStorage.getItem(`tenant_token_${orgId}`) || localStorage.getItem("tenant_token") || "";
                               if (token) headers.Authorization = `Bearer ${token}`;
                               if (tenant?.id) headers["x-tenant-id"] = tenant.id;
                               const base = window.location.origin;
-                              // Switch to POST so behavior matches provider card overrides
-                              const res = await fetch(
-                                `${base}/api/tenant/${tenant?.id}/azure-ad/validate`,
-                                { method: "POST", headers, body: JSON.stringify({}) }
-                              );
+                              const res = await fetch(`${base}/api/tenant/${tenant?.id}/azure-ad/validate`, { method: "POST", headers, body: JSON.stringify({}) });
                               const data = await res.json();
                               if (res.ok && data?.valid) {
-                                toast({
-                                  title: "Azure config looks good",
-                                  description: "You can try SSO now.",
-                                });
+                                toast({ title: "Azure config looks good", description: "You can try SSO now." });
                               } else {
-                                toast({
-                                  title: "Azure config invalid",
-                                  description: data?.message || "Fix settings and try again",
-                                  variant: "destructive",
-                                });
+                                toast({ title: "Azure config invalid", description: data?.message || "Fix settings and try again", variant: "destructive" });
                               }
                             } catch (e: any) {
-                              toast({
-                                title: "Validation failed",
-                                description: e?.message || "Unknown error",
-                                variant: "destructive",
-                              });
+                              toast({ title: "Validation failed", description: e?.message || "Unknown error", variant: "destructive" });
                             }
                           }}
                           disabled={!isAzureAdModuleActive}
@@ -1522,40 +1567,78 @@ export default function TenantDashboard() {
                         </Button>
                       </div>
                     </div>
+                    {/* Auth settings unsaved changes bar */}
+                    {(() => {
+                      const dirty =
+                        authDefaultProvider !== origAuthDefaultProvider ||
+                        authAllowFallback !== origAuthAllowFallback;
+                      return (
+                        <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
+                          <div className="text-xs text-slate-500">
+                            {dirty ? "You have unsaved changes" : "No changes"}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="secondary"
+                              onClick={() => {
+                                setAuthDefaultProvider(origAuthDefaultProvider);
+                                setAuthAllowFallback(origAuthAllowFallback);
+                              }}
+                              disabled={!dirty}
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              onClick={async () => {
+                                try {
+                                  const headers = getAuthHeaders();
+                                  const res = await fetch(`/api/tenant/${tenant?.id}/auth/settings`, {
+                                    method: "PATCH",
+                                    headers,
+                                    body: JSON.stringify({
+                                      defaultProvider: authDefaultProvider,
+                                      allowFallback: authAllowFallback,
+                                    }),
+                                  });
+                                  const data = await res.json().catch(() => ({}));
+                                  if (!res.ok) throw new Error(data?.message || "Save failed");
+                                  setOrigAuthDefaultProvider(authDefaultProvider);
+                                  setOrigAuthAllowFallback(authAllowFallback);
+                                  toast({ title: "Saved", description: "Authentication settings updated" });
+                                } catch (e: any) {
+                                  toast({ title: "Failed", description: e?.message || "Error", variant: "destructive" });
+                                }
+                              }}
+                              disabled={!dirty}
+                            >
+                              Save Settings
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
-                {isLoggingEnabled && (
-                  <>
-                    <LoggingSettingsCard tenantId={tenant?.id} orgId={orgId!} />
-                    <LoggingViewerCard
-                      tenantId={tenant?.id}
-                      orgId={orgId!}
-                      loggingApiKey={(tenant as any)?.loggingApiKey}
-                    />
-                  </>
-                )}
-
-                {/* Authentication Providers (Accordion) */}
                 {isAuthEnabled && (
                   <div className="p-4 border rounded-lg bg-white">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-sm font-medium">Authentication Providers</p>
-                      <span className="text-xs text-slate-500">
-                        Manage connection details (requests go to admin)
-                      </span>
+                      <span className="text-xs text-slate-500">Manage connection details (requests go to admin)</span>
                     </div>
                     <Accordion type="multiple" className="w-full">
                       {(isAzureAdModuleActive || providerTypes.has("azure-ad")) && (
                         <AccordionItem value="azure">
                           <AccordionTrigger>Azure Active Directory</AccordionTrigger>
                           <AccordionContent>
+                            <div id="provider-azure-ad">
                             <ProviderAzureCard
                               orgId={orgId!}
                               tenantId={tenant?.id}
                               provider={(providers || []).find((p: any) => p.type === "azure-ad")}
                               isEnabled={isAzureAdModuleActive}
                             />
+                            </div>
                           </AccordionContent>
                         </AccordionItem>
                       )}
@@ -1563,12 +1646,14 @@ export default function TenantDashboard() {
                         <AccordionItem value="auth0">
                           <AccordionTrigger>Auth0</AccordionTrigger>
                           <AccordionContent>
+                            <div id="provider-auth0">
                             <ProviderAuth0Card
                               orgId={orgId!}
                               tenantId={tenant?.id}
                               provider={(providers || []).find((p: any) => p.type === "auth0")}
                               isEnabled={isAuth0ModuleActive}
                             />
+                            </div>
                           </AccordionContent>
                         </AccordionItem>
                       )}
@@ -1576,18 +1661,58 @@ export default function TenantDashboard() {
                         <AccordionItem value="saml">
                           <AccordionTrigger>SAML</AccordionTrigger>
                           <AccordionContent>
+                            <div id="provider-saml">
                             <ProviderSamlCard
                               orgId={orgId!}
                               tenantId={tenant?.id}
                               provider={(providers || []).find((p: any) => p.type === "saml")}
                               isEnabled={isSamlModuleActive}
                             />
+                            </div>
                           </AccordionContent>
                         </AccordionItem>
                       )}
                     </Accordion>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="logs" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Logs</CardTitle>
+                  <p className="text-xs text-slate-500 mt-1">Settings & Viewer</p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isLoggingEnabled && (
+                  <>
+                    <LoggingSettingsCard tenantId={tenant?.id} orgId={orgId!} />
+                    <LoggingViewerCard tenantId={tenant?.id} orgId={orgId!} loggingApiKey={(tenant as any)?.loggingApiKey} />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="modules" className="space-y-6">
+            <Card className="max-h-[70vh] overflow-auto">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Modules</CardTitle>
+                    <p className="text-xs text-slate-500 mt-1">Enable/Disable & Deep Links</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-slate-500">Live status monitoring</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 {/* Display all available modules with their current status */}
                 {[
                   {
@@ -1727,18 +1852,50 @@ export default function TenantDashboard() {
                                 Request Disable
                               </Button>
                             )}
-                            {/* Deep-link to Configure Azure AD when RBAC present but no SSO */}
+                            {/* Deep-link helpers to Authentication tab */}
                             {module.id === "azure-ad" && (
                               <Button
                                 size="sm"
                                 variant="secondary"
                                 onClick={() => {
-                                  // Jump to provider accordion if present
-                                  const el = document.querySelector('[data-provider="azure-ad"]');
-                                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                  handleTabChange("authentication");
+                                  setTimeout(() => {
+                                    const el = document.getElementById("provider-azure-ad");
+                                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                  }, 50);
                                 }}
                               >
                                 Configure Azure AD
+                              </Button>
+                            )}
+                            {module.id === "auth0" && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  handleTabChange("authentication");
+                                  setTimeout(() => {
+                                    const el = document.getElementById("provider-auth0");
+                                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                  }, 50);
+                                }}
+                              >
+                                Configure Auth0
+                              </Button>
+                            )}
+                            {module.id === "saml" && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  handleTabChange("authentication");
+                                  setTimeout(() => {
+                                    const el = document.getElementById("provider-saml");
+                                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                  }, 50);
+                                }}
+                              >
+                                Configure SAML
                               </Button>
                             )}
                           </div>
@@ -2244,9 +2401,12 @@ function LoggingSettingsCard({ tenantId, orgId }: { tenantId?: string; orgId: st
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [levels, setLevels] = useState<string[]>(["error", "warning", "info"]);
+  const [origLevels, setOrigLevels] = useState<string[]>(["error", "warning", "info"]);
   const [destinations, setDestinations] = useState<string>("database");
   const [retentionDays, setRetentionDays] = useState<number>(30);
+  const [origRetentionDays, setOrigRetentionDays] = useState<number>(30);
   const [redactionEnabled, setRedactionEnabled] = useState<boolean>(false);
+  const [origRedactionEnabled, setOrigRedactionEnabled] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -2263,10 +2423,16 @@ function LoggingSettingsCard({ tenantId, orgId }: { tenantId?: string; orgId: st
         const res = await fetch(`/api/tenant/${tenantId}/logging/settings`, { headers });
         const data = await res.json();
         if (res.ok) {
-          setLevels(Array.isArray(data.levels) ? data.levels : ["error", "warning", "info"]);
+          const lv = Array.isArray(data.levels) ? data.levels : ["error", "warning", "info"];
+          const rd = typeof data.retentionDays === "number" ? data.retentionDays : 30;
+          const re = !!data.redactionEnabled;
+          setLevels(lv);
+          setOrigLevels(lv);
           setDestinations("database");
-          setRetentionDays(typeof data.retentionDays === "number" ? data.retentionDays : 30);
-          setRedactionEnabled(!!data.redactionEnabled);
+          setRetentionDays(rd);
+          setOrigRetentionDays(rd);
+          setRedactionEnabled(re);
+          setOrigRedactionEnabled(re);
         }
       } catch {}
       setLoading(false);
@@ -2298,6 +2464,9 @@ function LoggingSettingsCard({ tenantId, orgId }: { tenantId?: string; orgId: st
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Save failed");
       toast({ title: "Saved", description: "Logging settings updated" });
+      setOrigLevels(levels);
+      setOrigRetentionDays(retentionDays);
+      setOrigRedactionEnabled(redactionEnabled);
     } catch (e: any) {
       toast({
         title: "Failed",
@@ -2306,6 +2475,16 @@ function LoggingSettingsCard({ tenantId, orgId }: { tenantId?: string; orgId: st
       });
     }
   };
+
+  const setsEqual = (a: string[], b: string[]) => {
+    const as = [...a].sort().join(",");
+    const bs = [...b].sort().join(",");
+    return as === bs;
+  };
+  const dirty =
+    !setsEqual(levels, origLevels) ||
+    retentionDays !== origRetentionDays ||
+    redactionEnabled !== origRedactionEnabled;
 
   return (
     <div className="p-4 border rounded-lg bg-white mt-4">
@@ -2362,8 +2541,18 @@ function LoggingSettingsCard({ tenantId, orgId }: { tenantId?: string; orgId: st
               </Label>
             </div>
           </div>
-          <div className="md:col-span-3">
-            <Button onClick={save}>Save Logging Settings</Button>
+          <div className="md:col-span-3 flex items-center justify-between gap-2 border-t pt-3">
+            <div className="text-xs text-slate-500">
+              {dirty ? "You have unsaved changes" : "No changes"}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => {
+                setLevels(origLevels);
+                setRetentionDays(origRetentionDays);
+                setRedactionEnabled(origRedactionEnabled);
+              }} disabled={!dirty}>Reset</Button>
+              <Button onClick={save} disabled={!dirty}>Save Logging Settings</Button>
+            </div>
           </div>
           <div className="md:col-span-3 text-xs text-slate-500">
             Usage: send logs with your Logging API key. Example:
@@ -2602,6 +2791,23 @@ function ProviderAzureCard({
     clientSecret: "", // never prefill secrets
     redirectUri: provider?.config?.redirectUri || provider?.config?.callbackUrl || expectedRedirect,
   });
+  const [origForm, setOrigForm] = useState({
+    tenantId: provider?.config?.tenantId || "",
+    clientId: provider?.config?.clientId || "",
+    clientSecret: "",
+    redirectUri: provider?.config?.redirectUri || provider?.config?.callbackUrl || expectedRedirect,
+  });
+
+  useEffect(() => {
+    const base = {
+      tenantId: provider?.config?.tenantId || "",
+      clientId: provider?.config?.clientId || "",
+      clientSecret: "",
+      redirectUri: provider?.config?.redirectUri || provider?.config?.callbackUrl || expectedRedirect,
+    };
+    setForm(base);
+    setOrigForm(base);
+  }, [provider?.config?.tenantId, provider?.config?.clientId, provider?.config?.redirectUri, provider?.config?.callbackUrl]);
 
   const submitRequest = async () => {
     try {
@@ -2633,6 +2839,12 @@ function ProviderAzureCard({
       });
     }
   };
+
+  const dirty =
+    form.tenantId !== origForm.tenantId ||
+    form.clientId !== origForm.clientId ||
+    form.redirectUri !== origForm.redirectUri ||
+    (form.clientSecret || "") !== (origForm.clientSecret || "");
 
   return (
     <div className="border rounded-md p-3 mb-3" data-provider="azure-ad">
@@ -2797,6 +3009,19 @@ function ProviderAzureCard({
           </span>
         )}
       </div>
+      <div className="flex items-center justify-between gap-2 mt-3 border-t pt-2">
+        <div className="text-xs text-slate-500">{dirty ? "You have unsaved changes" : "No changes"}</div>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setForm({ ...origForm })}
+            disabled={!dirty}
+          >
+            Reset
+          </Button>
+          <Button onClick={submitRequest} disabled={!dirty || !isEnabled}>Request Update</Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2819,6 +3044,23 @@ function ProviderAuth0Card({
     clientSecret: "",
     audience: provider?.config?.audience || "",
   });
+  const [origForm, setOrigForm] = useState({
+    domain: provider?.config?.domain || "",
+    clientId: provider?.config?.clientId || "",
+    clientSecret: "",
+    audience: provider?.config?.audience || "",
+  });
+
+  useEffect(() => {
+    const base = {
+      domain: provider?.config?.domain || "",
+      clientId: provider?.config?.clientId || "",
+      clientSecret: "",
+      audience: provider?.config?.audience || "",
+    };
+    setForm(base);
+    setOrigForm(base);
+  }, [provider?.config?.domain, provider?.config?.clientId, provider?.config?.audience]);
   const expectedRedirect = `${window.location.protocol}//${window.location.host}/api/auth/auth0/callback`;
 
   const submitRequest = async () => {
@@ -2841,6 +3083,12 @@ function ProviderAuth0Card({
       });
     }
   };
+
+  const dirty =
+    form.domain !== origForm.domain ||
+    form.clientId !== origForm.clientId ||
+    form.audience !== origForm.audience ||
+    (form.clientSecret || "") !== (origForm.clientSecret || "");
 
   return (
     <div className="border rounded-md p-3 mb-3">
@@ -2945,6 +3193,13 @@ function ProviderAuth0Card({
           </span>
         )}
       </div>
+      <div className="flex items-center justify-between gap-2 mt-3 border-t pt-2">
+        <div className="text-xs text-slate-500">{dirty ? "You have unsaved changes" : "No changes"}</div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setForm({ ...origForm })} disabled={!dirty}>Reset</Button>
+          <Button onClick={submitRequest} disabled={!dirty || !isEnabled}>Request Update</Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2966,6 +3221,21 @@ function ProviderSamlCard({
     issuer: provider?.config?.issuer || "",
     cert: "",
   });
+  const [origForm, setOrigForm] = useState({
+    entryPoint: provider?.config?.entryPoint || "",
+    issuer: provider?.config?.issuer || "",
+    cert: "",
+  });
+
+  useEffect(() => {
+    const base = {
+      entryPoint: provider?.config?.entryPoint || "",
+      issuer: provider?.config?.issuer || "",
+      cert: "",
+    };
+    setForm(base);
+    setOrigForm(base);
+  }, [provider?.config?.entryPoint, provider?.config?.issuer]);
   const acsUrl = `${window.location.protocol}//${window.location.host}/api/auth/saml/callback`;
 
   const submitRequest = async () => {
@@ -2986,6 +3256,11 @@ function ProviderSamlCard({
       });
     }
   };
+
+  const dirty =
+    form.entryPoint !== origForm.entryPoint ||
+    form.issuer !== origForm.issuer ||
+    (form.cert || "") !== (origForm.cert || "");
 
   return (
     <div className="border rounded-md p-3">
@@ -3079,6 +3354,13 @@ function ProviderSamlCard({
             SAML module is disabled. Request enable in the list below.
           </span>
         )}
+      </div>
+      <div className="flex items-center justify-between gap-2 mt-3 border-t pt-2">
+        <div className="text-xs text-slate-500">{dirty ? "You have unsaved changes" : "No changes"}</div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setForm({ ...origForm })} disabled={!dirty}>Reset</Button>
+          <Button onClick={submitRequest} disabled={!dirty || !isEnabled}>Request Update</Button>
+        </div>
       </div>
     </div>
   );

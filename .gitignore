@@ -17,12 +17,48 @@ demo-*.html
 *_GUIDE.md
 *_COMPLETE.md
 *_SUMMARY.md
+*_CHECK_*.md
+*_AUDIT.md
+*_SUCCESS.md
+*_FAILURE.md
+*_INSTRUCTIONS.md
 *.ps1
 *.bat
 *.sh
+*.cjs
 cspell.json
 diagnostic-server.js
 server-fixed.js
+auth-test.html
+tenant-auth-test.html
+integration-benefits-demo.html
+ddg.html
+demo-tenant-creator.html
+
+# Development server files
+server/routes-clean.ts
+server/routes-comprehensive.ts
+server/routes-update-guide.ts
+
+# Test and example directories
+examples/
+test-*
+pure-api-test.*
+simple-api-test.*
+simple-connection-test.*
+external-test.*
+final-integration-test.*
+comprehensive-demo*
+comprehensive-module-verification.*
+
+# Development utilities
+check-*
+debug-*
+verify-*
+start-tenant-portal.*
+
+# Documentation drafts (keep only production docs)
+docs/
 
 # Build artifacts and caches
 **/bin/

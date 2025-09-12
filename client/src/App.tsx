@@ -30,6 +30,7 @@ import TenantAttentionPage from "@/pages/tenant-attention";
 import PlatformAdminLogin from "@/pages/platform-admin-login";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
+import { setToken } from "@saas-framework/auth-client";
 
 function Router() {
   return (
@@ -85,6 +86,23 @@ function Router() {
 function App() {
   // Handle token from URL when redirected from Azure AD login
   useEffect(() => {
+    // Capture tenant token from fragment (Azure callback sends #token=...&tenant=...)
+    try {
+      if (typeof window !== "undefined" && window.location.hash.startsWith("#")) {
+        const hash = new URLSearchParams(window.location.hash.substring(1));
+        const fragToken = hash.get("token");
+        const fragOrg = hash.get("tenant");
+        if (fragToken) {
+          setToken(fragToken);
+          localStorage.setItem("tenant_token", fragToken);
+          if (fragOrg) localStorage.setItem(`tenant_token_${fragOrg}`, fragToken);
+          const cleanUrl = window.location.pathname + window.location.search;
+          window.history.replaceState({}, document.title, cleanUrl);
+          console.log("[client] Tenant token captured from fragment and stored.");
+        }
+      }
+    } catch {}
+
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("token");
     const isAdmin = urlParams.get("admin");

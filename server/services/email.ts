@@ -371,8 +371,8 @@ export class EmailService {
     notificationsApiKey?: string;
     moduleConfigs?: any;
   }): string {
-    const baseUrl = process.env.BASE_URL || "https://localhost:5000";
-    const portalUrl = `${baseUrl}/tenant/${tenant.orgId}/login`;
+    const portalBase = process.env.PORTAL_BASE_URL || process.env.BASE_URL || "http://localhost:5000";
+    const portalUrl = `${portalBase}/tenant/${tenant.orgId}/login`;
     const docsUrl = `${baseUrl}/docs`;
 
     // Get enabled modules or default

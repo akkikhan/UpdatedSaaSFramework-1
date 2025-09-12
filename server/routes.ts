@@ -207,6 +207,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Compatibility redirect for Azure registered URI -> platform admin callback
+  // Azure app currently has http://localhost:5000/auth/callback registered
+  app.get("/auth/callback", (req, res) => {
+    const params = new URLSearchParams((req.query as any) || {}).toString();
+    const target = `/api/platform/auth/azure/callback${params ? `?${params}` : ""}`;
+    console.log(`[Compat] Forwarding /auth/callback -> ${target}`);
+    res.redirect(target);
+  });
+
   // Azure AD callback - handle response from Microsoft
   app.get("/api/platform/auth/azure/callback", async (req, res) => {
     try {
@@ -804,11 +813,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notificationsApiKey: tenant.notificationsApiKey || undefined,
         });
 
-        if (!emailSent) {
+      if (!emailSent) {
           console.warn(`Failed to send onboarding email to ${tenant.adminEmail}`);
         } else {
           console.log(`Onboarding email sent successfully to ${tenant.adminEmail}`);
         }
+      }
+
+      // Best-effort: add tenant admin to Azure AD "Tenant-Admins" group if configured
+      try {
+        const adminEmail = tenant.adminEmail;
+        if (process.env.AZURE_CLIENT_ID && process.env.AZURE_CLIENT_SECRET && process.env.TENANT_ADMIN_GROUP_ID) {
+          const result = await tenantAzureService.onboardTenantAdmin(adminEmail);
+          console.log(
+            `[TenantAzure] Onboard group add for ${adminEmail}: ${result.success ? "OK" : "FAILED"} - ${result.message}`
+          );
+        } else {
+          console.log(
+            "[TenantAzure] Skipped Azure group onboarding (missing AZURE_CLIENT_ID/SECRET or TENANT_ADMIN_GROUP_ID)"
+          );
+        }
+      } catch (e) {
+        console.warn("[TenantAzure] OnboardTenantAdmin encountered an error:", e instanceof Error ? e.message : e);
       }
 
       console.log(`Tenant created successfully: ${tenant.name} (${tenant.orgId})`);
@@ -880,6 +906,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Tenant registered successfully: ${tenant.name} (${tenant.orgId})`);
+
+      // Best-effort: add admin to Azure AD group
+      try {
+        if (process.env.AZURE_CLIENT_ID && process.env.AZURE_CLIENT_SECRET && process.env.TENANT_ADMIN_GROUP_ID) {
+          const result = await tenantAzureService.onboardTenantAdmin(tenant.adminEmail);
+          console.log(
+            `[TenantAzure] Onboard group add (public register) for ${tenant.adminEmail}: ${
+              result.success ? "OK" : "FAILED"
+            } - ${result.message}`
+          );
+        }
+      } catch {}
 
       res.status(201).json({
         message: "Organization created successfully",
@@ -1607,6 +1645,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenant.id
       );
 
+      // Enforce that only the onboarded tenant admin or members of Tenant-Admins can sign in
+      try {
+        const userEmail = (authResult.user.email || "").toLowerCase();
+        const userGroups = authResult.user.groups || [];
+        const isTenantAdminEmail = userEmail === (tenant.adminEmail || "").toLowerCase();
+        const inTenantAdminsGroup = userGroups.some(g => g === "Tenant-Admins");
+        if (!isTenantAdminEmail && !inTenantAdminsGroup) {
+          console.log(
+            `[TenantAzure] Unauthorized tenant access attempt by ${userEmail}. Expected ${tenant.adminEmail} or group Tenant-Admins.`
+          );
+          return res.redirect(`/tenant/${tenant.orgId}/login?error=unauthorized_tenant_access`);
+        }
+      } catch (authzErr) {
+        console.warn("[TenantAzure] Authorization check failed (continuing with safe deny):", authzErr);
+        return res.redirect(`/tenant/${tenant.orgId}/login?error=authorization_check_failed`);
+      }
+
       console.log(`User provisioned successfully: ${authResult.user.email}`);
 
       // Generate JWT for the application
@@ -1713,6 +1768,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       )}&code=${encodeURIComponent(code)}&details=${details}&corr=${encodeURIComponent(corrId)}${tenantParam}`;
       res.redirect(errorUrl);
     }
+  });
+
+  // Compatibility redirect for Azure registered tenant URI -> unified tenant callback
+  // Azure app currently has http://localhost:5000/tenant/{tenant}/auth/callback registered
+  app.get("/tenant/:orgId/auth/callback", (req, res) => {
+    const params = new URLSearchParams((req.query as any) || {}).toString();
+    const target = `/api/auth/azure/callback${params ? `?${params}` : ""}`;
+    console.log(`[Compat] Forwarding /tenant/${req.params.orgId}/auth/callback -> ${target}`);
+    res.redirect(target);
   });
 
   // JWKS endpoint for RS256 verification (exposes RSA public key if configured)

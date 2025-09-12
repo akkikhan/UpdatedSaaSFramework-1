@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { startAzure } from "@saas-framework/auth-client";
 import { useParams, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -74,6 +75,21 @@ export default function TenantLogin() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            {/* Microsoft SSO */}
+            <div className="mb-6">
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                onClick={async () => {
+                  if (!orgId) return;
+                  const returnUrl = `${window.location.origin}/tenant/${orgId}/dashboard`;
+                  await startAzure(orgId, { returnUrl });
+                }}
+              >
+                Sign in with Microsoft
+              </Button>
+              <div className="text-center text-xs text-slate-500 mt-2">Single sign-on via Azure AD</div>
+            </div>
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
