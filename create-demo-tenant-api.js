@@ -38,7 +38,7 @@ async function checkAndCreateDemoTenant() {
       adminName: "Akki Khan",
       website: "https://demo.primussoft.com",
       description: "Demo tenant for testing",
-      enabledModules: ["authentication", "users", "roles"],
+      enabledModules: ["auth", "users", "roles"],
       moduleConfigs: {
         authentication: {
           providers: ["email"],

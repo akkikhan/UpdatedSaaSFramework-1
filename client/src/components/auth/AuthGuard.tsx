@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { handleUnauthorized } from "@/lib/queryClient";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -30,12 +31,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         if (response.ok) {
           setIsAuthenticated(true);
         } else {
-          localStorage.removeItem("platformAdminToken");
+          console.warn("Auth verification failed, logging out");
+          handleUnauthorized();
           setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
-        localStorage.removeItem("platformAdminToken");
+        handleUnauthorized();
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -47,12 +49,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // Redirect to admin login page
       setLocation("/admin/login");
     }
   }, [isAuthenticated, isLoading, setLocation]);
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -64,11 +64,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  // If not authenticated, return null (redirect is handled in useEffect)
   if (!isAuthenticated) {
     return null;
   }
 
-  // If authenticated, render children
   return <>{children}</>;
 }

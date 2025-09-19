@@ -668,7 +668,10 @@ export default function TenantDashboard() {
 
   // Check if modules are enabled
   const isModuleEnabled = (moduleName: string) => {
-    return tenantInfo.enabledModules.includes(moduleName);
+    const normalized = (tenantInfo.enabledModules || []).map(module =>
+      module === "authentication" ? "auth" : module
+    );
+    return normalized.includes(moduleName);
   };
 
   const isAuthEnabled = isModuleEnabled("auth");

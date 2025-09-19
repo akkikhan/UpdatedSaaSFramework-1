@@ -229,7 +229,7 @@ export const AUTH_PROVIDERS: AuthProvider[] = [
  */
 export const MODULES: ModuleDefinition[] = [
   {
-    id: "authentication",
+    id: "auth",
     name: "Authentication Module",
     description:
       "Multi-provider authentication system with support for OAuth, SAML, and local credentials",
@@ -252,7 +252,7 @@ export const MODULES: ModuleDefinition[] = [
     name: "Role-Based Access Control",
     description: "Advanced permission management with hierarchical roles and dynamic policies",
     category: "core",
-    dependencies: ["authentication"],
+    dependencies: ["auth"],
     isRequired: true,
     configFields: [
       {
@@ -351,7 +351,7 @@ export const MODULES: ModuleDefinition[] = [
 /**
  * Default modules for new tenants
  */
-export const DEFAULT_MODULES = ["authentication", "rbac"];
+export const DEFAULT_MODULES = ["auth", "rbac"];
 
 /**
  * Get module by ID

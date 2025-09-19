@@ -25,9 +25,9 @@ import { notificationService } from "./services/notification";
 import { complianceService } from "./services/compliance-temp";
 import { z } from "zod";
 import path from "path";
-import { fileURLToPath } from "url";
-
 const DEFAULT_PERMISSION_SCOPE = "tenant" as const;
+
+const SDK_DOCS_PATH = path.resolve(process.cwd(), "docs/sdk.html");
 
 const normalizedPermissionSchema = tenantRolePermissionSchema.extend({
   scope: z.enum(["tenant", "resource", "global"]).default("tenant"),
@@ -65,13 +65,18 @@ function coercePermissionDefinition(value: unknown): TenantRolePermissionDefinit
 function toPermissionKey(permission: TenantRolePermissionDefinition): string {
   return `${permission.resource}.${permission.action}`;
 }
-function permissionMatches(permission: TenantRolePermissionDefinition, resource: string, action: string): boolean {
+function permissionMatches(
+  permission: TenantRolePermissionDefinition,
+  resource: string,
+  action: string
+): boolean {
   const candidateResource = permission.resource;
   const candidateAction = permission.action;
-  return (candidateResource === resource || candidateResource === "*") &&
-    (candidateAction === action || candidateAction === "*");
+  return (
+    (candidateResource === resource || candidateResource === "*") &&
+    (candidateAction === action || candidateAction === "*")
+  );
 }
-
 
 function normalizeRolePermissions(input: unknown): TenantRolePermissionDefinition[] {
   if (!Array.isArray(input)) return [];
@@ -160,9 +165,6 @@ function serializeRole(role: any) {
     permissionDetails,
   };
 }
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Helper: validate externally supplied returnUrl against allowlist to avoid open redirects
   function validateReturnUrl(raw?: string): string | undefined {
@@ -216,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // SDK/Integration docs (static HTML)
   app.get("/sdk", (req, res) => {
-    const file = path.resolve(__dirname, "../docs/sdk.html");
+    const file = SDK_DOCS_PATH;
     res.sendFile(file);
   });
 
@@ -910,9 +912,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const hasRequired = Boolean(cfg.tenantId && cfg.clientId && cfg.clientSecret);
                   // Basic GUID shape check for clientId/tenantId
                   const guid = /^[0-9a-fA-F-]{36}$/;
-                  const looksValid = guid.test(String(cfg.clientId || "")) && guid.test(String(cfg.tenantId || ""));
+                  const looksValid =
+                    guid.test(String(cfg.clientId || "")) && guid.test(String(cfg.tenantId || ""));
                   if (!hasRequired || !looksValid) {
-                    console.warn("[TenantCreate] Dropping incomplete Azure AD provider from payload.");
+                    console.warn(
+                      "[TenantCreate] Dropping incomplete Azure AD provider from payload."
+                    );
                     return false;
                   }
                 }
@@ -947,7 +952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notificationsApiKey: tenant.notificationsApiKey || undefined,
         });
 
-      if (!emailSent) {
+        if (!emailSent) {
           console.warn(`Failed to send onboarding email to ${tenant.adminEmail}`);
         } else {
           console.log(`Onboarding email sent successfully to ${tenant.adminEmail}`);
@@ -957,7 +962,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Best-effort: add tenant admin to Azure AD "Tenant-Admins" group if configured
       try {
         const adminEmail = tenant.adminEmail;
-        if (process.env.AZURE_CLIENT_ID && process.env.AZURE_CLIENT_SECRET && process.env.TENANT_ADMIN_GROUP_ID) {
+        if (
+          process.env.AZURE_CLIENT_ID &&
+          process.env.AZURE_CLIENT_SECRET &&
+          process.env.TENANT_ADMIN_GROUP_ID
+        ) {
           const { tenantAzureService } = await import("./services/tenant-azure.js");
           const result = await tenantAzureService.onboardTenantAdmin(adminEmail);
           console.log(
@@ -969,7 +978,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
       } catch (e) {
-        console.warn("[TenantAzure] OnboardTenantAdmin encountered an error:", e instanceof Error ? e.message : e);
+        console.warn(
+          "[TenantAzure] OnboardTenantAdmin encountered an error:",
+          e instanceof Error ? e.message : e
+        );
       }
 
       console.log(`Tenant created successfully: ${tenant.name} (${tenant.orgId})`);
@@ -989,8 +1001,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-      // Public Tenant Registration (no auth required) - simplified: always temp password, no adminPassword
-      app.post("/api/register", async (req, res) => {
+  // Public Tenant Registration (no auth required) - simplified: always temp password, no adminPassword
+  app.post("/api/register", async (req, res) => {
     try {
       const { name, orgId, adminEmail, adminName, enabledModules } = req.body;
 
@@ -1044,7 +1056,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Best-effort: add admin to Azure AD group
       try {
-        if (process.env.AZURE_CLIENT_ID && process.env.AZURE_CLIENT_SECRET && process.env.TENANT_ADMIN_GROUP_ID) {
+        if (
+          process.env.AZURE_CLIENT_ID &&
+          process.env.AZURE_CLIENT_SECRET &&
+          process.env.TENANT_ADMIN_GROUP_ID
+        ) {
           const { tenantAzureService } = await import("./services/tenant-azure.js");
           const result = await tenantAzureService.onboardTenantAdmin(tenant.adminEmail);
           console.log(
@@ -1220,12 +1236,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const tenant = await storage.getTenant(id);
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
-      const rbac = ((tenant.moduleConfigs as any) || {}).rbac || {};
+
+      const rbacConfig = ((tenant.moduleConfigs as any) || {}).rbac;
+      const normalization = await storage.normalizeTenantRbacConfig(rbacConfig);
+      const normalized = normalization.normalizedConfig;
+
+      const defaultRoleIds =
+        normalized.defaultRoleIds ??
+        (normalization.defaultRoleRecords.length
+          ? normalization.defaultRoleRecords.map(role => role.id)
+          : []);
+
+      const defaultRoles =
+        normalized.defaultRoles ??
+        (normalization.defaultRoleRecords.length
+          ? normalization.defaultRoleRecords.map(role => role.name)
+          : normalization.fallbackRoleNames.length
+            ? normalization.fallbackRoleNames
+            : ["Admin", "User"]);
+
       res.json({
-        permissionTemplate: rbac.permissionTemplate || "standard",
-        businessType: rbac.businessType || "general",
-        defaultRoles: rbac.defaultRoles || ["Admin", "Manager", "Viewer"],
-        customPermissions: rbac.customPermissions || [],
+        permissionTemplateId: normalized.permissionTemplateId ?? null,
+        permissionTemplate: normalized.permissionTemplate ?? null,
+        businessTypeId: normalized.businessTypeId ?? null,
+        businessType: normalized.businessType ?? null,
+        defaultRoleIds,
+        defaultRoles,
+        customPermissions: normalized.customPermissions ?? [],
       });
     } catch (error) {
       console.error("Error fetching tenant RBAC settings:", error);
@@ -1338,25 +1375,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const body = req.body || {};
       const schema = z.object({
-        permissionTemplate: z.enum(["standard", "enterprise", "custom"]).optional(),
-        businessType: z
-          .enum(["general", "healthcare", "finance", "education", "government"])
-          .optional(),
-        defaultRoles: z.array(z.string()).optional(),
-        customPermissions: z.array(z.string()).optional(),
+        permissionTemplateId: z.string().min(1).optional(),
+        permissionTemplate: z.string().min(1).optional(),
+        businessTypeId: z.string().min(1).optional(),
+        businessType: z.string().min(1).optional(),
+        defaultRoleIds: z.array(z.string().min(1)).optional(),
+        defaultRoles: z.array(z.string().min(1)).optional(),
+        customPermissions: z.array(z.string().min(1)).optional(),
       });
-      const updates = schema.parse(body);
+      const parsed = schema.parse(body);
 
       const tenant = await storage.getTenant(id);
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
 
-      const currentConfigs = (tenant.moduleConfigs as any) || {};
-      const rbacCfg = { ...(currentConfigs.rbac || {}) };
-      const nextRbac = { ...rbacCfg, ...updates };
-      const newConfigs = { ...currentConfigs, rbac: nextRbac };
+      const currentConfigs = ((tenant.moduleConfigs as any) || {}) as Record<string, any>;
+      const existingRbac = { ...(currentConfigs.rbac || {}) };
+
+      const sanitizedUpdates: Record<string, any> = {};
+      for (const [key, value] of Object.entries(parsed)) {
+        if (Array.isArray(value)) {
+          const cleaned = value
+            .map(item => (typeof item === "string" ? item.trim() : item))
+            .filter(item => (typeof item === "string" ? item.length > 0 : Boolean(item)));
+          sanitizedUpdates[key] = cleaned;
+        } else if (typeof value === "string") {
+          const trimmed = value.trim();
+          if (trimmed.length) sanitizedUpdates[key] = trimmed;
+        } else if (value !== undefined) {
+          sanitizedUpdates[key] = value;
+        }
+      }
+
+      const mergedRbac = { ...existingRbac, ...sanitizedUpdates };
+      const normalization = await storage.normalizeTenantRbacConfig(mergedRbac);
+      const normalized = normalization.normalizedConfig;
+
+      if (Object.keys(normalized).length) {
+        currentConfigs.rbac = normalized;
+      } else {
+        delete currentConfigs.rbac;
+      }
+
       const enabledModules = (tenant.enabledModules as string[]) || [];
-      await storage.updateTenantModules(id, enabledModules, newConfigs);
-      res.json({ message: "RBAC settings updated", rbac: nextRbac });
+      await storage.updateTenantModules(id, enabledModules, currentConfigs);
+
+      const defaultRoleIds =
+        normalized.defaultRoleIds ??
+        (normalization.defaultRoleRecords.length
+          ? normalization.defaultRoleRecords.map(role => role.id)
+          : []);
+
+      const defaultRoles =
+        normalized.defaultRoles ??
+        (normalization.defaultRoleRecords.length
+          ? normalization.defaultRoleRecords.map(role => role.name)
+          : normalization.fallbackRoleNames.length
+            ? normalization.fallbackRoleNames
+            : ["Admin", "User"]);
+
+      res.json({
+        message: "RBAC settings updated",
+        rbac: {
+          ...normalized,
+          defaultRoleIds,
+          defaultRoles,
+          customPermissions: normalized.customPermissions ?? [],
+        },
+      });
     } catch (error) {
       console.error("Error updating tenant RBAC settings:", error);
       res.status(400).json({ message: "Failed to update RBAC settings" });
@@ -1720,14 +1805,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const moduleConfigs = (tenant.moduleConfigs as any) || {};
       const authConfig = moduleConfigs.auth;
       let azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
-      const envFallback = (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
+      const envFallback =
+        (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
       const tenantAllowsFallback = authConfig?.allowFallback !== false;
-      const fallbackToPlatform = (!azureProvider || !azureProvider.enabled) && envFallback && tenantAllowsFallback;
+      const fallbackToPlatform =
+        (!azureProvider || !azureProvider.enabled) && envFallback && tenantAllowsFallback;
 
       if (!fallbackToPlatform && azureProvider && azureProvider.config) {
         console.log("Azure AD provider found, creating service instance...");
       } else {
-        console.log("Azure AD provider missing/disabled. Falling back to platform Azure app for SSO callback.");
+        console.log(
+          "Azure AD provider missing/disabled. Falling back to platform Azure app for SSO callback."
+        );
       }
 
       // Decrypt clientSecret if encrypted; surface clear error if undecryptable
@@ -1758,11 +1847,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Guard: ensure required fields for SSO (only check if not falling back to platform)
       if (
-        !fallbackToPlatform && 
-        (!azureProvider || 
-         !azureProvider.config?.tenantId ||
-         !azureProvider.config?.clientId ||
-         !azureProvider.config?.clientSecret)
+        !fallbackToPlatform &&
+        (!azureProvider ||
+          !azureProvider.config?.tenantId ||
+          !azureProvider.config?.clientId ||
+          !azureProvider.config?.clientSecret)
       ) {
         console.error("Azure AD provider is incomplete for tenant", tenant.orgId);
         return res.status(400).json({
@@ -1812,7 +1901,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.redirect(`/tenant/${tenant.orgId}/login?error=unauthorized_tenant_access`);
         }
       } catch (authzErr) {
-        console.warn("[TenantAzure] Authorization check failed (continuing with safe deny):", authzErr);
+        console.warn(
+          "[TenantAzure] Authorization check failed (continuing with safe deny):",
+          authzErr
+        );
         return res.redirect(`/tenant/${tenant.orgId}/login?error=authorization_check_failed`);
       }
 
@@ -1937,10 +2029,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const azure = Array.isArray(auth.providers)
         ? auth.providers.find((p: any) => p?.type === "azure-ad" && p?.enabled)
         : undefined;
-      const envFallback = (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
+      const envFallback =
+        (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
       const tenantAllowsFallback = auth?.allowFallback !== false;
       const fallbackActive = !azure && envFallback && tenantAllowsFallback;
-      res.json({ allowFallback: !!tenantAllowsFallback, defaultProvider: auth.defaultProvider || null, hasAzure: !!azure, fallbackActive });
+      res.json({
+        allowFallback: !!tenantAllowsFallback,
+        defaultProvider: auth.defaultProvider || null,
+        hasAzure: !!azure,
+        fallbackActive,
+      });
     } catch (error) {
       console.error("Error fetching auth settings:", error);
       res.status(500).json({ message: "Failed to fetch auth settings" });
@@ -2007,9 +2105,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Find Azure AD provider; optionally fall back to platform Azure app if enabled
       let azureProvider = authConfig?.providers?.find((p: any) => p.type === "azure-ad");
-      const envFallback = (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
+      const envFallback =
+        (process.env.USE_PLATFORM_AZURE_FALLBACK || "true").toLowerCase() !== "false";
       const tenantAllowsFallback = authConfig?.allowFallback !== false;
-      const fallbackToPlatform = (!azureProvider || !azureProvider.enabled) && envFallback && tenantAllowsFallback;
+      const fallbackToPlatform =
+        (!azureProvider || !azureProvider.enabled) && envFallback && tenantAllowsFallback;
 
       console.log(`Azure AD provider found for tenant ${tenant.name}`);
 
@@ -2545,14 +2645,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
-      const {
-        name,
-        description,
-        permissions,
-        permissionDetails,
-        inheritsFrom,
-        metadata,
-      } = req.body || {};
+      const { name, description, permissions, permissionDetails, inheritsFrom, metadata } =
+        req.body || {};
       const tenantId = req.tenantId;
 
       if (!name) {
@@ -2583,14 +2677,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
-      const {
-        name,
-        description,
-        permissions,
-        permissionDetails,
-        inheritsFrom,
-        metadata,
-      } = req.body || {};
+      const { name, description, permissions, permissionDetails, inheritsFrom, metadata } =
+        req.body || {};
 
       const updates = collectRoleUpdates({
         name,
@@ -2699,9 +2787,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User ID and permission are required" });
       }
       const tenantId = req.tenantId!;
-      const allowed = typeof storage.checkUserPermission === "function"
-        ? await storage.checkUserPermission(userId, permission, tenantId)
-        : false;
+      const allowed =
+        typeof storage.checkUserPermission === "function"
+          ? await storage.checkUserPermission(userId, permission, tenantId)
+          : false;
       res.json({ hasPermission: !!allowed });
     } catch (error) {
       console.error("RBAC check-permission error:", error);
@@ -2712,51 +2801,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================================================
   // Platform Admin RBAC Management
   // =============================================================================
-  app.get(
-    "/api/admin/rbac/roles",
-    platformAdminMiddleware,
-    tenantMiddleware,
-    async (req, res) => {
-      try {
-        const roles = await storage.getTenantRoles(req.tenantId!);
-        res.json((roles || []).map(serializeRole));
-      } catch (error) {
-        console.error("Admin get roles error:", error);
-        res.status(500).json({ message: "Failed to get roles" });
-      }
+  app.get("/api/admin/rbac/roles", platformAdminMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const roles = await storage.getTenantRoles(req.tenantId!);
+      res.json((roles || []).map(serializeRole));
+    } catch (error) {
+      console.error("Admin get roles error:", error);
+      res.status(500).json({ message: "Failed to get roles" });
     }
-  );
+  });
 
-  app.post(
-    "/api/admin/rbac/roles",
-    platformAdminMiddleware,
-    tenantMiddleware,
-    async (req, res) => {
-      try {
-        const {
-          name,
-          description,
-          permissions,
-          permissionDetails,
-          inheritsFrom,
-          metadata,
-        } = req.body || {};
-        if (!name) return res.status(400).json({ message: "Role name is required" });
-        const role = await storage.createTenantRole({
-          tenantId: req.tenantId!,
-          name,
-          description: description || "",
-          permissions: normalizeRolePermissions(permissionDetails ?? permissions),
-          inheritsFrom: normalizeRoleInheritance(inheritsFrom),
-          metadata: normalizeRoleMetadata(metadata),
-        });
-        res.status(201).json(serializeRole(role));
-      } catch (error) {
-        console.error("Admin create role error:", error);
-        res.status(500).json({ message: "Failed to create role" });
-      }
+  app.post("/api/admin/rbac/roles", platformAdminMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const { name, description, permissions, permissionDetails, inheritsFrom, metadata } =
+        req.body || {};
+      if (!name) return res.status(400).json({ message: "Role name is required" });
+      const role = await storage.createTenantRole({
+        tenantId: req.tenantId!,
+        name,
+        description: description || "",
+        permissions: normalizeRolePermissions(permissionDetails ?? permissions),
+        inheritsFrom: normalizeRoleInheritance(inheritsFrom),
+        metadata: normalizeRoleMetadata(metadata),
+      });
+      res.status(201).json(serializeRole(role));
+    } catch (error) {
+      console.error("Admin create role error:", error);
+      res.status(500).json({ message: "Failed to create role" });
     }
-  );
+  });
 
   app.get(
     "/api/admin/rbac/permissions",
@@ -2840,14 +2913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/v2/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
-      const {
-        name,
-        description,
-        permissions,
-        permissionDetails,
-        inheritsFrom,
-        metadata,
-      } = req.body || {};
+      const { name, description, permissions, permissionDetails, inheritsFrom, metadata } =
+        req.body || {};
       const tenantId = req.tenantId;
       if (!name) return res.status(400).json({ message: "Role name is required" });
       const role = await storage.createTenantRole({
@@ -2869,14 +2936,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
-      const {
-        name,
-        description,
-        permissions,
-        permissionDetails,
-        inheritsFrom,
-        metadata,
-      } = req.body || {};
+      const { name, description, permissions, permissionDetails, inheritsFrom, metadata } =
+        req.body || {};
       const updates = collectRoleUpdates({
         name,
         description,
@@ -2981,7 +3042,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const perms: string[] = (await storage.getUserPermissions?.(userId, tenantId)) || [];
-      const has = perms.includes(permissionKey) ||
+      const has =
+        perms.includes(permissionKey) ||
         perms.includes(`${normalizedResource}.*`) ||
         perms.includes(`*.${normalizedAction}`) ||
         perms.includes(`*.*`);
@@ -2997,10 +3059,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const matchedRoles = roles
         .map(role => serializeRole(role))
-        .filter(role => Array.isArray(role.permissionDetails) &&
-          role.permissionDetails.some((permission: TenantRolePermissionDefinition) =>
-            permissionMatches(permission, normalizedResource, normalizedAction)
-          ))
+        .filter(
+          role =>
+            Array.isArray(role.permissionDetails) &&
+            role.permissionDetails.some((permission: TenantRolePermissionDefinition) =>
+              permissionMatches(permission, normalizedResource, normalizedAction)
+            )
+        )
         .map(role => ({ id: role.id, name: role.name }));
 
       return res.json({ hasPermission: has, details: { evaluated: permissionKey, matchedRoles } });

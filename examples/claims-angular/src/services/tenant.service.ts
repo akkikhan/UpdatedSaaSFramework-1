@@ -55,7 +55,10 @@ export class TenantService {
       .subscribe(t => {
         const prev = this.tenant$.value;
         this.tenant$.next(t);
-        this.modules$.next(t?.enabledModules || []);
+        const normalizedModules = (t?.enabledModules || []).map(module =>
+          module === "authentication" ? "auth" : module
+        );
+        this.modules$.next(normalizedModules);
         if (prev && JSON.stringify(prev.enabledModules) !== JSON.stringify(t.enabledModules)) {
           this.snack.info("Tenant modules updated");
         }

@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Building, ChartPie, Code, Inbox, Server, LayersIcon, Settings, FileText, Shield } from "lucide-react";
+import {
+  Building,
+  ChartPie,
+  Code,
+  Inbox,
+  Server,
+  LayersIcon,
+  Settings,
+  FileText,
+  Shield,
+  LogOut,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { handleUnauthorized } from "@/lib/queryClient";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartPie, id: "dashboard" },
@@ -18,8 +31,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [location] = useLocation();
   const [currentPage, setCurrentPage] = useState(() => {
     const path = location === "/" ? "/" : location;
-    return navigation.find(item => item.href === path) || navigation[0];
+    return navigation.find((item) => item.href === path) || navigation[0];
   });
+
+  const handleLogoutClick = () => {
+    handleUnauthorized();
+  };
 
   return (
     <div className="admin-layout flex h-screen bg-slate-50">
@@ -89,6 +106,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="text-sm text-slate-600">All Systems Operational</span>
               </div>
+              <Button
+                variant="ghost"
+                className="text-slate-600 hover:text-slate-900"
+                onClick={handleLogoutClick}
+                data-testid="logout-button"
+              >
+                <LogOut size={16} />
+                <span>Logout</span>
+              </Button>
             </div>
           </div>
         </div>

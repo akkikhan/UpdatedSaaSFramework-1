@@ -36,6 +36,7 @@ module.exports = {
     '^@shared/(.*)$': '<rootDir>/shared/$1',
     '^@server/(.*)$': '<rootDir>/server/$1',
     '^@client/(.*)$': '<rootDir>/client/$1',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   
   // Setup files

@@ -58,7 +58,6 @@ function ensureDb() {
   return db;
 }
 
-
 const DEFAULT_PERMISSION_SCOPE = "tenant";
 
 function normalizePermissionDefinitionRecord(input: any): TenantRolePermissionDefinition | null {
@@ -73,8 +72,12 @@ function normalizePermissionDefinitionRecord(input: any): TenantRolePermissionDe
   if (typeof input !== "object") return null;
   const resource = typeof input.resource === "string" ? input.resource.trim() : "";
   if (!resource) return null;
-  const action = typeof input.action === "string" && input.action.trim().length > 0 ? input.action.trim() : "*";
-  const scope = typeof input.scope === "string" && input.scope.trim().length > 0 ? input.scope.trim() : DEFAULT_PERMISSION_SCOPE;
+  const action =
+    typeof input.action === "string" && input.action.trim().length > 0 ? input.action.trim() : "*";
+  const scope =
+    typeof input.scope === "string" && input.scope.trim().length > 0
+      ? input.scope.trim()
+      : DEFAULT_PERMISSION_SCOPE;
   const conditions = Array.isArray(input.conditions) ? input.conditions : [];
   const description = typeof input.description === "string" ? input.description : undefined;
   return { resource, action, scope, conditions, description };
@@ -84,9 +87,15 @@ function permissionKeyFromDefinition(permission: TenantRolePermissionDefinition)
   return `${permission.resource}.${permission.action}`;
 }
 
-function permissionMatchesDefinition(permission: TenantRolePermissionDefinition, resource: string, action: string): boolean {
-  return (permission.resource === resource || permission.resource === "*") &&
-    (permission.action === action || permission.action === "*");
+function permissionMatchesDefinition(
+  permission: TenantRolePermissionDefinition,
+  resource: string,
+  action: string
+): boolean {
+  return (
+    (permission.resource === resource || permission.resource === "*") &&
+    (permission.action === action || permission.action === "*")
+  );
 }
 
 export interface IStorage {
@@ -180,6 +189,7 @@ export interface IStorage {
   getTenantUser(id: string): Promise<TenantUser | null>;
   getTenantUserByEmail(tenantId: string, email: string): Promise<TenantUser | null>;
   updateTenantUser(id: string, updates: Partial<InsertTenantUser>): Promise<TenantUser | null>;
+  updateTenantUserLastLogin(userId: string): Promise<void>;
   deleteTenantUser(id: string): Promise<void>;
 
   // Tenant Roles - custom roles within each tenant for RBAC
@@ -384,7 +394,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Generate API keys only for enabled modules
-    const enabledModules = insertTenant.enabledModules || ["authentication", "rbac"];
+    const enabledModules = insertTenant.enabledModules || ["auth", "rbac"];
     const apiKeys: Partial<{
       authApiKey: string;
       rbacApiKey: string;
@@ -392,7 +402,7 @@ export class DatabaseStorage implements IStorage {
       notificationsApiKey: string;
     }> = {};
 
-    if (enabledModules.includes("authentication")) {
+    if (enabledModules.includes("auth")) {
       apiKeys.authApiKey = `auth_${randomUUID().replace(/-/g, "").substring(0, 24)}`;
     }
     if (enabledModules.includes("rbac")) {
@@ -1902,23 +1912,17 @@ class DemoStorage implements IStorage {
   }
 
   private clone<T>(value: T): T {
-    return value === undefined || value === null
-      ? value
-      : JSON.parse(JSON.stringify(value));
+    return value === undefined || value === null ? value : JSON.parse(JSON.stringify(value));
   }
 
   private findTenantByOrgId(orgId: string) {
     const normalized = (orgId || "").toLowerCase();
-    return this.tenants.find(
-      tenant => (tenant.orgId || "").toLowerCase() === normalized
-    );
+    return this.tenants.find(tenant => (tenant.orgId || "").toLowerCase() === normalized);
   }
 
   private findTenantByAuthApiKey(apiKey: string) {
     const normalized = (apiKey || "").toLowerCase();
-    return this.tenants.find(
-      tenant => (tenant.authApiKey || "").toLowerCase() === normalized
-    );
+    return this.tenants.find(tenant => (tenant.authApiKey || "").toLowerCase() === normalized);
   }
 
   async createTenant(tenant: InsertTenant): Promise<any> {
@@ -1937,9 +1941,7 @@ class DemoStorage implements IStorage {
         ? this.clone(tenant.moduleConfigs)
         : {};
     const metadata =
-      tenant?.metadata && typeof tenant.metadata === "object"
-        ? this.clone(tenant.metadata)
-        : {};
+      tenant?.metadata && typeof tenant.metadata === "object" ? this.clone(tenant.metadata) : {};
 
     const apiKeyBase = randomUUID().replace(/-/g, "");
 
@@ -1954,14 +1956,10 @@ class DemoStorage implements IStorage {
       sendEmail: tenant?.sendEmail ?? true,
       authApiKey:
         tenant?.authApiKey ||
-        (enabledModules.includes("auth")
-          ? `auth_demo_${apiKeyBase.substring(0, 12)}`
-          : undefined),
+        (enabledModules.includes("auth") ? `auth_demo_${apiKeyBase.substring(0, 12)}` : undefined),
       rbacApiKey:
         tenant?.rbacApiKey ||
-        (enabledModules.includes("rbac")
-          ? `rbac_demo_${apiKeyBase.substring(12, 24)}`
-          : undefined),
+        (enabledModules.includes("rbac") ? `rbac_demo_${apiKeyBase.substring(12, 24)}` : undefined),
       loggingApiKey:
         tenant?.loggingApiKey ||
         (enabledModules.includes("logging")
@@ -2085,6 +2083,9 @@ class DemoStorage implements IStorage {
   }
   async updateTenantUser(): Promise<any> {
     return null;
+  }
+  async updateTenantUserLastLogin(): Promise<void> {
+    return;
   }
   async deleteTenantUser(): Promise<void> {
     return;
@@ -2337,4 +2338,3 @@ try {
 export { storage };
 
 console.info("[storage] DatabaseStorage initialized for RBAC operations");
-

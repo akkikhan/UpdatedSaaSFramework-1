@@ -43,22 +43,30 @@ export class AuthService {
     user: any;
     expiresAt: Date;
   } | null> {
-    // Get user by email (not getTenantUserByEmail)
-    const user = await storage.getUserByEmail(email);
-
-    if (!user || !user.isActive) {
-      console.log(`❌ Auth failed - user not found or inactive: ${email}`);
+    if (!tenantId) {
+      console.log(`[Auth] Missing tenantId for email login attempt: ${email}`);
       return null;
     }
 
-    // Verify password
-    const isValidPassword = await this.verifyPassword(password, user.passwordHash || "");
+    const user = await storage.getTenantUserByEmail(tenantId, email);
+
+    if (!user || (user.status && user.status !== "active")) {
+      console.log(`[Auth] User not found or inactive: ${email}`);
+      return null;
+    }
+
+    if (!user.passwordHash) {
+      console.log(`[Auth] Password login attempted for SSO-only user: ${email}`);
+      return null;
+    }
+
+    const isValidPassword = await this.verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
-      console.log(`❌ Auth failed - invalid password for: ${email}`);
+      console.log(`[Auth] Invalid password for: ${email}`);
       return null;
     }
 
-    console.log(`✅ Auth successful for tenant user: ${email}`);
+    console.log(`[Auth] Successful login for tenant user: ${email}`);
 
     // Generate JWT token
     const expiresAt = new Date();
@@ -87,7 +95,7 @@ export class AuthService {
     // TODO: Implement tenant-specific session table if needed
 
     // Update last login for user
-    await storage.updateUserLastLogin(user.id);
+    await storage.updateTenantUserLastLogin(user.id);
 
     const { passwordHash, ...userWithoutPassword } = user;
 

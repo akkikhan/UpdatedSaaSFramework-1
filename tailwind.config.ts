@@ -61,6 +61,43 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
+        // Custom professional palette for modern, attractive look
+        blue: {
+          50: "#F0F9FF",
+          100: "#E0F2FE",
+          500: "#0EA5E9", // Primary blue for buttons/links
+          600: "#0284C7",
+          900: "#1E3A8A",
+        },
+        gray: {
+          50: "#F9FAFB",
+          100: "#F3F4F6",
+          500: "#6B7280", // Neutral for text/muted elements
+          700: "#374151",
+          900: "#111827",
+        },
+        green: {
+          50: "#F0FDF4",
+          500: "#10B981", // Success for notifications/approvals
+          600: "#059669",
+        },
+        success: {
+          DEFAULT: "#10B981",
+          foreground: "#FFFFFF",
+        },
+        // More neutrals for clean, professional feel
+        neutral: {
+          50: "#FAFAFA",
+          500: "#64748B",
+          900: "#0F172A",
+        },
+      },
+      boxShadow: {
+        // Subtle shadows for depth and attractiveness
+        soft: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+        medium: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+        elevated: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        card: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
       },
       fontFamily: {
         sans: ["var(--font-sans)"],

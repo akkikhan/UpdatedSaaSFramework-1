@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import "dotenv/config";
 // Prefer IPv4 DNS results first to avoid IPv6 connectivity issues (e.g., PG over IPv6 timeouts)
 import { setDefaultResultOrder } from "node:dns";
 try {
@@ -8,7 +8,6 @@ try {
 } catch {}
 
 // Load environment variables FIRST before any other imports
-dotenv.config();
 
 import { validateEnvironment } from "./config/environment";
 

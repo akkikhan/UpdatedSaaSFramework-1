@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -183,6 +183,76 @@ export default function OnboardingWizard() {
   // Align with shared schema key: "auth" (not "authentication")
   const watchedAuthProviders = form.watch("moduleConfigs.auth.providers");
   const watchedRBAC = watchedModules.includes("rbac");
+  const watchedRBACConfig = form.watch("moduleConfigs.rbac") as any;
+
+  useEffect(() => {
+    if (!watchedRBAC) return;
+    const templates = (permissionTemplates as any[]) || [];
+    const businessCatalog = (businessTypes as any[]) || [];
+    const current = (form.getValues("moduleConfigs.rbac") as any) || {};
+    const next = { ...current };
+    let shouldUpdate = false;
+
+    if (templates.length && !current.permissionTemplateId && !current.permissionTemplate) {
+      const templateForSeed = templates.find((t: any) => t?.isDefault) ?? templates[0];
+      if (templateForSeed?.id) {
+        next.permissionTemplateId = templateForSeed.id;
+        next.permissionTemplate = templateForSeed.name || templateForSeed.id;
+      }
+      shouldUpdate = true;
+    }
+
+    if (businessCatalog.length && !current.businessTypeId && !current.businessType) {
+      const businessForSeed = businessCatalog.find((b: any) => b?.isDefault) ?? businessCatalog[0];
+      if (businessForSeed?.id) {
+        next.businessTypeId = businessForSeed.id;
+        next.businessType = businessForSeed.name || businessForSeed.id;
+      }
+      shouldUpdate = true;
+    }
+
+    if (shouldUpdate) {
+      form.setValue("moduleConfigs.rbac" as any, next as any, { shouldDirty: false });
+    }
+  }, [watchedRBAC, permissionTemplates, businessTypes, form]);
+
+  const resolveTemplateName = (identifier?: string | null) => {
+    const value = (identifier || "").toString();
+    if (!value) return "standard";
+    const templates = (permissionTemplates as any[]) || [];
+    const match = Array.isArray(templates)
+      ? templates.find(template => {
+          const id = (template.id || "").toString();
+          const name = (template.name || "").toString();
+          return id === value || name.toLowerCase() === value.toLowerCase();
+        })
+      : null;
+    return match?.name || match?.id || value || "standard";
+  };
+
+  const resolveBusinessTypeName = (identifier?: string | null) => {
+    const value = (identifier || "").toString();
+    if (!value) return "general";
+    const catalog = (businessTypes as any[]) || [];
+    const match = Array.isArray(catalog)
+      ? catalog.find(type => {
+          const id = (type.id || "").toString();
+          const name = (type.name || "").toString();
+          return id === value || name.toLowerCase() === value.toLowerCase();
+        })
+      : null;
+    return match?.name || match?.id || value || "general";
+  };
+
+  const rbacTemplateDisplay = resolveTemplateName(
+    watchedRBACConfig?.permissionTemplateId || watchedRBACConfig?.permissionTemplate
+  );
+  const rbacBusinessDisplay = resolveBusinessTypeName(
+    watchedRBACConfig?.businessTypeId || watchedRBACConfig?.businessType
+  );
+  const rbacDefaultRoles = Array.isArray(watchedRBACConfig?.defaultRoles)
+    ? (watchedRBACConfig.defaultRoles as string[])
+    : [];
 
   const handleNext = async () => {
     let fieldsToValidate: (keyof FormData)[] = [];
@@ -326,7 +396,20 @@ export default function OnboardingWizard() {
         },
       };
 
-      await createTenant.mutateAsync(transformedData as any);
+      const tenant = await createTenant.mutateAsync(transformedData as any);
+
+      try {
+        sessionStorage.setItem(
+          "newTenantData",
+          JSON.stringify({
+            id: tenant.id,
+            name: tenant.name,
+            orgId: tenant.orgId,
+            adminEmail: tenant.adminEmail,
+            emailSent: data.sendEmail !== false,
+          })
+        );
+      } catch {}
 
       toast({
         title: "Tenant created successfully!",
@@ -589,14 +672,31 @@ export default function OnboardingWizard() {
                                     // Seed default RBAC config if missing
                                     const currentRBAC = form.getValues("moduleConfigs.rbac");
                                     if (!currentRBAC) {
-                                      form.setValue(
-                                        "moduleConfigs.rbac" as any,
-                                        {
-                                          permissionTemplate: "standard",
-                                          businessType: "general",
-                                          defaultRoles: ["Admin", "Manager", "Viewer"],
-                                        } as any
-                                      );
+                                      const templates = (permissionTemplates as any[]) || [];
+                                      const businessCatalog = (businessTypes as any[]) || [];
+                                      const templateForSeed =
+                                        templates.find((t: any) => t?.isDefault) ?? templates[0];
+                                      const businessForSeed =
+                                        businessCatalog.find((b: any) => b?.isDefault) ??
+                                        businessCatalog[0];
+
+                                      const seed: Record<string, any> = {};
+                                      if (templateForSeed?.id) {
+                                        seed.permissionTemplateId = templateForSeed.id;
+                                        seed.permissionTemplate =
+                                          templateForSeed.name || templateForSeed.id;
+                                      } else {
+                                        seed.permissionTemplate = "standard";
+                                      }
+                                      if (businessForSeed?.id) {
+                                        seed.businessTypeId = businessForSeed.id;
+                                        seed.businessType =
+                                          businessForSeed.name || businessForSeed.id;
+                                      } else {
+                                        seed.businessType = "general";
+                                      }
+
+                                      form.setValue("moduleConfigs.rbac" as any, seed as any);
                                     }
                                   }
 
@@ -905,13 +1005,40 @@ export default function OnboardingWizard() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                   control={form.control}
-                                  name="moduleConfigs.rbac.permissionTemplate"
+                                  name="moduleConfigs.rbac.permissionTemplateId"
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>Permission Template</FormLabel>
                                       <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={(field.value as any) || "standard"}
+                                        value={(field.value as string) || ""}
+                                        onValueChange={value => {
+                                          field.onChange(value);
+                                          const template = (permissionTemplates as any[]).find(
+                                            t => {
+                                              const name = (t.name || "").toString();
+                                              return (
+                                                (t.id && t.id === value) ||
+                                                name.toLowerCase() === value.toLowerCase()
+                                              );
+                                            }
+                                          );
+                                          if (template?.name) {
+                                            form.setValue(
+                                              "moduleConfigs.rbac.permissionTemplate" as any,
+                                              template.name as any
+                                            );
+                                          } else if (value) {
+                                            form.setValue(
+                                              "moduleConfigs.rbac.permissionTemplate" as any,
+                                              value as any
+                                            );
+                                          } else {
+                                            form.setValue(
+                                              "moduleConfigs.rbac.permissionTemplate" as any,
+                                              undefined as any
+                                            );
+                                          }
+                                        }}
                                       >
                                         <SelectTrigger>
                                           <SelectValue placeholder="Select a template" />
@@ -921,9 +1048,7 @@ export default function OnboardingWizard() {
                                             ? (permissionTemplates as any[]).map(t => (
                                                 <SelectItem
                                                   key={t.id}
-                                                  value={(t.name || t.id || "")
-                                                    .toString()
-                                                    .toLowerCase()}
+                                                  value={(t.id || t.name || "").toString()}
                                                 >
                                                   {t.name || t.id}
                                                 </SelectItem>
@@ -950,13 +1075,38 @@ export default function OnboardingWizard() {
 
                                 <FormField
                                   control={form.control}
-                                  name="moduleConfigs.rbac.businessType"
+                                  name="moduleConfigs.rbac.businessTypeId"
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>Business Type</FormLabel>
                                       <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={(field.value as any) || "general"}
+                                        value={(field.value as string) || ""}
+                                        onValueChange={value => {
+                                          field.onChange(value);
+                                          const business = (businessTypes as any[]).find(bt => {
+                                            const name = (bt.name || "").toString();
+                                            return (
+                                              (bt.id && bt.id === value) ||
+                                              name.toLowerCase() === value.toLowerCase()
+                                            );
+                                          });
+                                          if (business?.name) {
+                                            form.setValue(
+                                              "moduleConfigs.rbac.businessType" as any,
+                                              business.name as any
+                                            );
+                                          } else if (value) {
+                                            form.setValue(
+                                              "moduleConfigs.rbac.businessType" as any,
+                                              value as any
+                                            );
+                                          } else {
+                                            form.setValue(
+                                              "moduleConfigs.rbac.businessType" as any,
+                                              undefined as any
+                                            );
+                                          }
+                                        }}
                                       >
                                         <SelectTrigger>
                                           <SelectValue placeholder="Select business type" />
@@ -966,11 +1116,9 @@ export default function OnboardingWizard() {
                                             ? (businessTypes as any[]).map(bt => (
                                                 <SelectItem
                                                   key={bt.id}
-                                                  value={(bt.name || bt.id || "")
-                                                    .toString()
-                                                    .toLowerCase()}
+                                                  value={(bt.id || bt.name || "").toString()}
                                                 >
-                                                  {bt.name}
+                                                  {bt.name || bt.id}
                                                 </SelectItem>
                                               ))
                                             : [
@@ -1003,25 +1151,40 @@ export default function OnboardingWizard() {
                                 {Array.isArray(permissionTemplates) &&
                                 permissionTemplates.length > 0 ? (
                                   (() => {
-                                    const selected =
-                                      (form.getValues(
-                                        "moduleConfigs.rbac.permissionTemplate"
-                                      ) as string) || "standard";
-                                    const match = (permissionTemplates as any[]).find(
-                                      t =>
-                                        (t.name || t.id || "").toString().toLowerCase() === selected
-                                    );
-                                    const perms: string[] = (match?.permissions || []).slice(0, 12);
-                                    return perms.length ? (
+                                    const templateIdentifier =
+                                      (watchedRBACConfig?.permissionTemplateId as
+                                        | string
+                                        | undefined) ||
+                                      (watchedRBACConfig?.permissionTemplate as
+                                        | string
+                                        | undefined) ||
+                                      "";
+                                    const match = (permissionTemplates as any[]).find(t => {
+                                      const id = (t.id || "").toString();
+                                      const name = (t.name || "").toString();
+                                      return (
+                                        id === templateIdentifier ||
+                                        name.toLowerCase() === templateIdentifier.toLowerCase()
+                                      );
+                                    });
+                                    const permissions = Array.isArray(match?.permissions)
+                                      ? (match.permissions as string[])
+                                      : [];
+                                    const preview = permissions.slice(0, 12);
+                                    return preview.length ? (
                                       <div className="flex flex-wrap gap-2">
-                                        {perms.map(p => (
-                                          <Badge key={p} variant="outline" className="text-xs">
-                                            {p}
+                                        {preview.map(permission => (
+                                          <Badge
+                                            key={permission}
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {permission}
                                           </Badge>
                                         ))}
-                                        {(match?.permissions || []).length > perms.length && (
+                                        {permissions.length > preview.length && (
                                           <Badge variant="secondary" className="text-xs">
-                                            +{(match?.permissions || []).length - perms.length} more
+                                            +{permissions.length - preview.length} more
                                           </Badge>
                                         )}
                                       </div>
@@ -1043,11 +1206,9 @@ export default function OnboardingWizard() {
                                 control={form.control}
                                 name="moduleConfigs.rbac.defaultRoles"
                                 render={({ field }) => {
-                                  const roles: string[] = (field.value as any) || [
-                                    "Admin",
-                                    "Manager",
-                                    "Viewer",
-                                  ];
+                                  const roles: string[] = Array.isArray(field.value)
+                                    ? (field.value as string[])
+                                    : [];
                                   const [input, setInput] = React.useState("");
                                   const addRole = () => {
                                     const v = input.trim();
@@ -1362,32 +1523,23 @@ export default function OnboardingWizard() {
                               <span className="text-sm text-slate-600">RBAC:</span>
                               <div className="mt-2 space-y-1 text-sm">
                                 <div>
-                                  Template:{" "}
-                                  <strong>
-                                    {(form.getValues(
-                                      "moduleConfigs.rbac.permissionTemplate"
-                                    ) as any) || "standard"}
-                                  </strong>
+                                  Template: <strong>{rbacTemplateDisplay}</strong>
                                 </div>
                                 <div>
-                                  Business Type:{" "}
-                                  <strong>
-                                    {(form.getValues("moduleConfigs.rbac.businessType") as any) ||
-                                      "general"}
-                                  </strong>
+                                  Business Type: <strong>{rbacBusinessDisplay}</strong>
                                 </div>
                                 <div className="flex items-start gap-2">
                                   <span>Default Roles:</span>
                                   <div className="flex flex-wrap gap-2">
-                                    {(
-                                      form.getValues("moduleConfigs.rbac.defaultRoles") as
-                                        | any[]
-                                        | undefined
-                                    )?.map((r: any) => (
-                                      <Badge key={r} variant="secondary">
-                                        {r}
-                                      </Badge>
-                                    ))}
+                                    {rbacDefaultRoles.length ? (
+                                      rbacDefaultRoles.map(role => (
+                                        <Badge key={role} variant="secondary">
+                                          {role}
+                                        </Badge>
+                                      ))
+                                    ) : (
+                                      <span className="text-slate-500">None</span>
+                                    )}
                                   </div>
                                 </div>
                               </div>

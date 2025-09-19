@@ -94,7 +94,7 @@ export const testTransformation = () => {
     adminEmail: "akki@primussoft.com",
     adminName: "akki",
     sendEmail: true,
-    enabledModules: ["authentication", "rbac", "logging", "notifications"],
+    enabledModules: ["auth", "rbac", "logging", "notifications"],
     moduleConfigs: {
       authentication: {
         providers: ["azure-ad", "local"],

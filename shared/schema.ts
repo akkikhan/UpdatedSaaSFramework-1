@@ -65,7 +65,7 @@ export const tenants = pgTable("tenants", {
   loggingApiKey: varchar("logging_api_key", { length: 100 }),
   notificationsApiKey: varchar("notifications_api_key", { length: 100 }),
   // Module configurations
-  enabledModules: jsonb("enabled_modules").default(sql`'["authentication", "rbac"]'`), // ["authentication", "rbac", "logging", "notifications"]
+  enabledModules: jsonb("enabled_modules").default(sql`'["auth", "rbac"]'`), // ["auth", "rbac", "logging", "notifications"]
   moduleConfigs: jsonb("module_configs").default(sql`'{}'`), // Store configs for each module (provider settings, etc.)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -496,4 +496,3 @@ export type InsertDefaultRole = z.infer<typeof insertDefaultRoleSchema>;
 export type InsertTenantUserRole = z.infer<typeof insertTenantUserRoleSchema>;
 export type TenantNotification = typeof tenantNotifications.$inferSelect;
 export type InsertTenantNotification = z.infer<typeof insertTenantNotificationSchema>;
-

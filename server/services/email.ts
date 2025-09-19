@@ -172,12 +172,13 @@ export class EmailService {
     const subject = `Welcome to SaaS Framework - Your Tenant "${tenant.name}" is Ready`;
 
     // Get enabled modules or default
-    const enabledModules = tenant.enabledModules || ["authentication", "rbac"];
+    const enabledModules = tenant.enabledModules || ["auth", "rbac"];
+    const hasAuthModule = enabledModules.includes("auth") || enabledModules.includes("authentication");
 
     // Build API keys object for enabled modules only
     const apiKeys: { [key: string]: string } = {};
-    if (enabledModules.includes("authentication") && tenant.authApiKey) {
-      apiKeys.authentication = tenant.authApiKey;
+    if (hasAuthModule && tenant.authApiKey) {
+      apiKeys.auth = tenant.authApiKey;
     }
     if (enabledModules.includes("rbac") && tenant.rbacApiKey) {
       apiKeys.rbac = tenant.rbacApiKey;
@@ -374,11 +375,12 @@ export class EmailService {
     const docsUrl = `${baseUrl}/docs`;
 
     // Get enabled modules or default
-    const enabledModules = tenant.enabledModules || ["authentication", "rbac"];
+    const enabledModules = tenant.enabledModules || ["auth", "rbac"];
+    const hasAuthModule = enabledModules.includes("auth") || enabledModules.includes("authentication");
 
     // Build API keys object for enabled modules only
     const apiKeys: { [key: string]: string } = {};
-    if (enabledModules.includes("authentication") && tenant.authApiKey) {
+    if (hasAuthModule && tenant.authApiKey) {
       apiKeys["Authentication"] = tenant.authApiKey;
     }
     if (enabledModules.includes("rbac") && tenant.rbacApiKey) {
@@ -398,7 +400,7 @@ export class EmailService {
 
     // Generate NPM install command for enabled modules
     const packageNames = [];
-    if (enabledModules.includes("authentication")) packageNames.push("@saas-framework/auth");
+    if (hasAuthModule) packageNames.push("@saas-framework/auth");
     if (enabledModules.includes("rbac")) packageNames.push("@saas-framework/rbac");
     if (enabledModules.includes("logging")) packageNames.push("@saas-framework/logging");
     if (enabledModules.includes("notifications"))
@@ -410,7 +412,7 @@ export class EmailService {
     const importStatements = [];
     const initStatements = [];
 
-    if (enabledModules.includes("authentication") && tenant.authApiKey) {
+    if (hasAuthModule && tenant.authApiKey) {
       importStatements.push("import { SaaSAuth } from '@saas-framework/auth';");
       initStatements.push(`const auth = new SaaSAuth({
   apiKey: '${tenant.authApiKey}',
