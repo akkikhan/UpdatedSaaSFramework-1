@@ -1,0 +1,35 @@
+*** Begin Patch
+*** Update File: packages/rbac/src/index.ts
+@@
+ export interface SaaSRBACConfig {
+   apiKey: string;
+   baseUrl: string;
+   cacheEnabled?: boolean;
+   cacheTTL?: number; // seconds
+   realTimeUpdates?: boolean;
+   websocketUrl?: string;
+ }
+ 
++export interface RolePermissionDetail {
++  resource: string;
++  action: string;
++  scope?: string;
++  conditions?: PermissionCondition[];
++  description?: string;
++}
++
+ export interface Role {
+   id: string;
+   tenantId: string;
+   name: string;
+   description: string;
+-  permissions: string[];
++  permissions: string[];
++  permissionDetails: RolePermissionDetail[];
++  inheritsFrom?: string[];
+   isSystem: boolean;
+   isActive: boolean;
+   createdAt: Date;
+   updatedAt: Date;
+   hierarchy?: number; // 0 = highest, 999 = lowest
+*** End Patch

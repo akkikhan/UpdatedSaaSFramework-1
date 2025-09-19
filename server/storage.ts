@@ -31,6 +31,7 @@ import {
   type TenantUser,
   type InsertTenantUser,
   type TenantRole,
+  type TenantRolePermissionDefinition,
   type InsertTenantRole,
   type TenantUserRole,
   type InsertTenantUserRole,
@@ -55,6 +56,37 @@ function ensureDb() {
     throw new Error("Database connection not available");
   }
   return db;
+}
+
+
+const DEFAULT_PERMISSION_SCOPE = "tenant";
+
+function normalizePermissionDefinitionRecord(input: any): TenantRolePermissionDefinition | null {
+  if (input == null) return null;
+  if (typeof input === "string") {
+    const [rawResource, rawAction] = input.split(".");
+    const resource = (rawResource || "").trim();
+    if (!resource) return null;
+    const action = (rawAction || "*").trim() || "*";
+    return { resource, action, scope: DEFAULT_PERMISSION_SCOPE, conditions: [] };
+  }
+  if (typeof input !== "object") return null;
+  const resource = typeof input.resource === "string" ? input.resource.trim() : "";
+  if (!resource) return null;
+  const action = typeof input.action === "string" && input.action.trim().length > 0 ? input.action.trim() : "*";
+  const scope = typeof input.scope === "string" && input.scope.trim().length > 0 ? input.scope.trim() : DEFAULT_PERMISSION_SCOPE;
+  const conditions = Array.isArray(input.conditions) ? input.conditions : [];
+  const description = typeof input.description === "string" ? input.description : undefined;
+  return { resource, action, scope, conditions, description };
+}
+
+function permissionKeyFromDefinition(permission: TenantRolePermissionDefinition): string {
+  return `${permission.resource}.${permission.action}`;
+}
+
+function permissionMatchesDefinition(permission: TenantRolePermissionDefinition, resource: string, action: string): boolean {
+  return (permission.resource === resource || permission.resource === "*") &&
+    (permission.action === action || permission.action === "*");
 }
 
 export interface IStorage {
@@ -906,6 +938,38 @@ export class DatabaseStorage implements IStorage {
       .orderBy(tenantRoles.name);
   }
 
+  async getRolesWithInheritance(tenantId: string, roleIds: string[]): Promise<TenantRole[]> {
+    if (!Array.isArray(roleIds) || roleIds.length === 0) return [];
+    const dbInstance = ensureDb();
+    const visited = new Map<string, TenantRole>();
+    let pending = Array.from(new Set(roleIds.filter(Boolean)));
+
+    while (pending.length) {
+      const rows = await dbInstance
+        .select()
+        .from(tenantRoles)
+        .where(inArray(tenantRoles.id, pending));
+
+      pending = [];
+      for (const row of rows) {
+        if (!row || row.tenantId !== tenantId) continue;
+        if (!visited.has(row.id)) {
+          visited.set(row.id, row);
+          if (Array.isArray(row.inheritsFrom) && row.inheritsFrom.length) {
+            for (const parentId of row.inheritsFrom) {
+              if (parentId && !visited.has(parentId)) {
+                pending.push(parentId);
+              }
+            }
+          }
+        }
+      }
+      pending = Array.from(new Set(pending));
+    }
+
+    return Array.from(visited.values());
+  }
+
   async getTenantRole(id: string): Promise<TenantRole | null> {
     const [role] = await db.select().from(tenantRoles).where(eq(tenantRoles.id, id));
     return role || null;
@@ -962,17 +1026,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserPermissions(userId: string, tenantId: string): Promise<string[]> {
-    // Get role assignments
     const assignments = await this.getTenantUserRoles(tenantId, userId);
     if (!assignments || assignments.length === 0) return [];
     const roleIds = assignments.map(a => a.roleId);
-    // Fetch roles
-    const rolesResult = await db.select().from(tenantRoles).where(inArray(tenantRoles.id, roleIds));
-    const permissions = new Set<string>();
-    for (const r of rolesResult) {
-      (r.permissions || []).forEach(p => permissions.add(p));
+    const roles = await this.getRolesWithInheritance(tenantId, roleIds);
+    const permissionKeys = new Set<string>();
+    for (const role of roles) {
+      const definitions = Array.isArray(role.permissions)
+        ? role.permissions
+            .map(normalizePermissionDefinitionRecord)
+            .filter((value): value is TenantRolePermissionDefinition => value !== null)
+        : [];
+      for (const definition of definitions) {
+        permissionKeys.add(permissionKeyFromDefinition(definition));
+      }
     }
-    return Array.from(permissions);
+    return Array.from(permissionKeys);
   }
 
   // Tenant Notification Implementation
@@ -1127,13 +1196,27 @@ export class DatabaseStorage implements IStorage {
     permission: string,
     tenantId: string
   ): Promise<boolean> {
-    try {
-      // Simple implementation: For demo purposes, return true for testing
-      return true;
-    } catch (error) {
-      console.error("Error checking user permission:", error);
-      return false;
+    const [resourceRaw, actionRaw] = permission.split(".");
+    const resource = (resourceRaw || "").trim();
+    if (!resource) return false;
+    const action = (actionRaw || "*").trim() || "*";
+    const assignments = await this.getTenantUserRoles(tenantId, userId);
+    if (!assignments || assignments.length === 0) return false;
+    const roleIds = assignments.map(a => a.roleId);
+    const roles = await this.getRolesWithInheritance(tenantId, roleIds);
+    for (const role of roles) {
+      const definitions = Array.isArray(role.permissions)
+        ? role.permissions
+            .map(normalizePermissionDefinitionRecord)
+            .filter((value): value is TenantRolePermissionDefinition => value !== null)
+        : [];
+      for (const definition of definitions) {
+        if (permissionMatchesDefinition(definition, resource, action)) {
+          return true;
+        }
+      }
     }
+    return false;
   }
 
   async getDefaultRolesByBusinessType(businessTypeId: string): Promise<DefaultRole[]> {
@@ -1790,20 +1873,134 @@ export class DatabaseStorage implements IStorage {
 
 // Create demo storage for testing when database is unavailable
 class DemoStorage implements IStorage {
-  async createTenant(): Promise<any> {
-    return { id: "demo-tenant", status: "active" };
+  private tenants: any[];
+  private emailLogs: any[];
+
+  constructor() {
+    const now = new Date().toISOString();
+    this.tenants = [
+      {
+        id: "demo-tenant",
+        orgId: "demo-tenant",
+        name: "Demo Tenant",
+        adminEmail: "admin@example.com",
+        adminName: "Demo Admin",
+        status: "active",
+        enabledModules: ["auth", "rbac"],
+        moduleConfigs: {},
+        metadata: {},
+        authApiKey: "auth_demo_default",
+        rbacApiKey: "rbac_demo_default",
+        loggingApiKey: undefined,
+        notificationsApiKey: undefined,
+        sendEmail: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+    this.emailLogs = [];
   }
-  async getTenant(): Promise<any> {
-    return { id: "demo-tenant", status: "active" };
+
+  private clone<T>(value: T): T {
+    return value === undefined || value === null
+      ? value
+      : JSON.parse(JSON.stringify(value));
   }
-  async getTenantByOrgId(): Promise<any> {
-    return { id: "demo-tenant", status: "active" };
+
+  private findTenantByOrgId(orgId: string) {
+    const normalized = (orgId || "").toLowerCase();
+    return this.tenants.find(
+      tenant => (tenant.orgId || "").toLowerCase() === normalized
+    );
+  }
+
+  private findTenantByAuthApiKey(apiKey: string) {
+    const normalized = (apiKey || "").toLowerCase();
+    return this.tenants.find(
+      tenant => (tenant.authApiKey || "").toLowerCase() === normalized
+    );
+  }
+
+  async createTenant(tenant: InsertTenant): Promise<any> {
+    if (tenant?.orgId && this.findTenantByOrgId(tenant.orgId)) {
+      throw new Error("Organization ID already exists");
+    }
+
+    const now = new Date().toISOString();
+    const enabledModules =
+      Array.isArray(tenant?.enabledModules) && tenant.enabledModules.length
+        ? [...tenant.enabledModules]
+        : ["auth", "rbac"];
+
+    const moduleConfigs =
+      tenant?.moduleConfigs && typeof tenant.moduleConfigs === "object"
+        ? this.clone(tenant.moduleConfigs)
+        : {};
+    const metadata =
+      tenant?.metadata && typeof tenant.metadata === "object"
+        ? this.clone(tenant.metadata)
+        : {};
+
+    const apiKeyBase = randomUUID().replace(/-/g, "");
+
+    const record = {
+      ...tenant,
+      id: tenant?.id || randomUUID(),
+      status: tenant?.status || "pending",
+      enabledModules,
+      moduleConfigs,
+      metadata,
+      adminName: tenant?.adminName || (metadata as any)?.adminName || "",
+      sendEmail: tenant?.sendEmail ?? true,
+      authApiKey:
+        tenant?.authApiKey ||
+        (enabledModules.includes("auth")
+          ? `auth_demo_${apiKeyBase.substring(0, 12)}`
+          : undefined),
+      rbacApiKey:
+        tenant?.rbacApiKey ||
+        (enabledModules.includes("rbac")
+          ? `rbac_demo_${apiKeyBase.substring(12, 24)}`
+          : undefined),
+      loggingApiKey:
+        tenant?.loggingApiKey ||
+        (enabledModules.includes("logging")
+          ? `logging_demo_${apiKeyBase.substring(24, 32)}`
+          : undefined),
+      notificationsApiKey:
+        tenant?.notificationsApiKey ||
+        (enabledModules.includes("notifications")
+          ? `notify_demo_${apiKeyBase.substring(32, 40)}`
+          : undefined),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.tenants.push(record);
+    return this.clone(record);
+  }
+  async getTenant(id: string): Promise<any> {
+    const tenant = this.tenants.find(item => item.id === id);
+    return tenant ? this.clone(tenant) : undefined;
+  }
+  async getTenantByOrgId(orgId: string): Promise<any> {
+    const tenant = this.findTenantByOrgId(orgId);
+    return tenant ? this.clone(tenant) : undefined;
+  }
+
+  async getTenantByAuthApiKey(apiKey: string): Promise<any> {
+    const tenant = this.findTenantByAuthApiKey(apiKey);
+    return tenant ? this.clone(tenant) : undefined;
   }
   async getAllTenants(): Promise<any[]> {
-    return [{ id: "demo-tenant", status: "active" }];
+    return this.tenants.map(tenant => this.clone(tenant));
   }
-  async updateTenantStatus(): Promise<void> {
-    return;
+  async updateTenantStatus(id: string, status: string): Promise<void> {
+    const tenant = this.tenants.find(item => item.id === id);
+    if (tenant) {
+      tenant.status = status;
+      tenant.updatedAt = new Date().toISOString();
+    }
   }
   async createUser(): Promise<any> {
     return { id: "demo-user" };
@@ -1829,8 +2026,15 @@ class DemoStorage implements IStorage {
   async getRolesByTenant(): Promise<any[]> {
     return [{ id: "demo-role" }];
   }
-  async logEmail(): Promise<any> {
-    return { id: "demo-email-log" };
+  async logEmail(emailLog: any): Promise<any> {
+    const record = {
+      id: `demo-email-${this.emailLogs.length + 1}`,
+      ...emailLog,
+      sentAt: new Date().toISOString(),
+      status: emailLog?.status || "sent",
+    };
+    this.emailLogs.push(record);
+    return this.clone(record);
   }
   async logSystemActivity(): Promise<void> {
     return;
@@ -1848,13 +2052,24 @@ class DemoStorage implements IStorage {
     return;
   }
   async getEmailLogs(): Promise<any[]> {
-    return [];
+    return this.emailLogs.map(log => this.clone(log));
   }
   async getTenantStats(): Promise<any> {
-    return { totalTenants: 1, activeTenants: 1, pendingTenants: 0, emailsSent: 0 };
+    const totalTenants = this.tenants.length;
+    const activeTenants = this.tenants.filter(tenant => tenant.status === "active").length;
+    const pendingTenants = this.tenants.filter(tenant => tenant.status === "pending").length;
+    return {
+      totalTenants,
+      activeTenants,
+      pendingTenants,
+      emailsSent: this.emailLogs.length,
+    };
   }
   async getRecentTenants(): Promise<any[]> {
-    return [{ id: "demo-tenant" }];
+    return this.tenants
+      .slice(-5)
+      .reverse()
+      .map(tenant => this.clone(tenant));
   }
   async createTenantUser(): Promise<any> {
     return { id: "demo-tenant-user" };
@@ -2098,34 +2313,28 @@ class DemoStorage implements IStorage {
   }
 }
 
-// Use demo storage if database connection fails, otherwise use database storage
+// Initialize storage using DatabaseStorage (Postgres)
 let storage: IStorage;
 try {
-  // Only use database storage when a DB URL is provided AND a live connection exists
   const hasDbConfig = Boolean(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL);
-  const hasLiveConnection = Boolean(db);
-
-  if (hasDbConfig && hasLiveConnection) {
-    storage = new DatabaseStorage();
-  } else if (hasDbConfig && !hasLiveConnection) {
-    console.warn("Database configured but connection not available — using demo storage fallback");
-    storage = new DemoStorage();
-  } else {
-    console.log("No database configuration found, using demo storage");
-    storage = new DemoStorage();
+  if (!hasDbConfig) {
+    throw new Error(
+      "Database configuration required for RBAC. Set DATABASE_URL or NEON_DATABASE_URL before starting the server."
+    );
   }
+
+  if (!db) {
+    throw new Error("Database connection not available; cannot initialize DatabaseStorage");
+  }
+
+  storage = new DatabaseStorage();
 } catch (error) {
-  console.log(
-    "Database connection failed, using demo storage:",
-    error instanceof Error ? error.message : String(error)
-  );
-  storage = new DemoStorage();
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("Failed to initialize DatabaseStorage for RBAC:", message);
+  throw error instanceof Error ? error : new Error(message);
 }
 
 export { storage };
 
-// Debug: Verify checkUserPermission function exists
-console.log(
-  "🔍 Storage initialized. checkUserPermission exists:",
-  typeof storage.checkUserPermission === "function"
-);
+console.info("[storage] DatabaseStorage initialized for RBAC operations");
+

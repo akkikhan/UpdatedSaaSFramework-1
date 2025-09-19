@@ -37,7 +37,9 @@
     "packages:publish:rbac": "cd packages/rbac && npm run publish-package",
     "packages:verify": "npm run packages:build && echo 'All packages built successfully!'",
     "publish:dry-run": "npm run packages:build && echo 'Dry run completed - packages ready for publishing'",
-    "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'"
+    "packages:publish:auth-client": "cd packages/auth-client && echo 'Run npm publish here (configure registry and auth)'",
+    "cosmos:prototype": "node scripts/prototype-cosmos-postgres.mjs",
+    "cosmos:configure": "node scripts/cosmos/configure-cosmos.mjs"
   },
   "dependencies": {
     "@azure/msal-node": "^3.7.3",
@@ -101,6 +103,7 @@
     "lucide-react": "^0.453.0",
     "memoizee": "^0.4.17",
     "memorystore": "^1.6.7",
+    "mssql": "^11.0.1",
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
     "node-fetch": "^3.3.2",

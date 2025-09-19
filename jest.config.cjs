@@ -11,6 +11,7 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       useESM: true,
+      diagnostics: false,
       tsconfig: {
         module: 'ESNext',
         moduleResolution: 'node',

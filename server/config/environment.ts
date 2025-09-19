@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-
-dotenv.config();
+// Environment variables loaded by main server/index.ts
 
 interface EnvironmentConfig {
   NODE_ENV: string;

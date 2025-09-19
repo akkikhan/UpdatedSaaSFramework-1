@@ -1,7 +1,4 @@
-import { config } from "dotenv";
-
-// Load environment variables first
-config();
+// Environment variables loaded by main server/index.ts
 
 import { Pool } from "pg";
 import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";

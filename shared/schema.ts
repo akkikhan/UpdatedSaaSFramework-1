@@ -19,6 +19,23 @@ import {
   type ModuleConfigs,
 } from "./types";
 
+export const permissionConditionSchema = z.object({
+  type: z.string().min(1, "Condition type is required"),
+  operator: z.string().min(1).optional(),
+  value: z.any(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const tenantRolePermissionSchema = z.object({
+  resource: z.string().min(1, "Permission resource is required"),
+  action: z.string().min(1, "Permission action is required"),
+  scope: z.enum(["tenant", "resource", "global"]).optional(),
+  conditions: z.array(permissionConditionSchema).optional(),
+  description: z.string().optional(),
+});
+
+export type PermissionCondition = z.infer<typeof permissionConditionSchema>;
+export type TenantRolePermissionDefinition = z.infer<typeof tenantRolePermissionSchema>;
 // Platform Admins table - for platform-level administration
 export const platformAdmins = pgTable("platform_admins", {
   id: uuid("id")
@@ -259,10 +276,18 @@ export const tenantRoles = pgTable("tenant_roles", {
     .notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  permissions: text("permissions")
+  permissions: jsonb("permissions", { mode: "json" })
+    .$type<TenantRolePermissionDefinition[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  inheritsFrom: uuid("inherits_from")
     .array()
     .notNull()
-    .default(sql`'{}'::text[]`),
+    .default(sql`'{}'::uuid[]`),
+  metadata: jsonb("metadata", { mode: "json" })
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   isSystem: boolean("is_system").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -383,10 +408,20 @@ export const insertTenantUserSchema = createInsertSchema(tenantUsers).omit({
   updatedAt: true,
 });
 
-export const insertTenantRoleSchema = createInsertSchema(tenantRoles).omit({
+const tenantRoleInsertSchemaBase = createInsertSchema(tenantRoles, {
+  permissions: z.array(tenantRolePermissionSchema),
+  inheritsFrom: z.array(z.string().uuid()).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const insertTenantRoleSchema = tenantRoleInsertSchemaBase.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  permissions: z.array(tenantRolePermissionSchema).default([]),
+  inheritsFrom: z.array(z.string().uuid()).default([]),
+  metadata: z.record(z.any()).default({}),
 });
 
 export const insertTenantUserRoleSchema = createInsertSchema(tenantUserRoles).omit({
@@ -461,3 +496,4 @@ export type InsertDefaultRole = z.infer<typeof insertDefaultRoleSchema>;
 export type InsertTenantUserRole = z.infer<typeof insertTenantUserRoleSchema>;
 export type TenantNotification = typeof tenantNotifications.$inferSelect;
 export type InsertTenantNotification = z.infer<typeof insertTenantNotificationSchema>;
+

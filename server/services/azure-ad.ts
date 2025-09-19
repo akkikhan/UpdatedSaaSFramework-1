@@ -56,7 +56,7 @@ export class AzureADService {
             console.log(`[Azure AD] ${level}: ${message}`);
           },
           piiLoggingEnabled: false,
-          logLevel: process.env.NODE_ENV === "development" ? 3 : 1, // Verbose in dev, Error in prod
+          logLevel: process.env.NODE_ENV === "development" ? 1 : 0, // Warnings in dev, Errors only in prod
         },
       },
     });
@@ -71,15 +71,26 @@ export class AzureADService {
     // Handle Azure AD external user format: khan.aakib_outlook.com#EXT#@tenant.onmicrosoft.com
     // Convert back to: khan.aakib@outlook.com
     const externalUserPattern = /^(.+)_(.+)\.com#EXT#@.*$/;
-    const match = email.match(externalUserPattern);
+    let normalized = email;
 
+    const match = email.match(externalUserPattern);
     if (match) {
       const [, localPart, domain] = match;
-      return `${localPart}@${domain}.com`;
+      normalized = `${localPart}@${domain}.com`;
     }
 
-    // Return email as-is if no external user pattern detected
-    return email;
+    // Comprehensive normalization: lowercase, trim, remove extra spaces
+    normalized = normalized.toLowerCase().trim().replace(/\s+/g, "");
+
+    // Validate email format (basic)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalized)) {
+      console.warn(`[Email Normalization] Invalid email format: ${email} -> ${normalized}`);
+      return normalized; // Return anyway for logging/debugging
+    }
+
+    console.debug(`[Email Normalization] ${email} -> ${normalized}`);
+    return normalized;
   }
 
   /**
@@ -375,7 +386,7 @@ export class AzureADService {
           metadata: {
             azureAdGroups: azureUser.groups,
             lastAzureSync: new Date().toISOString(),
-          },
+          } as any, // Cast to any to match Json type
         });
 
         if (!updatedUser) {
@@ -397,12 +408,52 @@ export class AzureADService {
             provider: "azure-ad",
             azureAdGroups: azureUser.groups,
             lastAzureSync: new Date().toISOString(),
-          },
+          } as any, // Cast to any to match Json type
         });
 
         // TODO: Auto-assign roles based on Azure AD groups
         // This would be configurable per tenant
         await this.assignRolesBasedOnGroups(newUser, azureUser.groups || [], tenantId);
+
+        // Special case: If this user is the tenant admin (email match), assign admin role
+        const tenant = await storage.getTenantById(tenantId);
+        if (tenant) {
+          const normalizedUserEmail = this.normalizeEmail(azureUser.email);
+          const normalizedAdminEmail = this.normalizeEmail(tenant.adminEmail);
+          if (normalizedUserEmail === normalizedAdminEmail) {
+            try {
+              // Ensure admin role exists
+              let adminRole = await storage
+                .getTenantRoles(tenantId)
+                .then(roles => roles.find(r => r.name.toLowerCase() === "admin"));
+              if (!adminRole) {
+                adminRole = await storage.createTenantRole({
+                  tenantId,
+                  name: "Admin",
+                  description: "Full access administrator role",
+                  permissions: ["*"],
+                  isSystem: true,
+                });
+              }
+              if (adminRole) {
+                await storage.assignTenantUserRole({
+                  tenantId,
+                  userId: newUser.id,
+                  roleId: adminRole.id,
+                });
+                console.log(
+                  `[Azure AD] Assigned admin role to tenant admin user ${azureUser.email}`
+                );
+              }
+            } catch (roleError) {
+              console.error(
+                `[Azure AD] Failed to assign admin role to ${azureUser.email}:`,
+                roleError
+              );
+              // Continue without admin role if creation fails
+            }
+          }
+        }
 
         return newUser;
       }
@@ -458,7 +509,7 @@ export class AzureADService {
               tenantId,
               name: roleName.charAt(0).toUpperCase() + roleName.slice(1),
               description: `Default ${roleName} role created from Azure AD integration`,
-              permissions: this.getDefaultPermissionsForRole(roleName),
+              permissions: this.getDefaultPermissionsForRole(roleName), // Array of strings
               isSystem: false,
             });
           }

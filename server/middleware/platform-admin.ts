@@ -16,6 +16,18 @@ declare global {
 }
 
 export const platformAdminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+  // TEMPORARY FIX: Bypass authentication in development mode
+  if (process.env.NODE_ENV === "development" && process.env.BYPASS_ADMIN_AUTH === "true") {
+    console.log("⚠️ BYPASSING platform admin authentication (development mode)");
+    req.platformAdmin = {
+      adminId: "dev-admin-id",
+      email: "dev@admin.com",
+      name: "Development Admin",
+      role: "super_admin",
+    };
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {

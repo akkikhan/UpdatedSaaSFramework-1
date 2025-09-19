@@ -12,6 +12,27 @@ function getOrgIdFromLocation(): string | null {
 }
 
 function getTenantToken(orgId?: string | null): string | null {
+  // Check URL hash for OAuth callback token first
+  const hash = window.location.hash;
+  if (hash) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get("token");
+    const tenantParam = params.get("tenant");
+    if (token && tenantParam) {
+      // Store token in localStorage
+      localStorage.setItem("tenant_token", token);
+      if (tenantParam) {
+        localStorage.setItem(`tenant_token_${tenantParam}`, token);
+      }
+
+      // Clear URL hash to clean up
+      window.history.replaceState({}, "", window.location.pathname);
+
+      // Return the token
+      return token;
+    }
+  }
+
   const oid = orgId ?? getOrgIdFromLocation();
   if (oid) {
     const namespaced = localStorage.getItem(`tenant_token_${oid}`);
@@ -81,7 +102,7 @@ export function useTenantLogin() {
       return loginResult;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tenant/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v2/auth/verify"] });
       toast({
         title: "Success",
         description: "Logged in successfully",

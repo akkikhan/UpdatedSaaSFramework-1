@@ -7,13 +7,25 @@ export interface RBACConfig {
   tenantId: string;
 }
 
+export interface RolePermissionDetail {
+  resource: string;
+  action: string;
+  scope?: string;
+  conditions?: unknown[];
+  description?: string;
+}
+
 export interface Role {
   id: string;
   name: string;
   description?: string;
   permissions: string[];
+  permissionDetails: RolePermissionDetail[];
   tenantId: string;
   createdAt: Date;
+  updatedAt?: Date;
+  inheritsFrom?: string[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface Permission {
@@ -32,16 +44,27 @@ export interface UserRole {
 }
 
 // Validation schemas
+const permissionDetailSchema = z.object({
+  resource: z.string().min(1),
+  action: z.string().min(1),
+  scope: z.enum(['tenant', 'resource', 'global']).optional(),
+  conditions: z.array(z.unknown()).optional(),
+  description: z.string().optional(),
+});
+
 const roleSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  permissions: z.array(z.string())
+  permissions: z.array(z.string()).optional(),
+  permissionDetails: z.array(permissionDetailSchema).optional(),
+  inheritsFrom: z.array(z.string()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const permissionCheckSchema = z.object({
   userId: z.string(),
   resource: z.string(),
-  action: z.string()
+  action: z.string(),
 });
 
 export class SaaSFactoryRBAC {

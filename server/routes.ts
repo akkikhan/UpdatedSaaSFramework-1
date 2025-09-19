@@ -17,13 +17,149 @@ import {
   insertPermissionTemplateSchema,
   insertBusinessTypeSchema,
   insertDefaultRoleSchema,
+  tenantRolePermissionSchema,
+  permissionConditionSchema,
 } from "../shared/schema";
+import type { TenantRolePermissionDefinition } from "../shared/schema";
 import { notificationService } from "./services/notification";
 import { complianceService } from "./services/compliance-temp";
 import { z } from "zod";
 import path from "path";
 import { fileURLToPath } from "url";
 
+const DEFAULT_PERMISSION_SCOPE = "tenant" as const;
+
+const normalizedPermissionSchema = tenantRolePermissionSchema.extend({
+  scope: z.enum(["tenant", "resource", "global"]).default("tenant"),
+  conditions: z.array(permissionConditionSchema).default([]),
+});
+
+const inheritanceSchema = z.array(z.string().uuid());
+const metadataSchema = z.record(z.any());
+
+function coercePermissionDefinition(value: unknown): TenantRolePermissionDefinition | null {
+  if (typeof value === "string") {
+    const [resourcePart, actionPart] = value.split(".");
+    const resource = resourcePart?.trim();
+    if (!resource) return null;
+    return {
+      resource,
+      action: actionPart?.trim() || "*",
+      scope: DEFAULT_PERMISSION_SCOPE,
+      conditions: [],
+    };
+  }
+
+  const parsed = normalizedPermissionSchema.safeParse(value);
+  if (!parsed.success) return null;
+
+  return {
+    resource: parsed.data.resource,
+    action: parsed.data.action,
+    scope: parsed.data.scope ?? DEFAULT_PERMISSION_SCOPE,
+    conditions: parsed.data.conditions ?? [],
+    description: parsed.data.description,
+  };
+}
+
+function toPermissionKey(permission: TenantRolePermissionDefinition): string {
+  return `${permission.resource}.${permission.action}`;
+}
+function permissionMatches(permission: TenantRolePermissionDefinition, resource: string, action: string): boolean {
+  const candidateResource = permission.resource;
+  const candidateAction = permission.action;
+  return (candidateResource === resource || candidateResource === "*") &&
+    (candidateAction === action || candidateAction === "*");
+}
+
+
+function normalizeRolePermissions(input: unknown): TenantRolePermissionDefinition[] {
+  if (!Array.isArray(input)) return [];
+
+  const unique = new Map<string, TenantRolePermissionDefinition>();
+  for (const raw of input) {
+    const candidate = coercePermissionDefinition(raw);
+    if (!candidate) continue;
+
+    const scope = candidate.scope ?? DEFAULT_PERMISSION_SCOPE;
+    const key = `${candidate.resource.toLowerCase()}::${candidate.action.toLowerCase()}::${scope.toLowerCase()}`;
+    if (!unique.has(key)) {
+      unique.set(key, {
+        resource: candidate.resource,
+        action: candidate.action,
+        scope,
+        conditions: candidate.conditions ?? [],
+        description: candidate.description,
+      });
+    }
+  }
+
+  return Array.from(unique.values());
+}
+
+function normalizeRoleInheritance(input: unknown): string[] {
+  if (input == null || input === "") return [];
+  const rawArray = Array.isArray(input) ? input : [input];
+  const cleaned = rawArray
+    .filter(value => typeof value === "string")
+    .map(value => (value as string).trim())
+    .filter(value => value.length > 0);
+
+  if (cleaned.length === 0) return [];
+
+  const parsed = inheritanceSchema.safeParse(cleaned);
+  return parsed.success ? parsed.data : [];
+}
+
+function collectRoleUpdates(input: {
+  name?: unknown;
+  description?: unknown;
+  permissions?: unknown;
+  permissionDetails?: unknown;
+  inheritsFrom?: unknown;
+  metadata?: unknown;
+}): Record<string, unknown> {
+  const updates: Record<string, unknown> = {};
+  if (typeof input.name === "string" && input.name.trim().length > 0) updates.name = input.name;
+  if (typeof input.description === "string") updates.description = input.description;
+  if (input.permissions !== undefined || input.permissionDetails !== undefined) {
+    updates.permissions = normalizeRolePermissions(input.permissionDetails ?? input.permissions);
+  }
+  if (input.inheritsFrom !== undefined) {
+    updates.inheritsFrom = normalizeRoleInheritance(input.inheritsFrom);
+  }
+  if (input.metadata !== undefined) {
+    updates.metadata = normalizeRoleMetadata(input.metadata);
+  }
+  return updates;
+}
+
+function normalizeRoleMetadata(input: unknown): Record<string, unknown> {
+  if (input == null) return {};
+  const parsed = metadataSchema.safeParse(input);
+  return parsed.success ? parsed.data : {};
+}
+
+function serializeRole(role: any) {
+  if (!role) return role;
+  const permissionDetails = Array.isArray(role.permissions)
+    ? role.permissions
+        .map(coercePermissionDefinition)
+        .filter((value): value is TenantRolePermissionDefinition => value !== null)
+        .map(detail => ({
+          resource: detail.resource,
+          action: detail.action,
+          scope: detail.scope ?? DEFAULT_PERMISSION_SCOPE,
+          conditions: detail.conditions ?? [],
+          description: detail.description,
+        }))
+    : [];
+  return {
+    ...role,
+    permissions: permissionDetails.map(toPermissionKey),
+    permissionDetails,
+  };
+}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -142,31 +278,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Platform admin login error:", error);
       res.status(500).json({ message: "Platform admin login failed" });
-    }
-  });
-
-  // Platform admin token verification
-  app.get("/api/platform/auth/verify", async (req, res) => {
-    try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res.status(401).json({ message: "No valid authorization token provided" });
-      }
-
-      const token = authHeader.split(" ")[1];
-      const result = await platformAdminAuthService.verifyToken(token);
-
-      if (!result) {
-        return res.status(401).json({ message: "Invalid or expired token" });
-      }
-
-      res.json({
-        valid: true,
-        admin: result.admin,
-      });
-    } catch (error) {
-      console.error("Platform admin token verification error:", error);
-      res.status(401).json({ message: "Token verification failed" });
     }
   });
 
@@ -1613,7 +1724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tenantAllowsFallback = authConfig?.allowFallback !== false;
       const fallbackToPlatform = (!azureProvider || !azureProvider.enabled) && envFallback && tenantAllowsFallback;
 
-      if (!fallbackToPlatform) {
+      if (!fallbackToPlatform && azureProvider && azureProvider.config) {
         console.log("Azure AD provider found, creating service instance...");
       } else {
         console.log("Azure AD provider missing/disabled. Falling back to platform Azure app for SSO callback.");
@@ -1621,7 +1732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Decrypt clientSecret if encrypted; surface clear error if undecryptable
       let decryptErrorMessage = "";
-      if (!fallbackToPlatform) {
+      if (!fallbackToPlatform && azureProvider && azureProvider.config) {
         try {
           const { decryptSecret } = await import("./utils/secret.js");
           if (azureProvider.config?.clientSecret) {
@@ -1645,11 +1756,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Guard: ensure required fields for SSO
+      // Guard: ensure required fields for SSO (only check if not falling back to platform)
       if (
-        !azureProvider.config?.tenantId ||
-        !azureProvider.config?.clientId ||
-        !azureProvider.config?.clientSecret
+        !fallbackToPlatform && 
+        (!azureProvider || 
+         !azureProvider.config?.tenantId ||
+         !azureProvider.config?.clientId ||
+         !azureProvider.config?.clientSecret)
       ) {
         console.error("Azure AD provider is incomplete for tenant", tenant.orgId);
         return res.status(400).json({
@@ -1668,12 +1781,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             redirectUri: `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
           })
         : new AzureADService({
-            tenantId: azureProvider.config.tenantId,
-            clientId: azureProvider.config.clientId,
-            clientSecret: azureProvider.config.clientSecret,
+            tenantId: azureProvider?.config?.tenantId || "common",
+            clientId: azureProvider?.config?.clientId || "",
+            clientSecret: azureProvider?.config?.clientSecret || "",
             redirectUri:
-              azureProvider.config.redirectUri ||
-              azureProvider.config.callbackUrl ||
+              azureProvider?.config?.redirectUri ||
+              azureProvider?.config?.callbackUrl ||
               `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
           });
 
@@ -1909,12 +2022,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             redirectUri: `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
           })
         : new AzureADService({
-            tenantId: azureProvider.config.tenantId,
-            clientId: azureProvider.config.clientId,
-            clientSecret: azureProvider.config.clientSecret,
+            tenantId: azureProvider?.config?.tenantId || "common",
+            clientId: azureProvider?.config?.clientId || "",
+            clientSecret: azureProvider?.config?.clientSecret || "",
             redirectUri:
-              azureProvider.config.redirectUri ||
-              azureProvider.config.callbackUrl ||
+              azureProvider?.config?.redirectUri ||
+              azureProvider?.config?.callbackUrl ||
               `${req.protocol}://${req.get("host")}/api/auth/azure/callback`,
           });
 
@@ -2423,7 +2536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const tenantId = req.tenantId;
       const roles = await storage.getTenantRoles(tenantId);
-      res.json(roles);
+      res.json((roles || []).map(serializeRole));
     } catch (error) {
       console.error("Get roles error:", error);
       res.status(500).json({ message: "Failed to get roles" });
@@ -2432,21 +2545,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
-      const { name, description, permissions } = req.body;
+      const {
+        name,
+        description,
+        permissions,
+        permissionDetails,
+        inheritsFrom,
+        metadata,
+      } = req.body || {};
       const tenantId = req.tenantId;
 
       if (!name) {
         return res.status(400).json({ message: "Role name is required" });
       }
 
+      const normalizedPermissions = normalizeRolePermissions(permissionDetails ?? permissions);
+      const normalizedInheritance = normalizeRoleInheritance(inheritsFrom);
+      const normalizedMetadata = normalizeRoleMetadata(metadata);
+
       const role = await storage.createTenantRole({
         tenantId,
         name,
         description: description || "",
-        permissions: permissions || [],
+        permissions: normalizedPermissions,
+        inheritsFrom: normalizedInheritance,
+        metadata: normalizedMetadata,
       });
 
-      res.status(201).json(role);
+      res.status(201).json(serializeRole(role));
     } catch (error) {
       console.error("Create role error:", error);
       res.status(500).json({ message: "Failed to create role" });
@@ -2457,14 +2583,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
-      const updates = req.body;
+      const {
+        name,
+        description,
+        permissions,
+        permissionDetails,
+        inheritsFrom,
+        metadata,
+      } = req.body || {};
+
+      const updates = collectRoleUpdates({
+        name,
+        description,
+        permissions,
+        permissionDetails,
+        inheritsFrom,
+        metadata,
+      });
 
       const role = await storage.updateTenantRole(roleId, tenantId, updates);
       if (!role) {
         return res.status(404).json({ message: "Role not found" });
       }
 
-      res.json(role);
+      res.json(serializeRole(role));
     } catch (error) {
       console.error("Update role error:", error);
       res.status(500).json({ message: "Failed to update role" });
@@ -2550,26 +2692,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Simple RBAC endpoint that works independently of storage interface issues
-  app.post("/rbac/check-permission", authMiddleware, tenantMiddleware, (req, res) => {
-    console.log("🔐 RBAC Permission Check Request:", req.body);
-    const { userId, permission } = req.body;
-
-    if (!userId || !permission) {
-      console.log("❌ Missing userId or permission");
-      return res.status(400).json({ message: "User ID and permission are required" });
+  app.post("/rbac/check-permission", authMiddleware, tenantMiddleware, async (req, res) => {
+    try {
+      const { userId, permission } = req.body || {};
+      if (!userId || !permission) {
+        return res.status(400).json({ message: "User ID and permission are required" });
+      }
+      const tenantId = req.tenantId!;
+      const allowed = typeof storage.checkUserPermission === "function"
+        ? await storage.checkUserPermission(userId, permission, tenantId)
+        : false;
+      res.json({ hasPermission: !!allowed });
+    } catch (error) {
+      console.error("RBAC check-permission error:", error);
+      res.status(500).json({ message: "Failed to evaluate permission" });
     }
-
-    // Mock RBAC implementation for testing
-    const mockPermissions: Record<string, string[]> = {
-      "1": ["read", "write", "admin"],
-      "test-user": ["read", "write"],
-    };
-
-    const userPermissions = mockPermissions[userId as string] || [];
-    const hasPermission = userPermissions.includes(permission) || permission === "read"; // Default allow read
-
-    console.log("✅ RBAC check result:", { userId, permission, hasPermission });
-    res.json({ hasPermission });
   });
 
   // =============================================================================
@@ -2582,7 +2719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const roles = await storage.getTenantRoles(req.tenantId!);
-        res.json(roles);
+        res.json((roles || []).map(serializeRole));
       } catch (error) {
         console.error("Admin get roles error:", error);
         res.status(500).json({ message: "Failed to get roles" });
@@ -2596,15 +2733,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     tenantMiddleware,
     async (req, res) => {
       try {
-        const { name, description, permissions } = req.body;
+        const {
+          name,
+          description,
+          permissions,
+          permissionDetails,
+          inheritsFrom,
+          metadata,
+        } = req.body || {};
         if (!name) return res.status(400).json({ message: "Role name is required" });
         const role = await storage.createTenantRole({
           tenantId: req.tenantId!,
           name,
           description: description || "",
-          permissions: permissions || [],
+          permissions: normalizeRolePermissions(permissionDetails ?? permissions),
+          inheritsFrom: normalizeRoleInheritance(inheritsFrom),
+          metadata: normalizeRoleMetadata(metadata),
         });
-        res.status(201).json(role);
+        res.status(201).json(serializeRole(role));
       } catch (error) {
         console.error("Admin create role error:", error);
         res.status(500).json({ message: "Failed to create role" });
@@ -2620,8 +2766,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const roles = await storage.getTenantRoles(req.tenantId!);
         const set = new Set<string>();
-        for (const r of roles || []) {
-          (r.permissions || []).forEach((p: string) => set.add(p));
+        for (const role of roles || []) {
+          const details = Array.isArray(role.permissions)
+            ? role.permissions
+                .map(coercePermissionDefinition)
+                .filter((value): value is TenantRolePermissionDefinition => value !== null)
+            : [];
+          for (const permission of details) {
+            set.add(toPermissionKey(permission));
+          }
         }
         res.json(Array.from(set));
       } catch (error) {
@@ -2639,7 +2792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { userId } = req.params;
         const roles = await storage.getTenantUserRoles(req.tenantId!, userId);
-        res.json(roles);
+        res.json((roles || []).map(serializeRole));
       } catch (error) {
         console.error("Admin get user roles error:", error);
         res.status(500).json({ message: "Failed to get user roles" });
@@ -2678,7 +2831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const tenantId = req.tenantId;
       const roles = await storage.getTenantRoles(tenantId);
-      res.json(roles);
+      res.json((roles || []).map(serializeRole));
     } catch (error) {
       console.error("[v2] Get roles error:", error);
       res.status(500).json({ message: "Failed to get roles" });
@@ -2687,16 +2840,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/v2/rbac/roles", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
-      const { name, description, permissions } = req.body;
+      const {
+        name,
+        description,
+        permissions,
+        permissionDetails,
+        inheritsFrom,
+        metadata,
+      } = req.body || {};
       const tenantId = req.tenantId;
       if (!name) return res.status(400).json({ message: "Role name is required" });
       const role = await storage.createTenantRole({
         tenantId,
         name,
         description: description || "",
-        permissions: permissions || [],
+        permissions: normalizeRolePermissions(permissionDetails ?? permissions),
+        inheritsFrom: normalizeRoleInheritance(inheritsFrom),
+        metadata: normalizeRoleMetadata(metadata),
       });
-      res.status(201).json(role);
+      res.status(201).json(serializeRole(role));
     } catch (error) {
       console.error("[v2] Create role error:", error);
       res.status(500).json({ message: "Failed to create role" });
@@ -2707,10 +2869,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { roleId } = req.params;
       const tenantId = req.tenantId;
-      const updates = req.body;
+      const {
+        name,
+        description,
+        permissions,
+        permissionDetails,
+        inheritsFrom,
+        metadata,
+      } = req.body || {};
+      const updates = collectRoleUpdates({
+        name,
+        description,
+        permissions,
+        permissionDetails,
+        inheritsFrom,
+        metadata,
+      });
       const role = await storage.updateTenantRole(roleId, tenantId, updates);
       if (!role) return res.status(404).json({ message: "Role not found" });
-      res.json(role);
+      res.json(serializeRole(role));
     } catch (error) {
       console.error("[v2] Update role error:", error);
       res.status(500).json({ message: "Failed to update role" });
@@ -2738,13 +2915,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { userId } = req.params;
         const tenantId = req.tenantId!;
-        // Get assignments then fetch role details
         const assignments = await storage.getTenantUserRoles(tenantId, userId);
         const roleIds = (assignments || []).map((a: any) => a.roleId);
-        const roles = await Promise.all(
-          roleIds.map((id: string) => storage.getTenantRole?.(id)).filter(Boolean) as any
-        );
-        res.json(roles.filter(Boolean));
+        const roles = [];
+        if (typeof storage.getTenantRole === "function") {
+          const fetched = await Promise.all(roleIds.map((id: string) => storage.getTenantRole(id)));
+          for (const role of fetched) {
+            if (role) roles.push(serializeRole(role));
+          }
+        }
+        res.json(roles);
       } catch (error) {
         console.error("[v2] Get user roles error:", error);
         res.status(500).json({ message: "Failed to get user roles" });
@@ -2755,18 +2935,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/v2/rbac/permissions", authMiddleware, tenantMiddleware, async (req, res) => {
     try {
       const tenantId = req.tenantId;
-      // Derive available permissions as the union of all role permissions for tenant
       const roles = await storage.getTenantRoles(tenantId);
-      const set = new Set<string>();
-      for (const r of roles || []) {
-        (r.permissions || []).forEach((p: string) => set.add(p));
+      const permissionsByKey = new Map<string, TenantRolePermissionDefinition>();
+      for (const role of roles || []) {
+        const details = Array.isArray(role.permissions)
+          ? role.permissions
+              .map(coercePermissionDefinition)
+              .filter((value): value is TenantRolePermissionDefinition => value !== null)
+          : [];
+        for (const permission of details) {
+          const key = toPermissionKey(permission);
+          if (!permissionsByKey.has(key)) {
+            permissionsByKey.set(key, permission);
+          }
+        }
       }
       res.json(
-        Array.from(set).map(name => ({
-          id: name,
-          name,
-          resource: name.split(".")[0] || name,
-          action: name.split(".")[1] || "*",
+        Array.from(permissionsByKey.entries()).map(([key, permission]) => ({
+          id: key,
+          name: key,
+          resource: permission.resource,
+          action: permission.action,
+          scope: permission.scope ?? DEFAULT_PERMISSION_SCOPE,
         }))
       );
     } catch (error) {
@@ -2782,22 +2972,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "userId, resource, action are required" });
       }
       const tenantId = req.tenantId!;
-      const permissionKey = `${resource}.${action}`;
+      const normalizedResource = String(resource).trim();
+      const normalizedAction = String(action).trim();
+      const permissionKey = `${normalizedResource}.${normalizedAction}`;
       if (typeof storage.checkUserPermission === "function" && !explain) {
         const allowed = await storage.checkUserPermission(userId, permissionKey, tenantId);
         return res.json({ hasPermission: !!allowed });
       }
-      // Derive from roles and optionally explain
+
       const perms: string[] = (await storage.getUserPermissions?.(userId, tenantId)) || [];
-      const has = perms.includes(permissionKey);
+      const has = perms.includes(permissionKey) ||
+        perms.includes(`${normalizedResource}.*`) ||
+        perms.includes(`*.${normalizedAction}`) ||
+        perms.includes(`*.*`);
       if (!explain) return res.json({ hasPermission: has });
 
       const assignments = await storage.getTenantUserRoles(tenantId, userId);
       const roleIds = (assignments || []).map((a: any) => a.roleId);
-      const roles = await Promise.all(roleIds.map((id: string) => storage.getTenantRole?.(id)));
-      const matchedRoles = (roles || [])
-        .filter((r: any) => Array.isArray(r?.permissions) && r.permissions.includes(permissionKey))
-        .map((r: any) => ({ id: r.id, name: r.name }));
+      let roles: any[] = [];
+      if (typeof storage.getTenantRole === "function") {
+        roles = (await Promise.all(roleIds.map((id: string) => storage.getTenantRole(id)))).filter(
+          (value): value is any => Boolean(value)
+        );
+      }
+      const matchedRoles = roles
+        .map(role => serializeRole(role))
+        .filter(role => Array.isArray(role.permissionDetails) &&
+          role.permissionDetails.some((permission: TenantRolePermissionDefinition) =>
+            permissionMatches(permission, normalizedResource, normalizedAction)
+          ))
+        .map(role => ({ id: role.id, name: role.name }));
+
       return res.json({ hasPermission: has, details: { evaluated: permissionKey, matchedRoles } });
     } catch (error) {
       console.error("[v2] Check permission error:", error);

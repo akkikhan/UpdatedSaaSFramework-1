@@ -10,12 +10,22 @@ export interface SaaSRBACConfig {
   websocketUrl?: string;
 }
 
+export interface RolePermissionDetail {
+  resource: string;
+  action: string;
+  scope?: string;
+  conditions?: PermissionCondition[];
+  description?: string;
+}
+
 export interface Role {
   id: string;
   tenantId: string;
   name: string;
   description: string;
   permissions: string[];
+  permissionDetails: RolePermissionDetail[];
+  inheritsFrom?: string[];
   isSystem: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -140,6 +150,112 @@ export interface AuditEvent {
   context: AccessContext;
   timestamp: Date;
 }
+
+const DEFAULT_PERMISSION_SCOPE = "tenant";
+
+function coercePermissionDetail(input: unknown): RolePermissionDetail | null {
+  if (!input) return null;
+  if (typeof input === "string") {
+    const [resourcePart, actionPart] = input.split(".");
+    const resource = (resourcePart || "").trim();
+    if (!resource) return null;
+    const action = (actionPart || "*").trim() || "*";
+    return {
+      resource,
+      action,
+      scope: DEFAULT_PERMISSION_SCOPE,
+      conditions: [],
+    };
+  }
+  if (typeof input !== "object" || input === null) return null;
+  const candidate = input as Partial<RolePermissionDetail>;
+  const resource = typeof candidate.resource === "string" ? candidate.resource.trim() : "";
+  if (!resource) return null;
+  const action =
+    typeof candidate.action === "string" && candidate.action.trim().length > 0
+      ? candidate.action.trim()
+      : "*";
+  const scope =
+    typeof candidate.scope === "string" && candidate.scope.trim().length > 0
+      ? candidate.scope.trim()
+      : DEFAULT_PERMISSION_SCOPE;
+  const normalizedScope =
+    scope === "resource" || scope === "global" || scope === "tenant" ? scope : DEFAULT_PERMISSION_SCOPE;
+  const conditions = Array.isArray(candidate.conditions) ? candidate.conditions : [];
+  const description = typeof candidate.description === "string" ? candidate.description : undefined;
+  return {
+    resource,
+    action,
+    scope: normalizedScope,
+    conditions,
+    description,
+  };
+}
+
+function normalizePermissionDetails(
+  rawDetails: unknown,
+  fallbackPermissions: unknown
+): RolePermissionDetail[] {
+  const map = new Map<string, RolePermissionDetail>();
+
+  const addDetail = (detail: RolePermissionDetail | null) => {
+    if (!detail) return;
+    const scope = detail.scope || DEFAULT_PERMISSION_SCOPE; 
+    const key = `${detail.resource.toLowerCase()}::${detail.action.toLowerCase()}::${scope.toLowerCase()}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        resource: detail.resource,
+        action: detail.action,
+        scope,
+        conditions: Array.isArray(detail.conditions) ? detail.conditions : [],
+        description: detail.description,
+      });
+    }
+  };
+
+  if (Array.isArray(rawDetails)) {
+    for (const item of rawDetails) {
+      addDetail(coercePermissionDetail(item));
+    }
+  }
+
+  if (Array.isArray(fallbackPermissions)) {
+    for (const item of fallbackPermissions) {
+      addDetail(coercePermissionDetail(item));
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+function mapRoleResponse(role: any): Role {
+  if (!role || typeof role !== "object") {
+    throw new Error("Invalid role response");
+  }
+
+  const permissionDetails = normalizePermissionDetails(role.permissionDetails, role.permissions);
+  const permissions =
+    Array.isArray(role.permissions) && role.permissions.length > 0
+      ? role.permissions
+      : permissionDetails.map(detail => `${detail.resource}.${detail.action}`);
+
+  return {
+    id: role.id,
+    tenantId: role.tenantId,
+    name: role.name ?? "",
+    description: role.description ?? "",
+    permissions,
+    permissionDetails,
+    inheritsFrom: Array.isArray(role.inheritsFrom) ? role.inheritsFrom : [],
+    isSystem: Boolean(role.isSystem),
+    isActive: role.isActive !== undefined ? Boolean(role.isActive) : true,
+    createdAt: role.createdAt ? new Date(role.createdAt) : new Date(),
+    updatedAt: role.updatedAt ? new Date(role.updatedAt) : new Date(),
+    hierarchy: typeof role.hierarchy === "number" ? role.hierarchy : undefined,
+    metadata: role.metadata ?? {},
+  };
+}
+
 
 /**
  * Enterprise Role-Based Access Control (RBAC) SDK
@@ -343,7 +459,12 @@ export class SaaSRBAC {
         return [];
       }
 
-      return (await response.json()) as Role[];
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        return [];
+      }
+
+      return data.map(mapRoleResponse);
     } catch (error) {
       return [];
     }
@@ -624,3 +745,4 @@ declare global {
 }
 
 export default SaaSRBAC;
+

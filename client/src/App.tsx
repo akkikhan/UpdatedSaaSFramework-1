@@ -37,16 +37,22 @@ function Router() {
   return (
     <Switch>
       {/* Authentication Result Pages */}
-      <Route path="/auth-success" component={() => (
-        <TenantLayout title="Authentication Success" showSidebar={false} minimal>
-          <AuthSuccessPage />
-        </TenantLayout>
-      )} />
-      <Route path="/auth-error" component={() => (
-        <TenantLayout title="Authentication Error" showSidebar={false} minimal>
-          <AuthErrorPage />
-        </TenantLayout>
-      )} />
+      <Route
+        path="/auth-success"
+        component={() => (
+          <TenantLayout title="Authentication Success" showSidebar={false} minimal>
+            <AuthSuccessPage />
+          </TenantLayout>
+        )}
+      />
+      <Route
+        path="/auth-error"
+        component={() => (
+          <TenantLayout title="Authentication Error" showSidebar={false} minimal>
+            <AuthErrorPage />
+          </TenantLayout>
+        )}
+      />
       {/* Backward-compatible aliases used by server redirects */}
       <Route path="/auth/success" component={AuthSuccessPage} />
       <Route path="/auth/error" component={AuthErrorPage} />
@@ -55,32 +61,47 @@ function Router() {
       <Route path="/admin/login" component={PlatformAdminLogin} />
 
       {/* Tenant Portal Routes */}
-      <Route path="/tenant/:orgId/login" component={() => (
-        <TenantLayout title="Tenant Login" showSidebar={false} minimal>
-          <TenantLogin />
-        </TenantLayout>
-      )} />
-      <Route path="/tenant/:orgId/password/forgot" component={() => (
-        <TenantLayout title="Password Reset" showSidebar={false} minimal>
-          <PasswordResetRequest />
-        </TenantLayout>
-      )} />
-      <Route path="/tenant/:orgId/password/reset" component={() => (
-        <TenantLayout title="Password Reset" showSidebar={false} minimal>
-          <PasswordResetConfirm />
-        </TenantLayout>
-      )} />
-      <Route path="/tenant/:orgId/password/change" component={() => (
-        <TenantLayout title="Change Password" showSidebar={false} minimal>
-          <PasswordChange />
-        </TenantLayout>
-      )} />
+      <Route
+        path="/tenant/:orgId/login"
+        component={() => (
+          <TenantLayout title="Tenant Login" showSidebar={false} minimal>
+            <TenantLogin />
+          </TenantLayout>
+        )}
+      />
+      <Route
+        path="/tenant/:orgId/password/forgot"
+        component={() => (
+          <TenantLayout title="Password Reset" showSidebar={false} minimal>
+            <PasswordResetRequest />
+          </TenantLayout>
+        )}
+      />
+      <Route
+        path="/tenant/:orgId/password/reset"
+        component={() => (
+          <TenantLayout title="Password Reset" showSidebar={false} minimal>
+            <PasswordResetConfirm />
+          </TenantLayout>
+        )}
+      />
+      <Route
+        path="/tenant/:orgId/password/change"
+        component={() => (
+          <TenantLayout title="Change Password" showSidebar={false} minimal>
+            <PasswordChange />
+          </TenantLayout>
+        )}
+      />
       <Route path="/tenant/:orgId/dashboard" component={TenantDashboard} />
-      <Route path="/tenant/:orgId/success" component={() => (
-        <TenantLayout title="Success" showSidebar={false} minimal>
-          <TenantSuccessPage />
-        </TenantLayout>
-      )} />
+      <Route
+        path="/tenant/:orgId/success"
+        component={() => (
+          <TenantLayout title="Success" showSidebar={false} minimal>
+            <TenantSuccessPage />
+          </TenantLayout>
+        )}
+      />
       <Route path="/tenant/:orgId/*" component={TenantDashboard} />
 
       {/* Protected Admin Portal Routes */}
@@ -123,12 +144,40 @@ function App() {
         const fragToken = hash.get("token");
         const fragOrg = hash.get("tenant");
         if (fragToken) {
-          setToken(fragToken);
-          localStorage.setItem("tenant_token", fragToken);
-          if (fragOrg) localStorage.setItem(`tenant_token_${fragOrg}`, fragToken);
+          // Decode JWT to extract user data
+          try {
+            const payload = JSON.parse(atob(fragToken.split(".")[1]));
+            const userData = {
+              id: payload.userId,
+              email: payload.email,
+              tenantId: payload.tenantId,
+              isActive: true,
+            };
+
+            // Store both token and user data
+            setToken(fragToken);
+            localStorage.setItem("tenant_token", fragToken);
+            localStorage.setItem("tenant_user", JSON.stringify(userData));
+
+            if (fragOrg) {
+              localStorage.setItem(`tenant_token_${fragOrg}`, fragToken);
+              localStorage.setItem(`tenant_user_${fragOrg}`, JSON.stringify(userData));
+            }
+
+            console.log(
+              "[client] Tenant token and user data captured from fragment and stored.",
+              userData
+            );
+          } catch (decodeError) {
+            console.error("[client] Failed to decode JWT token:", decodeError);
+            // Still store the token even if decoding fails
+            setToken(fragToken);
+            localStorage.setItem("tenant_token", fragToken);
+            if (fragOrg) localStorage.setItem(`tenant_token_${fragOrg}`, fragToken);
+          }
+
           const cleanUrl = window.location.pathname + window.location.search;
           window.history.replaceState({}, document.title, cleanUrl);
-          console.log("[client] Tenant token captured from fragment and stored.");
         }
       }
     } catch {}
