@@ -189,4 +189,4 @@ temp/
 # Test files
 **/test-results/
 **/playwright-report/
-**/coverage/
+**/coverage/azure-db-credentials.txt

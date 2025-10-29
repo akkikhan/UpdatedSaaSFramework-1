@@ -190,6 +190,13 @@ function App() {
       // Store token in localStorage for persistence
       localStorage.setItem("platformAdminToken", token);
 
+      // Also set the token in the auth-client SDK
+      try {
+        setToken(token);
+      } catch (error) {
+        console.error("Failed to set token in auth-client:", error);
+      }
+
       // Clear URL parameters to clean up the URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -198,6 +205,12 @@ function App() {
       queryClient.invalidateQueries();
 
       console.log("Platform admin token stored from URL");
+
+      // If this is an admin login, redirect to admin dashboard
+      if (isAdmin === "true" && window.location.pathname === "/") {
+        console.log("Redirecting to admin dashboard after Azure AD login");
+        window.location.href = "/admin";
+      }
     }
 
     // Check if token exists in localStorage
