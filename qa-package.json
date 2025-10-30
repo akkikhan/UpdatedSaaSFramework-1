@@ -1,0 +1,14 @@
+{
+  "name": "qa-testing-dependencies",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test:qa": "node automated-qa-agent.mjs",
+    "test:qa:quick": "node automated-qa-agent.mjs --quick",
+    "test:install": "npm install -D playwright node-fetch && npx playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0",
+    "node-fetch": "^3.3.2"
+  }
+}

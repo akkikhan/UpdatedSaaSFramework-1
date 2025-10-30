@@ -62,11 +62,84 @@ export class AzureADService {
     });
   }
 
+  private isSelfSignedCertError(error: unknown): boolean {
+    if (!error) {
+      return false;
+    }
+
+    const code = (error as { code?: string }).code;
+    if (typeof code === "string" && code.toUpperCase().includes("SELF_SIGNED")) {
+      return true;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    return /self[-\s]?signed certificate/i.test(message);
+  }
+
+  private buildUserFromAuthResult(authResult: AuthenticationResult): AzureUser | null {
+    const claims = (authResult.idTokenClaims || {}) as Record<string, any>;
+    const emailCandidate =
+      (typeof claims.preferred_username === "string" && claims.preferred_username) ||
+      (typeof claims.email === "string" && claims.email) ||
+      (typeof claims.upn === "string" && claims.upn) ||
+      (typeof authResult.account?.username === "string" && authResult.account.username) ||
+      "";
+
+    if (!emailCandidate) {
+      console.error(
+        "[AzureADService] Unable to derive email from Azure AD token claims.",
+        claims
+      );
+      return null;
+    }
+
+    let email: string;
+    try {
+      email = this.normalizeEmail(emailCandidate);
+    } catch (error) {
+      console.error("[AzureADService] Email normalization failed for token claims.", error);
+      return null;
+    }
+
+    const displayName =
+      (typeof claims.name === "string" && claims.name) ||
+      authResult.account?.name ||
+      email;
+
+    const firstName =
+      (typeof claims.given_name === "string" && claims.given_name) || undefined;
+    const lastName =
+      (typeof claims.family_name === "string" && claims.family_name) || undefined;
+
+    const groups =
+      Array.isArray(claims.roles) && claims.roles.every(role => typeof role === "string")
+        ? (claims.roles as string[])
+        : [];
+
+    const id =
+      (typeof claims.oid === "string" && claims.oid) ||
+      authResult.uniqueId ||
+      authResult.account?.homeAccountId ||
+      email;
+
+    return {
+      id,
+      email,
+      displayName,
+      firstName,
+      lastName,
+      groups,
+    };
+  }
+
   /**
    * Normalize Azure AD email format (handle external user mangling)
    */
   private normalizeEmail(email: string): string {
-    if (!email) return email;
+    if (!email || typeof email !== "string") {
+      console.error("[Email Normalization] Invalid email input:", email);
+      throw new Error("Email is required and must be a string");
+    }
 
     // Handle Azure AD external user format: khan.aakib_outlook.com#EXT#@tenant.onmicrosoft.com
     // Convert back to: khan.aakib@outlook.com
@@ -196,8 +269,24 @@ export class AzureADService {
         throw new Error("Failed to acquire token from Azure AD");
       }
 
-      // Get user profile from Microsoft Graph
-      const azureUser = await this.getUserProfile(response.accessToken);
+      // Get user profile from Microsoft Graph with fallback when TLS trust blocks the call
+      let azureUser: AzureUser;
+      try {
+        azureUser = await this.getUserProfile(response.accessToken);
+      } catch (profileError) {
+        if (this.isSelfSignedCertError(profileError)) {
+          console.warn(
+            "[AzureADService] Microsoft Graph profile fetch failed due to TLS trust issue. Falling back to ID token claims."
+          );
+          const fallbackUser = this.buildUserFromAuthResult(response);
+          if (!fallbackUser) {
+            throw profileError;
+          }
+          azureUser = fallbackUser;
+        } else {
+          throw profileError;
+        }
+      }
 
       // Calculate token expiration
       const expiresAt = new Date(
@@ -251,8 +340,24 @@ export class AzureADService {
         throw new Error("Failed to acquire token from Azure AD");
       }
 
-      // Get user profile from Microsoft Graph
-      const azureUser = await this.getUserProfile(response.accessToken);
+      // Get user profile from Microsoft Graph with fallback when TLS trust blocks the call
+      let azureUser: AzureUser;
+      try {
+        azureUser = await this.getUserProfile(response.accessToken);
+      } catch (profileError) {
+        if (this.isSelfSignedCertError(profileError)) {
+          console.warn(
+            "[AzureADService] Microsoft Graph profile fetch failed due to TLS trust issue. Falling back to ID token claims."
+          );
+          const fallbackUser = this.buildUserFromAuthResult(response);
+          if (!fallbackUser) {
+            throw profileError;
+          }
+          azureUser = fallbackUser;
+        } else {
+          throw profileError;
+        }
+      }
 
       // Create or update tenant user
       const user = await this.provisionUser(azureUser, tenantId);
@@ -319,10 +424,17 @@ export class AzureADService {
         // Continue without groups if we can't fetch them
       }
 
+      // Extract email with proper null checking
+      const rawEmail = userInfo.mail || userInfo.userPrincipalName;
+      if (!rawEmail) {
+        console.error("Azure AD user info missing email:", userInfo);
+        throw new Error("User profile does not contain email address (mail or userPrincipalName)");
+      }
+
       return {
         id: userInfo.id,
-        email: this.normalizeEmail(userInfo.mail || userInfo.userPrincipalName),
-        displayName: userInfo.displayName,
+        email: this.normalizeEmail(rawEmail),
+        displayName: userInfo.displayName || rawEmail,
         firstName: userInfo.givenName,
         lastName: userInfo.surname,
         groups,

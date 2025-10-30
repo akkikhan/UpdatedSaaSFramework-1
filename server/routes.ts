@@ -102,6 +102,20 @@ function normalizeRolePermissions(input: unknown): TenantRolePermissionDefinitio
   return Array.from(unique.values());
 }
 
+function isSelfSignedTlsError(error: unknown): boolean {
+  if (!error) {
+    return false;
+  }
+
+  const code = (error as { code?: string }).code;
+  if (typeof code === "string" && code.toUpperCase().includes("SELF_SIGNED")) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return /self[-\s]?signed certificate/i.test(message);
+}
+
 function normalizeRoleInheritance(input: unknown): string[] {
   if (input == null || input === "") return [];
   const rawArray = Array.isArray(input) ? input : [input];
@@ -387,63 +401,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create or update platform admin record for Azure AD user
-      // TEMPORARY BYPASS: Skip database operations for in-memory database compatibility
+      const platformAdminEmail = authResult.user.email;
+      const platformAdminName =
+        authResult.user.firstName && authResult.user.lastName
+          ? `${authResult.user.firstName} ${authResult.user.lastName}`
+          : authResult.user.displayName || platformAdminEmail;
+
       let platformAdmin;
 
       try {
-        platformAdmin = await storage.getPlatformAdminByEmail(authResult.user.email);
-        console.log(`[Azure AD] Found existing platform admin: ${authResult.user.email}`);
+        platformAdmin = await storage.getPlatformAdminByEmail(platformAdminEmail);
+        if (platformAdmin) {
+          console.log(`[Azure AD] Found existing platform admin: ${platformAdminEmail}`);
+        }
       } catch (dbError: any) {
-        // If database operation fails (e.g., in-memory db limitation), create a mock admin
-        if (dbError.message && dbError.message.includes("getTypeParser")) {
-          console.warn(`[Azure AD] Database limitation detected, creating temporary session`);
-          platformAdmin = {
-            id: `temp-${Date.now()}`,
-            email: authResult.user.email,
-            name: authResult.user.displayName || authResult.user.email,
+        console.error(
+          `[Azure AD] Failed to query platform admin record for ${platformAdminEmail}:`,
+          dbError
+        );
+        if (isSelfSignedTlsError(dbError)) {
+          console.error(
+            "[Azure AD] Database lookup blocked by untrusted TLS certificate. " +
+              "Set ALLOW_INSECURE_TLS=true for development or install the appropriate certificate authority."
+          );
+        }
+        const detail = encodeURIComponent(
+          dbError instanceof Error ? dbError.message : String(dbError)
+        );
+        const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
+        return res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
+      }
+
+      if (!platformAdmin) {
+        try {
+          platformAdmin = await storage.createPlatformAdmin({
+            email: platformAdminEmail,
+            name: platformAdminName,
             role: "super_admin",
             passwordHash: "AZURE_AD_SSO",
             isActive: true,
-            createdAt: new Date(),
-            lastLogin: null,
-          };
-        } else {
-          // For other errors, try to create the admin
-          try {
-            platformAdmin = await storage.createPlatformAdmin({
-              email: authResult.user.email,
-              name:
-                authResult.user.firstName && authResult.user.lastName
-                  ? `${authResult.user.firstName} ${authResult.user.lastName}`
-                  : authResult.user.email,
-              role: "super_admin",
-              passwordHash: "AZURE_AD_SSO",
-              isActive: true,
-            });
-            console.log(`[Azure AD] Created new platform admin: ${authResult.user.email}`);
-          } catch (createError: any) {
-            // If creation also fails due to database limitation, use mock
-            if (createError.message && createError.message.includes("getTypeParser")) {
-              console.warn(`[Azure AD] Database limitation on creation, using temporary session`);
-              platformAdmin = {
-                id: `temp-${Date.now()}`,
-                email: authResult.user.email,
-                name: authResult.user.displayName || authResult.user.email,
-                role: "super_admin",
-                passwordHash: "AZURE_AD_SSO",
-                isActive: true,
-                createdAt: new Date(),
-                lastLogin: null,
-              };
-            } else {
-              throw createError;
-            }
+          });
+          console.log(`[Azure AD] Created new platform admin: ${platformAdminEmail}`);
+        } catch (dbError: any) {
+          console.error(
+            `[Azure AD] Failed to persist platform admin record for ${platformAdminEmail}:`,
+            dbError
+          );
+          if (isSelfSignedTlsError(dbError)) {
+            console.error(
+              "[Azure AD] Platform admin creation blocked by TLS certificate validation. " +
+                "Set ALLOW_INSECURE_TLS=true in your .env file or configure trusted certificates."
+            );
           }
+          const detail = encodeURIComponent(
+            dbError instanceof Error ? dbError.message : String(dbError)
+          );
+          const devSuffix = process.env.NODE_ENV !== "production" ? `&detail=${detail}` : "";
+          return res.redirect(`/admin/login?error=callback_processing_failed${devSuffix}`);
         }
       }
 
-      // Try to update last login (non-critical)
-      if (platformAdmin && !platformAdmin.id.startsWith("temp-")) {
+      // Update last login timestamp
+      if (platformAdmin) {
         try {
           await storage.updatePlatformAdminLastLogin(platformAdmin.id);
         } catch (updateError) {
@@ -451,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Try to log system activity (non-critical)
+      // Log system activity
       if (platformAdmin) {
         try {
           await storage.logSystemActivity({
@@ -468,30 +487,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (logError) {
           console.warn(`[Azure AD] Failed to log activity (non-critical):`, logError);
-        }
-      }
-
-      // Continue with remaining retry logic placeholder
-      let retryCount = 0;
-      const maxRetries = 3;
-      while (false) {
-        // Disabled original retry loop
-        try {
-          break; // Success, exit retry loop
-        } catch (dbError) {
-          retryCount++;
-          console.log(
-            `System logging attempt ${retryCount}/${maxRetries} failed:`,
-            dbError.message
-          );
-
-          if (retryCount >= maxRetries) {
-            console.warn("Failed to log system activity, but continuing..."); // Non-critical operation
-            break;
-          }
-
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
         }
       }
 

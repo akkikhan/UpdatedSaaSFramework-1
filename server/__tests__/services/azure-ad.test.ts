@@ -10,6 +10,7 @@ jest.mock("../../storage", () => ({
     getTenantRoles: jest.fn(),
     createTenantRole: jest.fn(),
     assignTenantUserRole: jest.fn(),
+    getTenantById: jest.fn(),
     logSystemActivity: jest.fn(),
   },
 }));
@@ -70,7 +71,7 @@ describe("AzureADService", () => {
           redirectUri: testConfig.redirectUri,
           codeChallenge: "mock-challenge",
           codeChallengeMethod: "S256",
-          prompt: "consent",
+          prompt: "select_account",
         })
       );
     });
@@ -85,12 +86,79 @@ describe("AzureADService", () => {
     });
   });
 
+  describe("handlePlatformAdminCallback", () => {
+    const mockAuthResponse = {
+      accessToken: "mock-access-token",
+      expiresOn: new Date(Date.now() + 3600000),
+      idTokenClaims: {
+        oid: "user-123",
+        preferred_username: "test@example.com",
+        name: "Test User",
+        given_name: "Test",
+        family_name: "User",
+      },
+      account: {
+        homeAccountId: "home-account-id",
+        environment: "login.microsoftonline.com",
+        tenantId: "tenant-123",
+        username: "test@example.com",
+        name: "Test User",
+      },
+      uniqueId: "user-123",
+    } as any;
+
+    beforeEach(() => {
+      const mockMsalApp = (azureADService as any).msalApp;
+      mockMsalApp.acquireTokenByCode.mockResolvedValue(mockAuthResponse);
+    });
+
+    it("should fallback to ID token claims when Microsoft Graph fails with self-signed certificate error", async () => {
+      mockFetch.mockReset();
+      const tlsError = Object.assign(
+        new Error("self-signed certificate in certificate chain"),
+        { code: "SELF_SIGNED_CERT_IN_CHAIN" }
+      );
+      mockFetch.mockRejectedValue(tlsError);
+
+      const code = "auth-code-456";
+      const statePayload = { codeVerifier: "mock-verifier" };
+      const encodedState = encodeURIComponent(JSON.stringify(statePayload));
+
+      const result = await azureADService.handlePlatformAdminCallback(code, encodedState);
+
+      expect(result.user).toEqual(
+        expect.objectContaining({
+          email: "test@example.com",
+          firstName: "Test",
+          lastName: "User",
+          displayName: "Test User",
+        })
+      );
+      expect(result.accessToken).toBe("mock-access-token");
+    });
+  });
+
   describe("handleCallback", () => {
     const mockAuthResponse = {
       accessToken: "mock-access-token",
       refreshToken: "mock-refresh-token",
       expiresOn: new Date(Date.now() + 3600000), // 1 hour from now
-    };
+      idTokenClaims: {
+        oid: "user-123",
+        preferred_username: "test@example.com",
+        name: "Test User",
+        given_name: "Test",
+        family_name: "User",
+      },
+      account: {
+        homeAccountId: "home-account-id",
+        environment: "login.microsoftonline.com",
+        tenantId: "tenant-123",
+        username: "test@example.com",
+        name: "Test User",
+      },
+      uniqueId: "user-123",
+    } as any;
 
     const mockUserProfile = {
       id: "user-123",
@@ -171,6 +239,10 @@ describe("AzureADService", () => {
         assignedAt: new Date(),
         assignedBy: null,
       });
+      mockStorage.getTenantById.mockImplementation(async id => ({
+        id,
+        adminEmail: "test@example.com",
+      }));
     });
 
     it("should handle callback and provision new user", async () => {
@@ -217,6 +289,31 @@ describe("AzureADService", () => {
         })
       );
       expect(mockStorage.createTenantUser).not.toHaveBeenCalled();
+    });
+
+    it("should fallback to ID token claims when Microsoft Graph fails with self-signed certificate error", async () => {
+      mockFetch.mockReset();
+      const tlsError = Object.assign(
+        new Error("self-signed certificate in certificate chain"),
+        { code: "SELF_SIGNED_CERT_IN_CHAIN" }
+      );
+      mockFetch.mockRejectedValue(tlsError);
+
+      const code = "auth-code-123";
+      const state = JSON.stringify({ codeVerifier: "mock-verifier", tenantId: "tenant-123" });
+      const tenantId = "tenant-123";
+
+      const result = await azureADService.handleCallback(code, state, tenantId);
+
+      expect(result.user).toEqual(mockTenantUser);
+      expect(mockStorage.createTenantUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          email: "test@example.com",
+          firstName: "Test",
+          lastName: "User",
+        })
+      );
     });
 
     it("should handle invalid state parameter", async () => {

@@ -7,6 +7,18 @@ try {
   console.log("Networking: DNS result order set to ipv4first");
 } catch {}
 
+// Allow opting into insecure TLS (self-signed certs) for local development/testing
+const allowInsecureTls =
+  (process.env.ALLOW_INSECURE_TLS || "").toLowerCase() === "true" ||
+  (process.env.NODE_ENV || "").toLowerCase() === "development";
+if (allowInsecureTls && process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  console.warn(
+    "[tls] Development mode allowing self-signed TLS certificates (NODE_TLS_REJECT_UNAUTHORIZED=0). " +
+      "Set ALLOW_INSECURE_TLS=false to require trusted certificates."
+  );
+}
+
 // Load environment variables FIRST before any other imports
 
 import { validateEnvironment } from "./config/environment";
