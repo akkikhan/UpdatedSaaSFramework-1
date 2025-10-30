@@ -10,6 +10,7 @@
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
+    "seed:supabase": "tsx scripts/seed-supabase.ts",
     "setup:platform-admin": "tsx server/setup-platform-admin.ts",
     "test:gmail": "node test-gmail-config.mjs",
     "test": "jest",
